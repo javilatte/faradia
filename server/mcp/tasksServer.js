@@ -30,7 +30,9 @@ server.registerTool(
     inputSchema: {
       title: z.string().describe('Titulo corto de la tarea, visible en el panel de agentes'),
       type: z.enum(['coding', 'documentation']).describe('Tipo de tarea'),
-      instruction: z.string().describe('Instruccion completa y autocontenida para el agente que ejecutara la tarea en su propio worktree')
+      instruction: z
+        .string()
+        .describe('Instruccion completa y autocontenida para el agente que ejecutara la tarea en su propio worktree')
     }
   },
   async ({ title, type, instruction }) => {
@@ -65,7 +67,12 @@ server.registerTool(
   async ({ taskId, phase, status }) => {
     const id = taskId || fixedTaskId;
     if (!id) {
-      return { content: [{ type: 'text', text: 'Error: no se pudo determinar el taskId (no se paso y esta sesion no tiene uno fijo)' }], isError: true };
+      return {
+        content: [
+          { type: 'text', text: 'Error: no se pudo determinar el taskId (no se paso y esta sesion no tiene uno fijo)' }
+        ],
+        isError: true
+      };
     }
     const res = await fetch(`${base}/api/tasks/${id}/phase`, {
       method: 'PATCH',

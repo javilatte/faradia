@@ -30,7 +30,10 @@ function syncTaskControls() {
 }
 
 taskBaseSelect.addEventListener('change', () => localStorage.setItem('optimia:task-base', taskBaseSelect.value));
-chatKindSelect.addEventListener('change', () => { localStorage.setItem('optimia:chat-kind', chatKindSelect.value); syncTaskControls(); });
+chatKindSelect.addEventListener('change', () => {
+  localStorage.setItem('optimia:chat-kind', chatKindSelect.value);
+  syncTaskControls();
+});
 syncTaskControls();
 
 async function createTaskFromChat(kind, text) {
@@ -72,7 +75,10 @@ function notifyTaskInChat(task, prevStatus) {
   if (task.status === 'awaiting_input') {
     const q = task.pendingQuestion;
     if (q?.kind === 'doc-options') {
-      appendMessage('system', `"${task.title}": la investigación está lista. Elige modo, formato y destino en el panel de agentes.`);
+      appendMessage(
+        'system',
+        `"${task.title}": la investigación está lista. Elige modo, formato y destino en el panel de agentes.`
+      );
     } else {
       appendMessage('system', `"${task.title}" necesita tu respuesta. Contéstala en su tarjeta del panel de agentes.`);
     }
@@ -190,7 +196,8 @@ async function loadInitialChats() {
   }
 }
 
-chatNewButton.addEventListener('click', () => { createAndSelectChat(); });
+chatNewButton.addEventListener('click', () => {
+  createAndSelectChat();
+});
 
 sendButton.addEventListener('click', () => (waitingForResult ? stopCurrentChat() : sendCurrentInput()));
-

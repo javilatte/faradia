@@ -51,7 +51,10 @@ async function openAuthLoginInTerminal() {
   for (const [cmd, args] of LINUX_TERMINALS) {
     if (await trySpawn(cmd, args)) return { ok: true };
   }
-  return { ok: false, error: `No encuentro un emulador de terminal (probado: ${LINUX_TERMINALS.map(([c]) => c).join(', ')}). ${MANUAL_HINT}` };
+  return {
+    ok: false,
+    error: `No encuentro un emulador de terminal (probado: ${LINUX_TERMINALS.map(([c]) => c).join(', ')}). ${MANUAL_HINT}`
+  };
 }
 
 module.exports = { getClaudeAuthStatus, openAuthLoginInTerminal };

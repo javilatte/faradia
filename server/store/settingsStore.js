@@ -41,7 +41,12 @@ function loadSettings(projectRoot) {
       theme: THEMES.includes(onDisk.ui?.theme) ? onDisk.ui.theme : defaults.ui.theme,
       clock: CLOCKS.includes(onDisk.ui?.clock) ? onDisk.ui.clock : defaults.ui.clock
     },
-    ai: { ...defaults.ai, ...onDisk.ai, claude: { ...defaults.ai.claude, ...onDisk.ai?.claude }, localAi: { ...defaults.ai.localAi, ...onDisk.ai?.localAi } },
+    ai: {
+      ...defaults.ai,
+      ...onDisk.ai,
+      claude: { ...defaults.ai.claude, ...onDisk.ai?.claude },
+      localAi: { ...defaults.ai.localAi, ...onDisk.ai?.localAi }
+    },
     preferences: {
       ...defaults.preferences,
       ...onDisk.preferences,

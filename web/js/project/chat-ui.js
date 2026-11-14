@@ -2,13 +2,15 @@
 
 // Reloj, layout, mensajes del chat, adjuntos y eventos de Claude.
 
-
 let clockFormat = 'datetime';
 
 function tickClock() {
   const now = new Date();
   const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  if (clockFormat === 'time') { clockEl.textContent = time; return; }
+  if (clockFormat === 'time') {
+    clockEl.textContent = time;
+    return;
+  }
   const weekday = now.toLocaleDateString('es-ES', { weekday: 'long' });
   const day = now.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
   clockEl.textContent = `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${day}\u00A0\u00A0${time}`;
@@ -25,7 +27,10 @@ function marqueeStart(el) {
   const started = performance.now();
   el.classList.add('marquee-active');
   const step = (now) => {
-    if (!el.isConnected) { marqueeFrames.delete(el); return; }
+    if (!el.isConnected) {
+      marqueeFrames.delete(el);
+      return;
+    }
     const t = ((now - started) / duration) % 2;
     el.scrollLeft = max * (t <= 1 ? t : 2 - t);
     marqueeFrames.set(el, requestAnimationFrame(step));
@@ -64,7 +69,9 @@ function setChatWidth(px) {
 try {
   const saved = Number(localStorage.getItem('optimia:chat-width'));
   if (saved >= CHAT_MIN) setChatWidth(saved);
-} catch { /* sin localStorage: ancho por defecto */ }
+} catch {
+  /* sin localStorage: ancho por defecto */
+}
 
 layoutSplitter.addEventListener('pointerdown', (e) => {
   e.preventDefault();
@@ -78,7 +85,11 @@ layoutSplitter.addEventListener('pointerdown', (e) => {
     layoutSplitter.classList.remove('dragging');
     layoutSplitter.removeEventListener('pointermove', onMove);
     layoutSplitter.removeEventListener('pointerup', onUp);
-    try { localStorage.setItem('optimia:chat-width', String(Math.round(chatPanelEl.getBoundingClientRect().width))); } catch { /* sin persistencia */ }
+    try {
+      localStorage.setItem('optimia:chat-width', String(Math.round(chatPanelEl.getBoundingClientRect().width)));
+    } catch {
+      /* sin persistencia */
+    }
   };
   layoutSplitter.addEventListener('pointermove', onMove);
   layoutSplitter.addEventListener('pointerup', onUp);
@@ -86,7 +97,11 @@ layoutSplitter.addEventListener('pointerdown', (e) => {
 
 layoutSplitter.addEventListener('dblclick', () => {
   layoutEl.style.removeProperty('--chat-w');
-  try { localStorage.removeItem('optimia:chat-width'); } catch { /* sin persistencia */ }
+  try {
+    localStorage.removeItem('optimia:chat-width');
+  } catch {
+    /* sin persistencia */
+  }
 });
 
 function applyUi(ui) {
@@ -192,7 +207,7 @@ function setWaiting(isWaiting) {
   const canStop = isWaiting && wsOpen && Boolean(currentChatId);
   sendButton.textContent = canStop ? 'Parar' : 'Enviar';
   sendButton.classList.toggle('stop', canStop);
-  sendButton.disabled = isWaiting ? !canStop : (!currentChatId || !wsOpen);
+  sendButton.disabled = isWaiting ? !canStop : !currentChatId || !wsOpen;
   thinkingOrb.hidden = !isWaiting;
 }
 
@@ -244,7 +259,11 @@ function handleClaudeEvent(event) {
     let agentsChanged = false;
     if (event.subtype === 'task_started' && event.task_id) {
       if (!isAgentDismissed(currentChatId, event.task_id)) {
-        chatAgents.set(event.task_id, { chatId: currentChatId, description: event.description || 'Agente', lastStep: 'iniciando...' });
+        chatAgents.set(event.task_id, {
+          chatId: currentChatId,
+          description: event.description || 'Agente',
+          lastStep: 'iniciando...'
+        });
         agentsChanged = true;
       }
     } else if (event.subtype === 'task_progress' && chatAgents.has(event.task_id)) {
@@ -255,7 +274,11 @@ function handleClaudeEvent(event) {
       // actual output) can still be in flight — move the card to "ready to
       // review" instead of deleting it, so the user sees what it produced.
       const agent = chatAgents.get(event.task_id);
-      if (agent) { agent.finished = true; agent.status = event.patch.status; agentsChanged = true; }
+      if (agent) {
+        agent.finished = true;
+        agent.status = event.patch.status;
+        agentsChanged = true;
+      }
     } else if (event.subtype === 'task_notification' && event.task_id) {
       const agent = chatAgents.get(event.task_id);
       if (agent) {
@@ -265,7 +288,11 @@ function handleClaudeEvent(event) {
         agentsChanged = true;
       } else if (!isAgentDismissed(currentChatId, event.task_id)) {
         chatAgents.set(event.task_id, {
-          chatId: currentChatId, description: 'Agente', finished: true, status: event.status, summary: event.summary
+          chatId: currentChatId,
+          description: 'Agente',
+          finished: true,
+          status: event.status,
+          summary: event.summary
         });
         agentsChanged = true;
       }
@@ -275,11 +302,18 @@ function handleClaudeEvent(event) {
         // Only reap entries nothing else is tracking — once an agent is
         // finished it stays for review until the user dismisses it, even
         // after it drops out of Claude Code's own live-task snapshot.
-        if (agent.chatId === currentChatId && !agent.finished && !liveIds.has(id)) { chatAgents.delete(id); agentsChanged = true; }
+        if (agent.chatId === currentChatId && !agent.finished && !liveIds.has(id)) {
+          chatAgents.delete(id);
+          agentsChanged = true;
+        }
       }
       for (const t of event.tasks || []) {
         if (!chatAgents.has(t.task_id) && !isAgentDismissed(currentChatId, t.task_id)) {
-          chatAgents.set(t.task_id, { chatId: currentChatId, description: t.description || 'Agente', lastStep: 'iniciando...' });
+          chatAgents.set(t.task_id, {
+            chatId: currentChatId,
+            description: t.description || 'Agente',
+            lastStep: 'iniciando...'
+          });
           agentsChanged = true;
         }
       }
@@ -288,7 +322,8 @@ function handleClaudeEvent(event) {
   } else if (event.type === 'result') {
     currentAssistantBubble = null;
     setWaiting(false);
-    if (event.is_error) appendMessage('error', typeof event.result === 'string' ? event.result : 'Error en la sesión de Claude.');
+    if (event.is_error)
+      appendMessage('error', typeof event.result === 'string' ? event.result : 'Error en la sesión de Claude.');
     // NOTE: deliberately no chatAgents cleanup here. A `result` only closes
     // this turn's synchronous text reply — background agents (the whole
     // point of the Agent tool's backgrounding) keep running and report their
@@ -306,4 +341,3 @@ function handleClaudeEvent(event) {
     console.debug('[optimia] claude_event', event.type, event);
   }
 }
-

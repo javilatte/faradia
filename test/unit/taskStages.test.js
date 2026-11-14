@@ -18,7 +18,14 @@ const {
   decideAfterStage
 } = require('../../server/bridge/taskStages');
 
-const base = { id: 't1', title: 'Anadir botones', instruction: 'Anadir botones al tablero', status: 'pending', stageOutputs: {}, phases: [] };
+const base = {
+  id: 't1',
+  title: 'Anadir botones',
+  instruction: 'Anadir botones al tablero',
+  status: 'pending',
+  stageOutputs: {},
+  phases: []
+};
 
 test('firstStage: documentacion investiga primero, codigo planifica', () => {
   assert.equal(firstStage('documentation'), 'research');
@@ -39,7 +46,10 @@ test('validateDocOptions: exige formato valido y ruta relativa segura para edita
 
 test('canRun: una tarea pendiente puede lanzar plan o investigacion', () => {
   assert.equal(canRun(base, 'plan'), null);
-  assert.equal(canRun({ ...base, status: 'in_progress' }, 'plan'), 'la etapa solo puede lanzarse desde una tarea pendiente');
+  assert.equal(
+    canRun({ ...base, status: 'in_progress' }, 'plan'),
+    'la etapa solo puede lanzarse desde una tarea pendiente'
+  );
 });
 
 test('canRun: revision y commit solo cuando esta lista para revisar', () => {
@@ -100,7 +110,11 @@ test('decideAfterStage: plan sin texto no encadena y deja error', () => {
 });
 
 test('decideAfterStage: implementacion bloqueada pasa a awaiting_input con la pregunta', () => {
-  const { patch, next } = decideAfterStage(base, 'implement', { text: 'Necesito el color?', hasChanges: false, phaseStatus: 'blocked' });
+  const { patch, next } = decideAfterStage(base, 'implement', {
+    text: 'Necesito el color?',
+    hasChanges: false,
+    phaseStatus: 'blocked'
+  });
   assert.equal(next, null);
   assert.equal(patch.status, 'awaiting_input');
   assert.deepEqual(patch.pendingQuestion, { kind: 'implement-details', text: 'Necesito el color?' });
@@ -194,7 +208,13 @@ test('stageTools: implementacion puede editar y usar Bash sin pedir permiso por 
 
 test('stageDisallowed: bloquea commits, pushes y acciones destructivas, tambien con git -c', () => {
   const deny = stageDisallowed();
-  for (const rule of ['Bash(git commit*)', 'Bash(git push*)', 'Bash(git -c * commit*)', 'Bash(git reset --hard*)', 'Bash(rm *)']) {
+  for (const rule of [
+    'Bash(git commit*)',
+    'Bash(git push*)',
+    'Bash(git -c * commit*)',
+    'Bash(git reset --hard*)',
+    'Bash(rm *)'
+  ]) {
     assert.ok(deny.includes(rule), `falta ${rule}`);
   }
 });
@@ -202,13 +222,18 @@ test('stageDisallowed: bloquea commits, pushes y acciones destructivas, tambien 
 test('stageTools: las etapas de lectura pueden consultar tokensave pero no editarlo', () => {
   const plan = stageTools('plan');
   assert.ok(plan.includes('mcp__tokensave__tokensave_context'));
-  assert.ok(!plan.some((t) => t.startsWith('mcp__tokensave') && /str_replace|insert_at|replace_symbol|multi_str/.test(t)));
+  assert.ok(
+    !plan.some((t) => t.startsWith('mcp__tokensave') && /str_replace|insert_at|replace_symbol|multi_str/.test(t))
+  );
 });
 
 test('approvalRule: Bash se aprueba solo para el comando literal', () => {
   assert.equal(approvalRule('Bash', 'git ls-files src'), 'Bash(git ls-files src)');
   assert.equal(approvalRule('Bash', 'rm -rf *'), null);
-  assert.equal(approvalRule('Bash', "node -e \"console.log('ok')\" 2>&1 | tail -1"), "Bash(node -e \"console.log('ok')\" 2>&1 | tail -1)");
+  assert.equal(
+    approvalRule('Bash', 'node -e "console.log(\'ok\')" 2>&1 | tail -1'),
+    'Bash(node -e "console.log(\'ok\')" 2>&1 | tail -1)'
+  );
   assert.equal(approvalRule('Bash', 'a\nb'), null);
   assert.equal(approvalRule('Bash', ''), null);
   assert.equal(approvalRule('Bash', undefined), null);

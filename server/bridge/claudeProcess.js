@@ -17,19 +17,27 @@ const crypto = require('crypto');
  * not grant itself extra permissions.
  */
 class ClaudeSession extends EventEmitter {
-  constructor({ projectRoot, sessionId, resumeSessionId, model, effort, baseUrl, authHeader, systemPrompt, mcpConfigPath, extraAllowedTools = [], disallowedTools = [], gitHooksPath } = {}) {
+  constructor({
+    projectRoot,
+    sessionId,
+    resumeSessionId,
+    model,
+    effort,
+    baseUrl,
+    authHeader,
+    systemPrompt,
+    mcpConfigPath,
+    extraAllowedTools = [],
+    disallowedTools = [],
+    gitHooksPath
+  } = {}) {
     super();
     this.projectRoot = projectRoot;
     this.sessionId = resumeSessionId || sessionId || crypto.randomUUID();
     this._buffer = '';
     this._exited = false;
 
-    const args = [
-      '-p',
-      '--input-format', 'stream-json',
-      '--output-format', 'stream-json',
-      '--verbose'
-    ];
+    const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'];
     // Resuming a prior conversation pins its identity via --resume; a fresh
     // session instead picks its own --session-id so we can persist it.
     if (resumeSessionId) {

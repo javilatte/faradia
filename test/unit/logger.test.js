@@ -14,7 +14,10 @@ test('logger: escribe un evento JSON por linea en .optimia/logs/optimia.log', (t
   logger.info('task.stage.start', { taskId: 't1', stage: 'plan' });
   logger.warn('task.stage.denied', { taskId: 't1', tool: 'Bash' });
 
-  const lines = fs.readFileSync(path.join(dir, '.optimia', 'logs', 'optimia.log'), 'utf8').trim().split('\n');
+  const lines = fs
+    .readFileSync(path.join(dir, '.optimia', 'logs', 'optimia.log'), 'utf8')
+    .trim()
+    .split('\n');
   assert.equal(lines.length, 2);
   const first = JSON.parse(lines[0]);
   assert.equal(first.event, 'task.stage.start');
@@ -48,5 +51,8 @@ test('readRecent: devuelve las entradas más recientes primero, con límite', (t
   logger.info('b.second', {});
   logger.info('c.third', {});
   const recent = logger.readRecent(2);
-  assert.deepEqual(recent.map((e) => e.event), ['c.third', 'b.second']);
+  assert.deepEqual(
+    recent.map((e) => e.event),
+    ['c.third', 'b.second']
+  );
 });

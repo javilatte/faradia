@@ -27,16 +27,25 @@ function connect() {
       }
     } else if (msg.type === 'chat_renamed') {
       const meta = chatsMeta.get(msg.chatId);
-      if (meta) { meta.title = msg.title; renderChatTabs(); }
+      if (meta) {
+        meta.title = msg.title;
+        renderChatTabs();
+      }
     } else if (msg.type === 'chat_stopped') {
       if (msg.chatId === currentChatId) {
         currentAssistantBubble = null;
-        appendMessage('system', 'Consulta parada. La conversacion se conserva; el siguiente mensaje continua desde aqui.');
+        appendMessage(
+          'system',
+          'Consulta parada. La conversacion se conserva; el siguiente mensaje continua desde aqui.'
+        );
         setWaiting(false);
       }
     } else if (msg.type === 'claude_exit') {
       if (msg.chatId === currentChatId) {
-        appendMessage('system', 'La sesion de Claude Code para este chat termino. Se reanudara con el siguiente mensaje.');
+        appendMessage(
+          'system',
+          'La sesion de Claude Code para este chat termino. Se reanudara con el siguiente mensaje.'
+        );
         setWaiting(false);
       }
     } else if (msg.type === 'client_error') {
@@ -45,12 +54,18 @@ function connect() {
       setWaiting(false);
     } else if (msg.type === 'permission_needed') {
       if (msg.scope === 'chat' ? msg.id === currentChatId : true) {
-        appendMessage('system', `Permiso denegado: ${msg.toolName}. Abriendo la terminal para continuar de forma interactiva.`);
+        appendMessage(
+          'system',
+          `Permiso denegado: ${msg.toolName}. Abriendo la terminal para continuar de forma interactiva.`
+        );
       }
       if (window.TerminalView) window.TerminalView.flagAttention();
     } else if (msg.type === 'terminal_handoff') {
       if (msg.scope === 'chat' ? msg.id === currentChatId : true) {
-        appendMessage('system', `Abriendo la terminal (${msg.toolName} necesitaba permiso). Al cerrarla, esta conversacion sigue aqui.`);
+        appendMessage(
+          'system',
+          `Abriendo la terminal (${msg.toolName} necesitaba permiso). Al cerrarla, esta conversacion sigue aqui.`
+        );
         setWaiting(false);
       }
       if (msg.scope === 'chat') {
@@ -65,7 +80,10 @@ function connect() {
         // on the next message sent in this chat).
         let agentsChanged = false;
         for (const [id, agent] of chatAgents) {
-          if (agent.chatId === msg.id && !agent.interrupted && !agent.finished) { agent.interrupted = true; agentsChanged = true; }
+          if (agent.chatId === msg.id && !agent.interrupted && !agent.finished) {
+            agent.interrupted = true;
+            agentsChanged = true;
+          }
         }
         if (agentsChanged) renderTasks();
       }
@@ -112,4 +130,3 @@ function connect() {
 
   ws.addEventListener('error', () => ws.close());
 }
-

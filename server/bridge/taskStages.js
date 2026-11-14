@@ -39,21 +39,46 @@ const ASK_RULE = (phase) =>
 // lo que no puede hacer se bloquea con STAGE_DISALLOWED (y el hook de git para
 // commits y pushes), no con una lista blanca que obliga a aprobar cada comando.
 const READ_TOOLS = [
-  'Read', 'Glob', 'Grep', 'LS', 'WebSearch', 'WebFetch', 'Bash',
-  'mcp__tokensave__tokensave_context', 'mcp__tokensave__tokensave_search',
-  'mcp__tokensave__tokensave_node', 'mcp__tokensave__tokensave_callers',
-  'mcp__tokensave__tokensave_callees', 'mcp__tokensave__tokensave_impact',
-  'mcp__tokensave__tokensave_files', 'mcp__tokensave__tokensave_dependencies'
+  'Read',
+  'Glob',
+  'Grep',
+  'LS',
+  'WebSearch',
+  'WebFetch',
+  'Bash',
+  'mcp__tokensave__tokensave_context',
+  'mcp__tokensave__tokensave_search',
+  'mcp__tokensave__tokensave_node',
+  'mcp__tokensave__tokensave_callers',
+  'mcp__tokensave__tokensave_callees',
+  'mcp__tokensave__tokensave_impact',
+  'mcp__tokensave__tokensave_files',
+  'mcp__tokensave__tokensave_dependencies'
 ];
 const EDIT_TOOLS = ['Edit', 'MultiEdit', 'Write'];
 // Denegaciones que ganan sobre cualquier allow. Coinciden con el texto del
 // comando, asi que tambien van las variantes con `git -c ...`.
 const STAGE_DISALLOWED = [
-  'Bash(rm *)', 'Bash(sudo *)', 'Bash(chmod -R *)', 'Bash(find * -delete*)',
-  'Bash(git reset --hard*)', 'Bash(git clean *)', 'Bash(git checkout -- *)', 'Bash(git restore *)',
-  'Bash(git branch -D *)', 'Bash(git branch -d *)', 'Bash(git worktree remove *)', 'Bash(git stash drop*)',
-  'Bash(git commit*)', 'Bash(git push*)', 'Bash(git merge*)', 'Bash(git rebase*)',
-  'Bash(git -c * commit*)', 'Bash(git -c * push*)', 'Bash(git -c * merge*)', 'Bash(git -c * rebase*)'
+  'Bash(rm *)',
+  'Bash(sudo *)',
+  'Bash(chmod -R *)',
+  'Bash(find * -delete*)',
+  'Bash(git reset --hard*)',
+  'Bash(git clean *)',
+  'Bash(git checkout -- *)',
+  'Bash(git restore *)',
+  'Bash(git branch -D *)',
+  'Bash(git branch -d *)',
+  'Bash(git worktree remove *)',
+  'Bash(git stash drop*)',
+  'Bash(git commit*)',
+  'Bash(git push*)',
+  'Bash(git merge*)',
+  'Bash(git rebase*)',
+  'Bash(git -c * commit*)',
+  'Bash(git -c * push*)',
+  'Bash(git -c * merge*)',
+  'Bash(git -c * rebase*)'
 ];
 const STAGE_TOOLS = {
   plan: READ_TOOLS,
@@ -87,7 +112,8 @@ function approvalRule(tool, command) {
 // Claude Code pide aprobacion para cualquier redireccion a /dev/null aunque la
 // regla coincida, asi que una etapa que la use se bloquea sin remedio desde la
 // tarjeta. Se le pide evitarla en todas las etapas.
-const SHELL_RULE = 'Al ejecutar comandos no uses redirecciones a /dev/null (2>/dev/null ni >/dev/null): para silenciar errores usa 2>&1.';
+const SHELL_RULE =
+  'Al ejecutar comandos no uses redirecciones a /dev/null (2>/dev/null ni >/dev/null): para silenciar errores usa 2>&1.';
 
 function firstStage(type) {
   return type === 'documentation' ? 'research' : 'plan';
@@ -144,9 +170,10 @@ function canRun(task, stage, { answer, docOptions } = {}) {
 function buildWritePrompt(task, { mode, format, targetPath, template }, research) {
   const goal = task.instruction || task.title;
   const tpl = template ? ` Usa la plantilla ${template} como base de estructura y estilo.` : '';
-  const fmtNote = format === 'docx'
-    ? 'Formato: docx. Genera el fichero con la skill docx si esta disponible; si no, dilo claramente.'
-    : `Formato: ${format}.`;
+  const fmtNote =
+    format === 'docx'
+      ? 'Formato: docx. Genera el fichero con la skill docx si esta disponible; si no, dilo claramente.'
+      : `Formato: ${format}.`;
   const notes = research ? `Notas de investigacion:\n${research}` : 'No hay notas de investigacion previas.';
 
   if (mode === 'edit') {
@@ -224,11 +251,12 @@ function buildStageBody(task, stage, { docOptions } = {}) {
 }
 
 function answerPrompt(answer, stage) {
-  const tail = {
-    plan: 'Continua la planificacion con esta respuesta y termina con el plan final.',
-    research: 'Continua la investigacion con esta respuesta y termina con las notas estructuradas.',
-    implement: 'Continua la implementacion y termina cuando el cambio este completo.'
-  }[stage] || 'Continua y termina tu etapa.';
+  const tail =
+    {
+      plan: 'Continua la planificacion con esta respuesta y termina con el plan final.',
+      research: 'Continua la investigacion con esta respuesta y termina con las notas estructuradas.',
+      implement: 'Continua la implementacion y termina cuando el cambio este completo.'
+    }[stage] || 'Continua y termina tu etapa.';
   return `Respuesta del usuario a tus preguntas:\n${answer.trim()}\n\n${tail}`;
 }
 
@@ -263,7 +291,10 @@ function decideAfterStage(task, stage, { text = '', hasChanges = false, phaseSta
     if (!text.trim()) return done({ status: 'pending', error: 'la investigacion no devolvio texto' });
     return done({
       status: 'awaiting_input',
-      pendingQuestion: { kind: 'doc-options', text: 'Investigacion lista. Elige el modo de salida, el formato y el destino.' }
+      pendingQuestion: {
+        kind: 'doc-options',
+        text: 'Investigacion lista. Elige el modo de salida, el formato y el destino.'
+      }
     });
   }
   if (stage === 'implement') {

@@ -57,7 +57,10 @@ test('buildSessionOptions: composes instructions + project memory into systemPro
 test('buildSessionOptions: reads memory from projectRoot (not cwd) for a task running in a worktree', (t) => {
   const projectRoot = mkTmpDir('sessopts-main');
   const worktreeCwd = mkTmpDir('sessopts-worktree');
-  t.after(() => { rmTmpDir(projectRoot); rmTmpDir(worktreeCwd); });
+  t.after(() => {
+    rmTmpDir(projectRoot);
+    rmTmpDir(worktreeCwd);
+  });
 
   saveMemory(projectRoot, 'memoria del proyecto principal');
   const settings = defaultSettings();
@@ -67,16 +70,24 @@ test('buildSessionOptions: reads memory from projectRoot (not cwd) for a task ru
   assert.match(opts.systemPrompt, /memoria del proyecto principal/); // but memory comes from the main project
 });
 
-test('buildSessionOptions: local mode aliases the Ollama model and sets baseUrl/authHeader', { skip: !ollamaAvailable() && 'ollama not available in this environment' }, (t) => {
-  const dir = mkTmpDir('sessopts');
-  t.after(() => rmTmpDir(dir));
+test(
+  'buildSessionOptions: local mode aliases the Ollama model and sets baseUrl/authHeader',
+  { skip: !ollamaAvailable() && 'ollama not available in this environment' },
+  (t) => {
+    const dir = mkTmpDir('sessopts');
+    t.after(() => rmTmpDir(dir));
 
-  const settings = defaultSettings();
-  settings.ai.mode = 'local';
-  settings.ai.localAi = { url: 'http://localhost:11434', model: 'qwen2.5:0.5b', authHeader: 'Authorization: Bearer x' };
+    const settings = defaultSettings();
+    settings.ai.mode = 'local';
+    settings.ai.localAi = {
+      url: 'http://localhost:11434',
+      model: 'qwen2.5:0.5b',
+      authHeader: 'Authorization: Bearer x'
+    };
 
-  const opts = buildSessionOptions(settings, dir);
-  assert.equal(opts.baseUrl, 'http://localhost:11434');
-  assert.equal(opts.authHeader, 'Authorization: Bearer x');
-  assert.equal(opts.model, ALIAS_MODEL_NAME);
-});
+    const opts = buildSessionOptions(settings, dir);
+    assert.equal(opts.baseUrl, 'http://localhost:11434');
+    assert.equal(opts.authHeader, 'Authorization: Bearer x');
+    assert.equal(opts.model, ALIAS_MODEL_NAME);
+  }
+);

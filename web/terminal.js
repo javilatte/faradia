@@ -44,9 +44,15 @@ terminalOverlay.addEventListener('click', (ev) => {
 });
 
 window.TerminalView = {
-  isOpen() { return !terminalOverlay.hidden; },
-  open() { openTerminal(); },
-  flagAttention() { terminalButton.classList.add('needs-attention'); },
+  isOpen() {
+    return !terminalOverlay.hidden;
+  },
+  open() {
+    openTerminal();
+  },
+  flagAttention() {
+    terminalButton.classList.add('needs-attention');
+  },
   handleScrollback(data) {
     ensureTerminal();
     term.write(data);

@@ -7,18 +7,34 @@ const path = require('path');
 // now ("No-go files & commands" only edits the deny side). Mirrors what the
 // old wizard used to generate per project.
 const DEFAULT_ALLOW = [
-  'Read', 'Glob', 'Grep', 'LS', 'Edit', 'MultiEdit',
-  'Write(src/**)', 'Write(tests/**)', 'Write(docs/**)',
-  'Bash(npm run *)', 'Bash(npm test *)', 'Bash(npx tsc *)', 'Bash(npx prettier *)', 'Bash(npx eslint *)',
-  'Bash(git status)', 'Bash(git diff *)', 'Bash(git log *)', 'Bash(git add *)',
+  'Read',
+  'Glob',
+  'Grep',
+  'LS',
+  'Edit',
+  'MultiEdit',
+  'Write(src/**)',
+  'Write(tests/**)',
+  'Write(docs/**)',
+  'Bash(npm run *)',
+  'Bash(npm test *)',
+  'Bash(npx tsc *)',
+  'Bash(npx prettier *)',
+  'Bash(npx eslint *)',
+  'Bash(git status)',
+  'Bash(git diff *)',
+  'Bash(git log *)',
+  'Bash(git add *)',
   // Pre-granted so background work (task worktrees, subagents spawned via
   // the Agent tool) runs end-to-end without hitting the terminal handoff
   // for routine research — only a genuinely unexpected tool should still
   // deny and hand off.
-  'WebSearch', 'WebFetch',
+  'WebSearch',
+  'WebFetch',
   // Names verified against a real --mcp-config session's stream-json "init"
   // event (mcp__<server-key-in-mcp.json>__<tool-name>), not guessed.
-  'mcp__optimia-tasks__create_task', 'mcp__optimia-tasks__update_task_progress'
+  'mcp__optimia-tasks__create_task',
+  'mcp__optimia-tasks__update_task_progress'
 ];
 const DEFAULT_MODE = 'acceptEdits';
 
@@ -37,7 +53,11 @@ function syncClaudeSettings(projectRoot, noGo) {
   const file = claudeSettingsPath(projectRoot);
   let current = {};
   if (fs.existsSync(file)) {
-    try { current = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { current = {}; }
+    try {
+      current = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      current = {};
+    }
   }
   const next = {
     ...current,
@@ -51,10 +71,9 @@ function syncClaudeSettings(projectRoot, noGo) {
       // Union, not "existing OR default": a project that already has its
       // own settings.json still picks up new DEFAULT_ALLOW entries added
       // later here, without ever dropping anything the user added.
-      allow: Array.from(new Set([
-        ...(Array.isArray(current.permissions?.allow) ? current.permissions.allow : []),
-        ...DEFAULT_ALLOW
-      ])),
+      allow: Array.from(
+        new Set([...(Array.isArray(current.permissions?.allow) ? current.permissions.allow : []), ...DEFAULT_ALLOW])
+      ),
       deny: noGo,
       defaultMode: current.permissions?.defaultMode || DEFAULT_MODE
     }

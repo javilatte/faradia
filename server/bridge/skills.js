@@ -17,7 +17,8 @@ function readFrontmatterField(text, field) {
 function listSkills(projectRoot) {
   const dir = skillsDir(projectRoot);
   if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir, { withFileTypes: true })
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => {
       const skillFile = path.join(dir, entry.name, 'SKILL.md');

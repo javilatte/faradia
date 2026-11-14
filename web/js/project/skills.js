@@ -49,7 +49,10 @@ function renderSkillSuggest() {
       row.appendChild(desc);
     }
     // mousedown + preventDefault evita que el textarea pierda el foco antes de insertar.
-    row.addEventListener('mousedown', (e) => { e.preventDefault(); applySkillSuggest(i); });
+    row.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      applySkillSuggest(i);
+    });
     skillSuggest.appendChild(row);
   });
   skillSuggest.hidden = false;
@@ -99,15 +102,20 @@ async function updateSkillSuggest() {
   const range = currentSkillQuery();
   if (!range) return hideSkillSuggest();
   const token = ++skillSuggestToken;
-  const skills = await fetch('/api/skills').then((r) => r.json()).catch(() => []);
+  const skills = await fetch('/api/skills')
+    .then((r) => r.json())
+    .catch(() => []);
   if (token !== skillSuggestToken) return;
   const q = range.query;
   const all = [...skills.map((s) => ({ ...s, source: 'project' })), ...CLAUDE_COMMANDS];
   const matches = all
     .filter((s) => s.slug.includes(q) || (s.name || '').toLowerCase().includes(q))
-    .sort((a, b) => Number(!a.slug.startsWith(q)) - Number(!b.slug.startsWith(q))
-      || (a.source === b.source ? 0 : a.source === 'project' ? -1 : 1)
-      || a.slug.localeCompare(b.slug))
+    .sort(
+      (a, b) =>
+        Number(!a.slug.startsWith(q)) - Number(!b.slug.startsWith(q)) ||
+        (a.source === b.source ? 0 : a.source === 'project' ? -1 : 1) ||
+        a.slug.localeCompare(b.slug)
+    )
     .slice(0, 12);
   if (matches.length === 0) return hideSkillSuggest();
   skillSuggestItems = matches;
@@ -155,4 +163,3 @@ input.addEventListener('input', () => {
 
 input.addEventListener('blur', hideSkillSuggest);
 input.addEventListener('click', updateSkillSuggest);
-

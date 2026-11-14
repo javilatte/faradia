@@ -43,7 +43,10 @@ test('_onStdout: parses multiple NDJSON lines delivered in one chunk', () => {
 
   session._onStdout(Buffer.from('{"type":"a"}\n{"type":"b"}\n{"type":"c"}\n'));
 
-  assert.deepEqual(events.map((e) => e.type), ['a', 'b', 'c']);
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ['a', 'b', 'c']
+  );
 });
 
 test('_onStdout: buffers a line split across two stdout chunks until the newline arrives', () => {
@@ -65,7 +68,10 @@ test('_onStdout: skips blank lines without erroring', () => {
   session.on('event', (e) => events.push(e));
 
   session._onStdout(Buffer.from('\n{"type":"x"}\n\n'));
-  assert.deepEqual(events.map((e) => e.type), ['x']);
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ['x']
+  );
 });
 
 test('_onStdout: an unparseable line emits "error" and does not break parsing of the next line', () => {
@@ -79,13 +85,22 @@ test('_onStdout: an unparseable line emits "error" and does not break parsing of
 
   assert.equal(errors.length, 1);
   assert.match(errors[0].message, /unparseable stream-json line/);
-  assert.deepEqual(events.map((e) => e.type), ['ok']);
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ['ok']
+  );
 });
 
 test('send: text-only message writes a single text content block', () => {
   const session = makeBareSession();
   let written = null;
-  session.proc = { stdin: { write: (line) => { written = line; } } };
+  session.proc = {
+    stdin: {
+      write: (line) => {
+        written = line;
+      }
+    }
+  };
 
   session.send('hola');
 
@@ -97,7 +112,13 @@ test('send: text-only message writes a single text content block', () => {
 test('send: images are placed before the text block as base64 content blocks', () => {
   const session = makeBareSession();
   let written = null;
-  session.proc = { stdin: { write: (line) => { written = line; } } };
+  session.proc = {
+    stdin: {
+      write: (line) => {
+        written = line;
+      }
+    }
+  };
 
   session.send('que hay en la imagen?', [{ mediaType: 'image/png', base64Data: 'QUJD' }]);
 
@@ -112,7 +133,13 @@ test('send: throws once the session has exited, and never touches stdin', () => 
   const session = makeBareSession();
   session._exited = true;
   let writeCalled = false;
-  session.proc = { stdin: { write: () => { writeCalled = true; } } };
+  session.proc = {
+    stdin: {
+      write: () => {
+        writeCalled = true;
+      }
+    }
+  };
 
   assert.throws(() => session.send('hola'), /already exited/);
   assert.equal(writeCalled, false);
@@ -122,17 +149,21 @@ test('send: throws once the session has exited, and never touches stdin', () => 
 // stdin immediately, with no message ever sent, makes the real `claude`
 // binary exit right away without starting a conversation turn — cheap and
 // real, no API usage, same anti-mock approach as the rest of this suite.
-test('constructor: with no resumeSessionId, spawns with a generated --session-id (no --resume)', needsClaude, async (t) => {
-  const session = new ClaudeSession({ projectRoot: process.cwd() });
-  t.after(() => session.kill());
-  session.close(); // no message ever sent -> the real binary exits immediately, no API usage
+test(
+  'constructor: with no resumeSessionId, spawns with a generated --session-id (no --resume)',
+  needsClaude,
+  async (t) => {
+    const session = new ClaudeSession({ projectRoot: process.cwd() });
+    t.after(() => session.kill());
+    session.close(); // no message ever sent -> the real binary exits immediately, no API usage
 
-  await new Promise((resolve) => session.on('exit', resolve));
+    await new Promise((resolve) => session.on('exit', resolve));
 
-  assert.ok(session.proc.spawnargs.includes('--session-id'));
-  assert.ok(session.proc.spawnargs.includes(session.sessionId));
-  assert.ok(!session.proc.spawnargs.includes('--resume'));
-});
+    assert.ok(session.proc.spawnargs.includes('--session-id'));
+    assert.ok(session.proc.spawnargs.includes(session.sessionId));
+    assert.ok(!session.proc.spawnargs.includes('--resume'));
+  }
+);
 
 test('constructor: with resumeSessionId, spawns with --resume <id> (no --session-id)', needsClaude, async (t) => {
   const crypto = require('crypto');
@@ -149,28 +180,36 @@ test('constructor: with resumeSessionId, spawns with --resume <id> (no --session
   assert.ok(!session.proc.spawnargs.includes('--session-id'));
 });
 
-test('constructor: with mcpConfigPath, spawns with --mcp-config and --allowedTools for the MCP tasks tools', needsClaude, async (t) => {
-  const session = new ClaudeSession({ projectRoot: process.cwd(), mcpConfigPath: '/tmp/does-not-exist-mcp.json' });
-  t.after(() => session.kill());
-  session.close();
+test(
+  'constructor: with mcpConfigPath, spawns with --mcp-config and --allowedTools for the MCP tasks tools',
+  needsClaude,
+  async (t) => {
+    const session = new ClaudeSession({ projectRoot: process.cwd(), mcpConfigPath: '/tmp/does-not-exist-mcp.json' });
+    t.after(() => session.kill());
+    session.close();
 
-  await new Promise((resolve) => session.on('exit', resolve));
+    await new Promise((resolve) => session.on('exit', resolve));
 
-  assert.ok(session.proc.spawnargs.includes('--mcp-config'));
-  assert.ok(session.proc.spawnargs.includes('/tmp/does-not-exist-mcp.json'));
-  assert.ok(session.proc.spawnargs.includes('--allowedTools'));
-  const idx = session.proc.spawnargs.indexOf('--allowedTools');
-  assert.match(session.proc.spawnargs[idx + 1], /mcp__optimia-tasks__create_task/);
-  assert.match(session.proc.spawnargs[idx + 1], /mcp__optimia-tasks__update_task_progress/);
-});
+    assert.ok(session.proc.spawnargs.includes('--mcp-config'));
+    assert.ok(session.proc.spawnargs.includes('/tmp/does-not-exist-mcp.json'));
+    assert.ok(session.proc.spawnargs.includes('--allowedTools'));
+    const idx = session.proc.spawnargs.indexOf('--allowedTools');
+    assert.match(session.proc.spawnargs[idx + 1], /mcp__optimia-tasks__create_task/);
+    assert.match(session.proc.spawnargs[idx + 1], /mcp__optimia-tasks__update_task_progress/);
+  }
+);
 
-test('constructor: without mcpConfigPath, spawns with neither --mcp-config nor --allowedTools', needsClaude, async (t) => {
-  const session = new ClaudeSession({ projectRoot: process.cwd() });
-  t.after(() => session.kill());
-  session.close();
+test(
+  'constructor: without mcpConfigPath, spawns with neither --mcp-config nor --allowedTools',
+  needsClaude,
+  async (t) => {
+    const session = new ClaudeSession({ projectRoot: process.cwd() });
+    t.after(() => session.kill());
+    session.close();
 
-  await new Promise((resolve) => session.on('exit', resolve));
+    await new Promise((resolve) => session.on('exit', resolve));
 
-  assert.ok(!session.proc.spawnargs.includes('--mcp-config'));
-  assert.ok(!session.proc.spawnargs.includes('--allowedTools'));
-});
+    assert.ok(!session.proc.spawnargs.includes('--mcp-config'));
+    assert.ok(!session.proc.spawnargs.includes('--allowedTools'));
+  }
+);

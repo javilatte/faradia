@@ -4,7 +4,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
-const { syncClaudeSettings, claudeSettingsPath, DEFAULT_ALLOW, DEFAULT_MODE } = require('../../server/bridge/claudeSettingsSync');
+const {
+  syncClaudeSettings,
+  claudeSettingsPath,
+  DEFAULT_ALLOW,
+  DEFAULT_MODE
+} = require('../../server/bridge/claudeSettingsSync');
 
 test('syncClaudeSettings: creates .claude/settings.json with deny list and defaults when none exists', (t) => {
   const dir = mkTmpDir('claudesync');
@@ -27,10 +32,13 @@ test('syncClaudeSettings: preserves unrelated top-level keys and custom allow/de
   t.after(() => rmTmpDir(dir));
 
   fs.mkdirSync(`${dir}/.claude`, { recursive: true });
-  fs.writeFileSync(claudeSettingsPath(dir), JSON.stringify({
-    someOtherKey: 'keep-me',
-    permissions: { allow: ['Read', 'Bash(my-custom-script *)'], deny: ['old-deny'], defaultMode: 'plan' }
-  }));
+  fs.writeFileSync(
+    claudeSettingsPath(dir),
+    JSON.stringify({
+      someOtherKey: 'keep-me',
+      permissions: { allow: ['Read', 'Bash(my-custom-script *)'], deny: ['old-deny'], defaultMode: 'plan' }
+    })
+  );
 
   const result = syncClaudeSettings(dir, ['new-deny']);
 

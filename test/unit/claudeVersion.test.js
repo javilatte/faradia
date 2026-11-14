@@ -18,12 +18,16 @@ function claudeAvailable() {
   }
 }
 
-test('checkClaudeCapabilities: the real claude CLI on this machine has all required flags', { skip: !claudeAvailable() && 'claude CLI not installed in this environment' }, () => {
-  const result = checkClaudeCapabilities();
-  assert.equal(result.error, null);
-  assert.deepEqual(result.missing, []);
-  assert.equal(result.ok, true);
-});
+test(
+  'checkClaudeCapabilities: the real claude CLI on this machine has all required flags',
+  { skip: !claudeAvailable() && 'claude CLI not installed in this environment' },
+  () => {
+    const result = checkClaudeCapabilities();
+    assert.equal(result.error, null);
+    assert.deepEqual(result.missing, []);
+    assert.equal(result.ok, true);
+  }
+);
 
 test('checkClaudeCapabilities: a nonexistent command reports ok=false with all flags missing', () => {
   const result = checkClaudeCapabilities('__optimia_nonexistent_cli__');

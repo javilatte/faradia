@@ -13,7 +13,10 @@ const { ensureOllamaAlias, ALIAS_MODEL_NAME, listLocalModels } = require('../../
 function pulledOllamaModel() {
   try {
     const out = execFileSync('ollama', ['list'], { encoding: 'utf8' });
-    const line = out.split('\n').slice(1).find((l) => l.trim());
+    const line = out
+      .split('\n')
+      .slice(1)
+      .find((l) => l.trim());
     return line ? line.trim().split(/\s+/)[0] : null;
   } catch {
     return null;
@@ -22,29 +25,38 @@ function pulledOllamaModel() {
 
 const model = pulledOllamaModel();
 
-test('ensureOllamaAlias: aliases a real pulled model without throwing', { skip: !model && 'no ollama model pulled in this environment' }, () => {
-  assert.doesNotThrow(() => ensureOllamaAlias(model));
-  const aliases = execFileSync('ollama', ['list'], { encoding: 'utf8' });
-  assert.match(aliases, new RegExp(ALIAS_MODEL_NAME.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')));
-});
-
-test('ensureOllamaAlias: throws a descriptive error for a model that was never pulled', { skip: !model && 'ollama not available in this environment' }, () => {
-  assert.throws(
-    () => ensureOllamaAlias('__optimia_nonexistent_model_xyz__'),
-    /could not alias local model/
-  );
-});
-
-test('listLocalModels: lists real pulled models with a name and size, excluding the internal alias', { skip: !model && 'ollama not available in this environment' }, () => {
-  const models = listLocalModels();
-  assert.ok(models.length > 0);
-  for (const m of models) {
-    assert.equal(typeof m.name, 'string');
-    assert.equal(typeof m.size, 'string');
-    assert.notEqual(m.name, `${ALIAS_MODEL_NAME}:latest`);
-    assert.notEqual(m.name, ALIAS_MODEL_NAME);
+test(
+  'ensureOllamaAlias: aliases a real pulled model without throwing',
+  { skip: !model && 'no ollama model pulled in this environment' },
+  () => {
+    assert.doesNotThrow(() => ensureOllamaAlias(model));
+    const aliases = execFileSync('ollama', ['list'], { encoding: 'utf8' });
+    assert.match(aliases, new RegExp(ALIAS_MODEL_NAME.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')));
   }
-});
+);
+
+test(
+  'ensureOllamaAlias: throws a descriptive error for a model that was never pulled',
+  { skip: !model && 'ollama not available in this environment' },
+  () => {
+    assert.throws(() => ensureOllamaAlias('__optimia_nonexistent_model_xyz__'), /could not alias local model/);
+  }
+);
+
+test(
+  'listLocalModels: lists real pulled models with a name and size, excluding the internal alias',
+  { skip: !model && 'ollama not available in this environment' },
+  () => {
+    const models = listLocalModels();
+    assert.ok(models.length > 0);
+    for (const m of models) {
+      assert.equal(typeof m.name, 'string');
+      assert.equal(typeof m.size, 'string');
+      assert.notEqual(m.name, `${ALIAS_MODEL_NAME}:latest`);
+      assert.notEqual(m.name, ALIAS_MODEL_NAME);
+    }
+  }
+);
 
 test('listLocalModels: returns an empty array when the ollama binary is not available', () => {
   const originalPath = process.env.PATH;

@@ -14,7 +14,18 @@ const { PtySession } = require('./bridge/ptySession');
 const { syncClaudeSettings } = require('./bridge/claudeSettingsSync');
 const { buildMigrationPreview, applyMigration } = require('./migrate/legacyImport');
 const { buildSessionOptions } = require('./bridge/sessionOptions');
-const { createTaskWorktree, stageForReview, removeTaskWorktree, listLocalBranches, branchNameProblem, commitTaskWorktree, worktreeIsClean, mergeTaskBranch, filesChangedBy, changedFiles } = require('./bridge/worktree');
+const {
+  createTaskWorktree,
+  stageForReview,
+  removeTaskWorktree,
+  listLocalBranches,
+  branchNameProblem,
+  commitTaskWorktree,
+  worktreeIsClean,
+  mergeTaskBranch,
+  filesChangedBy,
+  changedFiles
+} = require('./bridge/worktree');
 const { pickFile } = require('./bridge/filePicker');
 const logger = require('./bridge/logger');
 
@@ -29,7 +40,17 @@ function relPath(base, p) {
 }
 const { ensureGitGuardHooks } = require('./bridge/gitGuard');
 const { listFilesModifiedSince, resolveInside, readPreview, openWithSystem } = require('./bridge/taskFiles');
-const { STAGE_PHASE, firstStage, stageTools, stageDisallowed, approvalRule, canRun, buildStagePrompt, answerPrompt, decideAfterStage } = require('./bridge/taskStages');
+const {
+  STAGE_PHASE,
+  firstStage,
+  stageTools,
+  stageDisallowed,
+  approvalRule,
+  canRun,
+  buildStagePrompt,
+  answerPrompt,
+  decideAfterStage
+} = require('./bridge/taskStages');
 const { loadMemory, saveMemory } = require('./store/memoryStore');
 const { listSkills, createSkill } = require('./bridge/skills');
 const { getClaudeAuthStatus, openAuthLoginInTerminal } = require('./bridge/claudeAuth');
@@ -105,16 +126,25 @@ function sendJson(res, status, body) {
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
-    req.on('data', (chunk) => { raw += chunk; });
+    req.on('data', (chunk) => {
+      raw += chunk;
+    });
     req.on('end', () => {
       if (!raw) return resolve({});
-      try { resolve(JSON.parse(raw)); } catch (err) { reject(err); }
+      try {
+        resolve(JSON.parse(raw));
+      } catch (err) {
+        reject(err);
+      }
     });
     req.on('error', reject);
   });
 }
 
-function createApp(projectRoot, { onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskRun, onTaskApprove, onChatDeleted } = {}) {
+function createApp(
+  projectRoot,
+  { onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskRun, onTaskApprove, onChatDeleted } = {}
+) {
   return async function handler(req, res) {
     const url = new URL(req.url, 'http://localhost');
 
@@ -172,7 +202,8 @@ function createApp(projectRoot, { onTaskCreated, onTaskUpdated, onTaskDeleted, o
 
     if (url.pathname === '/api/memory' && req.method === 'PUT') {
       const body = await readJsonBody(req).catch(() => null);
-      if (!body || typeof body.content !== 'string') return sendJson(res, 400, { error: 'content (string) is required' });
+      if (!body || typeof body.content !== 'string')
+        return sendJson(res, 400, { error: 'content (string) is required' });
       saveMemory(projectRoot, body.content);
       return sendJson(res, 200, { content: body.content });
     }
@@ -206,7 +237,8 @@ function createApp(projectRoot, { onTaskCreated, onTaskUpdated, onTaskDeleted, o
       if (body.branchName) {
         const problem = branchNameProblem(body.branchName);
         if (problem) return sendJson(res, 400, { error: problem });
-        if (git.branches.includes(body.branchName)) return sendJson(res, 409, { error: `ya existe la rama ${body.branchName}` });
+        if (git.branches.includes(body.branchName))
+          return sendJson(res, 409, { error: `ya existe la rama ${body.branchName}` });
       }
       const task = addTask(projectRoot, body);
       onTaskCreated?.(task);
@@ -306,7 +338,8 @@ function createApp(projectRoot, { onTaskCreated, onTaskUpdated, onTaskDeleted, o
       const body = await readJsonBody(req).catch(() => null);
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
       if (!task) return sendJson(res, 404, { error: 'task not found' });
-      if (task.status !== 'ready_to_test' || !task.worktreePath) return sendJson(res, 409, { error: 'la tarea no esta lista para revisar' });
+      if (task.status !== 'ready_to_test' || !task.worktreePath)
+        return sendJson(res, 409, { error: 'la tarea no esta lista para revisar' });
       const message = typeof body?.message === 'string' ? body.message.trim() : '';
       if (!message) return sendJson(res, 400, { error: 'el mensaje de commit no puede estar vacio' });
       let sha;
@@ -326,7 +359,8 @@ function createApp(projectRoot, { onTaskCreated, onTaskUpdated, onTaskDeleted, o
       if (!task) return sendJson(res, 404, { error: 'task not found' });
       if (!task.lastCommit) return sendJson(res, 409, { error: 'haz commit de la tarea antes de fusionarla' });
       if (!task.baseBranch || !task.branch) return sendJson(res, 409, { error: 'la tarea no tiene rama base' });
-      if (!worktreeIsClean(task.worktreePath)) return sendJson(res, 409, { error: 'quedan cambios sin commitear en la tarea' });
+      if (!worktreeIsClean(task.worktreePath))
+        return sendJson(res, 409, { error: 'quedan cambios sin commitear en la tarea' });
       let sha;
       try {
         sha = mergeTaskBranch(projectRoot, task.branch, task.baseBranch, `Merge ${task.branch} en ${task.baseBranch}`);
@@ -335,7 +369,15 @@ function createApp(projectRoot, { onTaskCreated, onTaskUpdated, onTaskDeleted, o
         return sendJson(res, 409, { error: err.message });
       }
       logger.info('task.merge', { taskId, into: task.baseBranch, sha, files: filesChangedBy(projectRoot, sha) });
-      return sendJson(res, 200, updateTask(projectRoot, taskId, { mergedInto: task.baseBranch, mergeCommit: sha, mergedAt: new Date().toISOString() }));
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, {
+          mergedInto: task.baseBranch,
+          mergeCommit: sha,
+          mergedAt: new Date().toISOString()
+        })
+      );
     }
 
     if (url.pathname === '/api/logs' && req.method === 'GET') {
@@ -452,7 +494,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
     if (!task) return { error: 'task not found', code: 404 };
     if (taskSessions.has(taskId)) return { error: 'la tarea ya tiene un agente en marcha', code: 409 };
 
-    const effectiveDocOptions = stage === 'write' ? (docOptions || task.docOptions) : undefined;
+    const effectiveDocOptions = stage === 'write' ? docOptions || task.docOptions : undefined;
     const problem = canRun(task, stage, { answer, docOptions: effectiveDocOptions });
     if (problem) return { error: problem, code: 409 };
 
@@ -460,7 +502,10 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
     let branch = task.branch;
     if (!worktreeDir) {
       try {
-        const worktree = createTaskWorktree(projectRoot, task.id, { baseRef: task.baseBranch, branchName: task.branchName });
+        const worktree = createTaskWorktree(projectRoot, task.id, {
+          baseRef: task.baseBranch,
+          branchName: task.branchName
+        });
         worktreeDir = worktree.dir;
         branch = worktree.branch;
       } catch (err) {
@@ -483,7 +528,10 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
     const resuming = answer !== undefined && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
     let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions });
-    if (answer !== undefined) prompt = resuming ? answerPrompt(answer, stage) : `${prompt}\n\nRespuesta del usuario a tus preguntas:\n${answer.trim()}`;
+    if (answer !== undefined)
+      prompt = resuming
+        ? answerPrompt(answer, stage)
+        : `${prompt}\n\nRespuesta del usuario a tus preguntas:\n${answer.trim()}`;
 
     const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
     opts.extraAllowedTools = [...stageTools(stage), ...approved];
@@ -516,7 +564,13 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
         for (const block of event.message?.content || []) {
           if (block.type === 'tool_use') toolUses.set(block.id, { name: block.name, input: block.input });
           if (block.type === 'tool_use' && FILE_TOOLS.has(block.name)) {
-            logger.info('file.edit', { scope: 'task', taskId, stage, tool: block.name, path: relPath(worktreeDir, block.input?.file_path) });
+            logger.info('file.edit', {
+              scope: 'task',
+              taskId,
+              stage,
+              tool: block.name,
+              path: relPath(worktreeDir, block.input?.file_path)
+            });
           }
         }
       }
@@ -539,11 +593,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
         logger.warn('task.stage.denied', { taskId, stage, tool, alreadyApproved });
         const current = updateTask(projectRoot, taskId, {
           status: 'pending',
-          error: tool === 'Bash'
-            ? `la etapa "${stage}" se bloqueo en Bash${command ? `: ${command}` : ''}. Es una accion prohibida para agentes o un aviso de Claude Code; no se puede aprobar desde la tarjeta.`
-            : alreadyApproved
-              ? `la etapa "${stage}" fue bloqueada por ${tool} aunque ya estaba permitido. No se puede resolver desde la tarjeta.`
-              : `la etapa "${stage}" necesita permiso para ${tool}.`,
+          error:
+            tool === 'Bash'
+              ? `la etapa "${stage}" se bloqueo en Bash${command ? `: ${command}` : ''}. Es una accion prohibida para agentes o un aviso de Claude Code; no se puede aprobar desde la tarjeta.`
+              : alreadyApproved
+                ? `la etapa "${stage}" fue bloqueada por ${tool} aunque ya estaba permitido. No se puede resolver desde la tarjeta.`
+                : `la etapa "${stage}" necesita permiso para ${tool}.`,
           pendingPermission: rule && !alreadyApproved ? { tool } : null
         });
         if (current) broadcast({ type: 'task_updated', task: current });
@@ -558,7 +613,10 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
       if (session._stageDone) return;
       // Salida sin `result` (fallo, kill o handoff a la terminal): la tarea no
       // puede quedarse en in_progress para siempre.
-      const current = updateTask(projectRoot, taskId, { status: 'pending', error: `la etapa "${stage}" termino sin completarse` });
+      const current = updateTask(projectRoot, taskId, {
+        status: 'pending',
+        error: `la etapa "${stage}" termino sin completarse`
+      });
       if (current) broadcast({ type: 'task_updated', task: current });
     });
 
@@ -571,7 +629,8 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
   function approveAndRetryTask(taskId, { tool, command } = {}) {
     const task = loadTasks(projectRoot).find((t) => t.id === taskId);
     if (!task) return { error: 'task not found', code: 404 };
-    if (!task.stage || !task.pendingPermission) return { error: 'la tarea no esta esperando ningun permiso', code: 409 };
+    if (!task.stage || !task.pendingPermission)
+      return { error: 'la tarea no esta esperando ningun permiso', code: 409 };
     const rule = approvalRule(tool, command);
     if (!rule) return { error: 'esta herramienta no se puede aprobar desde la tarjeta', code: 400 };
     if (tool !== task.pendingPermission.tool || (tool === 'Bash' && command !== task.pendingPermission.command)) {
@@ -615,9 +674,22 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
     const outputFiles = listFilesModifiedSince(worktreeDir, session._startedAt || 0);
     const knownFiles = new Set(current.outputFiles || []);
     for (const f of outputFiles) knownFiles.add(f);
-    if (patch.pendingQuestion) logger.info('task.question', { taskId, stage, kind: patch.pendingQuestion.kind, text: cut(patch.pendingQuestion.text) });
+    if (patch.pendingQuestion)
+      logger.info('task.question', {
+        taskId,
+        stage,
+        kind: patch.pendingQuestion.kind,
+        text: cut(patch.pendingQuestion.text)
+      });
     const updated = updateTask(projectRoot, taskId, { ...patch, outputFiles: [...knownFiles].sort() });
-    logger.info('task.stage.finish', { taskId, stage, status: updated?.status, hasChanges, outputFiles: knownFiles.size, error: patch.error || null });
+    logger.info('task.stage.finish', {
+      taskId,
+      stage,
+      status: updated?.status,
+      hasChanges,
+      outputFiles: knownFiles.size,
+      error: patch.error || null
+    });
     broadcast({ type: 'task_updated', task: updated });
 
     if (next) {
@@ -649,7 +721,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
 
     const session = new ClaudeSession(opts);
     chatSessions.set(chatId, session);
-    logger.info('claude.session.spawn', { scope: 'chat', chatId, sessionId: session.sessionId, resumed: Boolean(chat.claudeSessionId) });
+    logger.info('claude.session.spawn', {
+      scope: 'chat',
+      chatId,
+      sessionId: session.sessionId,
+      resumed: Boolean(chat.claudeSessionId)
+    });
     if (!chat.claudeSessionId) {
       updateChatMeta(projectRoot, chatId, { claudeSessionId: session.sessionId });
     }
@@ -660,7 +737,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
           logger.info('chat.reply', { chatId, text: cut(block.text) });
         }
         if (event.type === 'assistant' && block.type === 'tool_use' && FILE_TOOLS.has(block.name)) {
-          logger.info('file.edit', { scope: 'chat', chatId, tool: block.name, path: relPath(projectRoot, block.input?.file_path) });
+          logger.info('file.edit', {
+            scope: 'chat',
+            chatId,
+            tool: block.name,
+            path: relPath(projectRoot, block.input?.file_path)
+          });
         }
       }
       appendMessage(projectRoot, chatId, { role: 'claude_event', event, ts: new Date().toISOString() });
@@ -671,7 +753,13 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
     session.on('stderr', (text) => broadcast({ type: 'claude_stderr', chatId, text }));
     session.on('exit', (info) => {
       if (chatSessions.get(chatId) === session) chatSessions.delete(chatId);
-      logger.info('claude.session.exit', { scope: 'chat', chatId, code: info?.code ?? null, signal: info?.signal ?? null, stopped: Boolean(session._stopRequested) });
+      logger.info('claude.session.exit', {
+        scope: 'chat',
+        chatId,
+        code: info?.code ?? null,
+        signal: info?.signal ?? null,
+        stopped: Boolean(session._stopRequested)
+      });
       // A handoff-triggered kill is not a real end of the conversation (see
       // watchForPermissionHandoff) — terminal_handoff already told the chat
       // what's happening, so skip the generic "session ended" broadcast. The
@@ -769,7 +857,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
     res.on('finish', () => {
       const pathname = new URL(req.url, 'http://localhost').pathname;
       if (pathname.startsWith('/api/')) {
-        logger.info('http.request', { method: req.method, path: pathname, status: res.statusCode, ms: Date.now() - started });
+        logger.info('http.request', {
+          method: req.method,
+          path: pathname,
+          status: res.statusCode,
+          ms: Date.now() - started
+        });
       }
     });
     app(req, res);
@@ -820,7 +913,13 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
         // Never start a second process on a --session-id the terminal already
         // owns (see watchForPermissionHandoff) — same chat, same conversation.
         if (terminalOwner && terminalOwner.scope === 'chat' && terminalOwner.id === msg.chatId) {
-          return ws.send(JSON.stringify({ type: 'client_error', error: 'Esta conversacion esta abierta en la terminal ahora mismo. Cierra esa sesion de terminal para volver a usar el chat.' }));
+          return ws.send(
+            JSON.stringify({
+              type: 'client_error',
+              error:
+                'Esta conversacion esta abierta en la terminal ahora mismo. Cierra esa sesion de terminal para volver a usar el chat.'
+            })
+          );
         }
 
         let session;
@@ -831,11 +930,20 @@ function start({ projectRoot = process.cwd(), port = 0, open = true } = {}) {
         }
         if (!session) return ws.send(JSON.stringify({ type: 'client_error', error: 'chat not found' }));
 
-        appendMessage(projectRoot, msg.chatId, { role: 'user', text: msg.text, images: msg.images || [], ts: new Date().toISOString() });
+        appendMessage(projectRoot, msg.chatId, {
+          role: 'user',
+          text: msg.text,
+          images: msg.images || [],
+          ts: new Date().toISOString()
+        });
         logger.info('chat.user', { chatId: msg.chatId, text: cut(msg.text), images: (msg.images || []).length });
         // El primer mensaje da nombre al chat; despues el nombre se queda fijo.
         const chatNow = loadChat(projectRoot, msg.chatId);
-        const firstLine = (msg.text || '').split('\n').map((l) => l.trim()).find(Boolean) || '';
+        const firstLine =
+          (msg.text || '')
+            .split('\n')
+            .map((l) => l.trim())
+            .find(Boolean) || '';
         if (chatNow?.title === 'Nuevo chat' && firstLine) {
           const title = firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
           updateChatMeta(projectRoot, msg.chatId, { title });

@@ -17,7 +17,11 @@ function listFilesModifiedSince(worktreeDir, sinceMs) {
   const walk = (dir) => {
     if (out.length >= MAX_FILES) return;
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
     for (const entry of entries) {
       if (out.length >= MAX_FILES) return;
       const abs = path.join(dir, entry.name);
@@ -42,12 +46,19 @@ function resolveInside(worktreeDir, rel) {
 }
 
 function docxText(abs) {
-  const xml = execFileSync('unzip', ['-p', abs, 'word/document.xml'], { encoding: 'utf8', maxBuffer: MAX_PREVIEW_BYTES });
+  const xml = execFileSync('unzip', ['-p', abs, 'word/document.xml'], {
+    encoding: 'utf8',
+    maxBuffer: MAX_PREVIEW_BYTES
+  });
   return xml
     .replace(/<\/w:p>/g, '\n')
     .replace(/<w:tab\/>/g, '\t')
     .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -56,12 +67,16 @@ function docxText(abs) {
 // y html solo se muestra dentro de un iframe sin scripts en el cliente.
 function readPreview(abs) {
   const ext = path.extname(abs).toLowerCase();
-  if (fs.statSync(abs).size > MAX_PREVIEW_BYTES) return { kind: 'unsupported', reason: 'fichero demasiado grande para previsualizar' };
+  if (fs.statSync(abs).size > MAX_PREVIEW_BYTES)
+    return { kind: 'unsupported', reason: 'fichero demasiado grande para previsualizar' };
   if (['.md', '.txt', '.csv', '.json'].includes(ext)) return { kind: 'text', content: fs.readFileSync(abs, 'utf8') };
   if (['.html', '.htm'].includes(ext)) return { kind: 'html', content: fs.readFileSync(abs, 'utf8') };
   if (ext === '.docx') {
-    try { return { kind: 'text', content: docxText(abs) }; }
-    catch (err) { return { kind: 'unsupported', reason: `no se pudo leer el docx: ${err.message}` }; }
+    try {
+      return { kind: 'text', content: docxText(abs) };
+    } catch (err) {
+      return { kind: 'unsupported', reason: `no se pudo leer el docx: ${err.message}` };
+    }
   }
   return { kind: 'unsupported', reason: 'no hay previsualizacion para este tipo de fichero' };
 }

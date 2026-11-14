@@ -6,7 +6,18 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
-const { createTaskWorktree, stageForReview, worktreeDir, removeTaskWorktree, listLocalBranches, branchNameProblem, commitTaskWorktree, mergeTaskBranch, filesChangedBy, changedFiles } = require('../../server/bridge/worktree');
+const {
+  createTaskWorktree,
+  stageForReview,
+  worktreeDir,
+  removeTaskWorktree,
+  listLocalBranches,
+  branchNameProblem,
+  commitTaskWorktree,
+  mergeTaskBranch,
+  filesChangedBy,
+  changedFiles
+} = require('../../server/bridge/worktree');
 
 function initGitRepo(dir) {
   execFileSync('git', ['init', '-q'], { cwd: dir });
@@ -20,7 +31,11 @@ function initGitRepo(dir) {
 test('createTaskWorktree: creates a real git worktree on its own branch, copying .claude/settings.json', (t) => {
   const dir = mkTmpDir('worktree-repo');
   t.after(() => {
-    try { execFileSync('git', ['worktree', 'remove', '--force', worktreeDir(dir, 'task-123')], { cwd: dir }); } catch { /* best effort */ }
+    try {
+      execFileSync('git', ['worktree', 'remove', '--force', worktreeDir(dir, 'task-123')], { cwd: dir });
+    } catch {
+      /* best effort */
+    }
     rmTmpDir(dir);
   });
 
@@ -42,7 +57,11 @@ test('createTaskWorktree: creates a real git worktree on its own branch, copying
 test('createTaskWorktree: skips copying .claude/settings.json when the source project has none', (t) => {
   const dir = mkTmpDir('worktree-repo');
   t.after(() => {
-    try { execFileSync('git', ['worktree', 'remove', '--force', worktreeDir(dir, 'task-456')], { cwd: dir }); } catch { /* best effort */ }
+    try {
+      execFileSync('git', ['worktree', 'remove', '--force', worktreeDir(dir, 'task-456')], { cwd: dir });
+    } catch {
+      /* best effort */
+    }
     rmTmpDir(dir);
   });
 
@@ -54,7 +73,11 @@ test('createTaskWorktree: skips copying .claude/settings.json when the source pr
 test('stageForReview: reports hasChanges false on a clean worktree and true after an edit', (t) => {
   const dir = mkTmpDir('worktree-repo');
   t.after(() => {
-    try { execFileSync('git', ['worktree', 'remove', '--force', worktreeDir(dir, 'task-789')], { cwd: dir }); } catch { /* best effort */ }
+    try {
+      execFileSync('git', ['worktree', 'remove', '--force', worktreeDir(dir, 'task-789')], { cwd: dir });
+    } catch {
+      /* best effort */
+    }
     rmTmpDir(dir);
   });
 
@@ -105,8 +128,17 @@ test('tareas: salen de la rama base elegida, con su propia rama, y se fusionan e
   assert.equal(branchNameProblem('fix/rebranding-buttons'), null);
   assert.ok(branchNameProblem('mal..nombre'));
 
-  const { dir: wt, branch } = createTaskWorktree(dir, 'task-flow-1', { baseRef: 'fix/rebranding', branchName: 'fix/rebranding-buttons' });
-  t.after(() => { try { removeTaskWorktree(dir, { worktreePath: wt, branch }); } catch { /* best effort */ } });
+  const { dir: wt, branch } = createTaskWorktree(dir, 'task-flow-1', {
+    baseRef: 'fix/rebranding',
+    branchName: 'fix/rebranding-buttons'
+  });
+  t.after(() => {
+    try {
+      removeTaskWorktree(dir, { worktreePath: wt, branch });
+    } catch {
+      /* best effort */
+    }
+  });
   assert.equal(branch, 'fix/rebranding-buttons');
 
   fs.writeFileSync(path.join(wt, 'boton.css'), '.btn{}\n');

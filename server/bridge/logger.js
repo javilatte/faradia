@@ -18,7 +18,9 @@ function rotateIfNeeded() {
   try {
     if (fs.statSync(logFile).size < MAX_BYTES) return;
     fs.renameSync(logFile, `${logFile}.1`);
-  } catch { /* aún no existe o no se puede rotar: seguimos escribiendo */ }
+  } catch {
+    /* aún no existe o no se puede rotar: seguimos escribiendo */
+  }
 }
 
 function log(level, event, data = {}) {
@@ -27,7 +29,9 @@ function log(level, event, data = {}) {
     try {
       rotateIfNeeded();
       fs.appendFileSync(logFile, line + '\n');
-    } catch { /* disco lleno o permisos: el registro nunca tumba el servidor */ }
+    } catch {
+      /* disco lleno o permisos: el registro nunca tumba el servidor */
+    }
   }
   if (level === 'warn' || level === 'error') process.stderr.write(line + '\n');
 }
@@ -39,11 +43,17 @@ function readRecent(limit = 200) {
   for (const file of [`${logFile}.1`, logFile]) {
     try {
       lines.push(...fs.readFileSync(file, 'utf8').split('\n').filter(Boolean));
-    } catch { /* aún no existe */ }
+    } catch {
+      /* aún no existe */
+    }
   }
   const out = [];
   for (let i = lines.length - 1; i >= 0 && out.length < limit; i--) {
-    try { out.push(JSON.parse(lines[i])); } catch { /* línea corrupta: se omite */ }
+    try {
+      out.push(JSON.parse(lines[i]));
+    } catch {
+      /* línea corrupta: se omite */
+    }
   }
   return out;
 }
@@ -54,5 +64,5 @@ module.exports = {
   log,
   info: (event, data) => log('info', event, data),
   warn: (event, data) => log('warn', event, data),
-  error: (event, data) => log('error', event, data),
+  error: (event, data) => log('error', event, data)
 };

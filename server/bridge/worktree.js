@@ -60,15 +60,21 @@ function removeTaskWorktree(projectRoot, { worktreePath, branch }) {
   git(projectRoot, ['worktree', 'prune']);
   if (branch) {
     const exists = (() => {
-      try { git(projectRoot, ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`]); return true; }
-      catch { return false; }
+      try {
+        git(projectRoot, ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`]);
+        return true;
+      } catch {
+        return false;
+      }
     })();
     if (exists) git(projectRoot, ['branch', '-D', branch]);
   }
 }
 
 function listLocalBranches(projectRoot) {
-  const branches = git(projectRoot, ['for-each-ref', '--format=%(refname:short)', 'refs/heads']).split('\n').filter(Boolean);
+  const branches = git(projectRoot, ['for-each-ref', '--format=%(refname:short)', 'refs/heads'])
+    .split('\n')
+    .filter(Boolean);
   return { current: git(projectRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), branches };
 }
 
@@ -88,7 +94,10 @@ function commitTaskWorktree(worktreeDirPath, message, outputFiles = []) {
   execFileSync('git', ['add', '-A'], { cwd: worktreeDirPath });
   const existing = outputFiles.filter((f) => fs.existsSync(path.join(worktreeDirPath, f)));
   if (existing.length) execFileSync('git', ['add', '-f', '--', ...existing], { cwd: worktreeDirPath });
-  const staged = execFileSync('git', ['diff', '--cached', '--name-only'], { cwd: worktreeDirPath, encoding: 'utf8' }).trim();
+  const staged = execFileSync('git', ['diff', '--cached', '--name-only'], {
+    cwd: worktreeDirPath,
+    encoding: 'utf8'
+  }).trim();
   if (!staged) throw new Error('no hay cambios que commitear');
   execFileSync('git', ['commit', '-m', message], { cwd: worktreeDirPath, encoding: 'utf8' });
   return git(worktreeDirPath, ['rev-parse', 'HEAD']);
@@ -112,8 +121,14 @@ function mergeAt(dir, branch, targetBranch, message) {
   try {
     git(dir, ['merge', '--no-ff', '-m', message, branch]);
   } catch (err) {
-    try { git(dir, ['merge', '--abort']); } catch { /* no habia merge en curso */ }
-    throw new Error(`conflictos al fusionar ${branch} en ${targetBranch}; resuelvelos a mano. ${err.message.split('\n')[0]}`);
+    try {
+      git(dir, ['merge', '--abort']);
+    } catch {
+      /* no habia merge en curso */
+    }
+    throw new Error(
+      `conflictos al fusionar ${branch} en ${targetBranch}; resuelvelos a mano. ${err.message.split('\n')[0]}`
+    );
   }
   return git(dir, ['rev-parse', 'HEAD']);
 }
@@ -129,32 +144,53 @@ function mergeTaskBranch(projectRoot, branch, targetBranch, message) {
     }
     return mergeAt(checkedOutAt, branch, targetBranch, message);
   }
-  const tmp = path.join(projectRoot, '.optimia', 'merge-tmp', `${targetBranch.replace(/[^A-Za-z0-9]/g, '-')}-${Date.now()}`);
+  const tmp = path.join(
+    projectRoot,
+    '.optimia',
+    'merge-tmp',
+    `${targetBranch.replace(/[^A-Za-z0-9]/g, '-')}-${Date.now()}`
+  );
   git(projectRoot, ['worktree', 'add', tmp, targetBranch]);
   try {
     return mergeAt(tmp, branch, targetBranch, message);
   } finally {
-    try { git(projectRoot, ['worktree', 'remove', '--force', tmp]); } catch { /* ya borrado */ }
+    try {
+      git(projectRoot, ['worktree', 'remove', '--force', tmp]);
+    } catch {
+      /* ya borrado */
+    }
   }
 }
 
 // Ficheros que cambia un commit (o una fusion, frente a su primer padre).
 function filesChangedBy(dir, sha) {
-  return git(dir, ['diff', '--name-only', `${sha}^1`, sha]).split('\n').filter(Boolean);
+  return git(dir, ['diff', '--name-only', `${sha}^1`, sha])
+    .split('\n')
+    .filter(Boolean);
 }
 
 // Ficheros modificados, staged o sin seguimiento en un worktree ahora mismo.
 function changedFiles(dir) {
   try {
     return git(dir, ['status', '--porcelain', '--untracked-files=all'])
-      .split('\n').filter(Boolean).map((line) => line.slice(3));
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => line.slice(3));
   } catch {
     return [];
   }
 }
 
 module.exports = {
-  worktreeDir, createTaskWorktree, stageForReview, removeTaskWorktree,
-  listLocalBranches, branchNameProblem, commitTaskWorktree, worktreeIsClean, mergeTaskBranch,
-  filesChangedBy, changedFiles
+  worktreeDir,
+  createTaskWorktree,
+  stageForReview,
+  removeTaskWorktree,
+  listLocalBranches,
+  branchNameProblem,
+  commitTaskWorktree,
+  worktreeIsClean,
+  mergeTaskBranch,
+  filesChangedBy,
+  changedFiles
 };

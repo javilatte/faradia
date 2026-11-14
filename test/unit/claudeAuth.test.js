@@ -18,15 +18,19 @@ function claudeAvailable() {
   }
 }
 
-test('getClaudeAuthStatus: returns a well-shaped status object from the real claude CLI', { skip: !claudeAvailable() && 'claude CLI not installed in this environment' }, () => {
-  const status = getClaudeAuthStatus();
-  assert.equal(typeof status.loggedIn, 'boolean');
-  if (status.loggedIn) {
-    assert.equal(typeof status.email, 'string');
-  } else {
-    assert.equal(typeof status.error, 'string');
+test(
+  'getClaudeAuthStatus: returns a well-shaped status object from the real claude CLI',
+  { skip: !claudeAvailable() && 'claude CLI not installed in this environment' },
+  () => {
+    const status = getClaudeAuthStatus();
+    assert.equal(typeof status.loggedIn, 'boolean');
+    if (status.loggedIn) {
+      assert.equal(typeof status.email, 'string');
+    } else {
+      assert.equal(typeof status.error, 'string');
+    }
   }
-});
+);
 
 test('getClaudeAuthStatus: never throws, regardless of auth state', () => {
   assert.doesNotThrow(() => getClaudeAuthStatus());

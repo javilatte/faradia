@@ -9,7 +9,11 @@
 effortSelect.addEventListener('change', async () => {
   const settings = await fetch('/api/settings').then((r) => r.json());
   settings.ai.claude.effort = effortSelect.value;
-  await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
+  await fetch('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  });
   appendMessage('system', `Effort actualizado a "${effortSelect.value}" para la proxima sesion.`);
 });
 
@@ -213,14 +217,19 @@ function populateSettingsForm() {
 
 function renderAccountInfo(auth) {
   if (auth.loggedIn === false) {
-    claudeAccountInfo.textContent = auth.error ? `No se pudo leer la cuenta: ${auth.error}` : 'No hay sesion de Claude Code iniciada.';
+    claudeAccountInfo.textContent = auth.error
+      ? `No se pudo leer la cuenta: ${auth.error}`
+      : 'No hay sesion de Claude Code iniciada.';
   } else {
-    claudeAccountInfo.textContent = [
-      auth.email ? `Cuenta: ${auth.email}` : null,
-      auth.orgName ? `Organizacion: ${auth.orgName}` : null,
-      auth.subscriptionType ? `Plan: ${auth.subscriptionType}` : null,
-      auth.authMethod ? `Metodo: ${auth.authMethod}` : null
-    ].filter(Boolean).join(' · ') || 'Sesion activa.';
+    claudeAccountInfo.textContent =
+      [
+        auth.email ? `Cuenta: ${auth.email}` : null,
+        auth.orgName ? `Organizacion: ${auth.orgName}` : null,
+        auth.subscriptionType ? `Plan: ${auth.subscriptionType}` : null,
+        auth.authMethod ? `Metodo: ${auth.authMethod}` : null
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Sesion activa.';
   }
 }
 
@@ -281,7 +290,9 @@ settingsNavItems.forEach((item) => {
     settingsNavItems.forEach((i) => i.classList.remove('active'));
     item.classList.add('active');
     const pane = item.dataset.pane;
-    settingsPanes.forEach((p) => { p.hidden = p.dataset.pane !== pane; });
+    settingsPanes.forEach((p) => {
+      p.hidden = p.dataset.pane !== pane;
+    });
     settingsPaneTitle.textContent = item.textContent;
     if (pane === 'registro') loadLogPane();
   });
@@ -303,18 +314,22 @@ const LOG_CATEGORIES = {
   todo: () => true,
   archivos: (e) => e.event.startsWith('file.') || e.event === 'task.commit' || e.event === 'task.merge',
   preguntas: (e) => e.event === 'chat.user' || e.event === 'task.question',
-  respuestas: (e) => e.event === 'chat.reply' || e.event === 'task.answer',
+  respuestas: (e) => e.event === 'chat.reply' || e.event === 'task.answer'
 };
 let logCategory = 'todo';
 
 function renderLogPane() {
   const needle = logFilter.value.trim().toLowerCase();
   logList.innerHTML = '';
-  const rows = logEntries.filter((e) => LOG_CATEGORIES[logCategory](e) && (!needle || `${e.event} ${logDetail(e)}`.toLowerCase().includes(needle)));
+  const rows = logEntries.filter(
+    (e) => LOG_CATEGORIES[logCategory](e) && (!needle || `${e.event} ${logDetail(e)}`.toLowerCase().includes(needle))
+  );
   if (!rows.length) {
     const empty = document.createElement('div');
     empty.className = 'muted';
-    empty.textContent = logEntries.length ? 'Ningún evento coincide con el filtro.' : 'Todavía no hay eventos registrados en este proyecto.';
+    empty.textContent = logEntries.length
+      ? 'Ningún evento coincide con el filtro.'
+      : 'Todavía no hay eventos registrados en este proyecto.';
     logList.appendChild(empty);
     return;
   }
@@ -336,7 +351,9 @@ function renderLogPane() {
 }
 
 async function loadLogPane() {
-  logEntries = await fetch('/api/logs?limit=300').then((r) => r.json()).catch(() => []);
+  logEntries = await fetch('/api/logs?limit=300')
+    .then((r) => r.json())
+    .catch(() => []);
   renderLogPane();
 }
 
@@ -377,4 +394,3 @@ settingsSave.addEventListener('click', async () => {
   await populateChatModelSelect(saved);
   settingsSaveStatus.textContent = 'Guardado. Se aplicara en la proxima sesion de Claude.';
 });
-

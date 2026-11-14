@@ -44,8 +44,10 @@ test('readPreview: extrae el texto de un docx', (t) => {
   const dir = mkTmpDir('taskfiles-docx');
   t.after(() => rmTmpDir(dir));
   fs.mkdirSync(path.join(dir, 'word'));
-  fs.writeFileSync(path.join(dir, 'word', 'document.xml'),
-    '<w:document><w:body><w:p><w:r><w:t>Hola &amp; adios</w:t></w:r></w:p></w:body></w:document>');
+  fs.writeFileSync(
+    path.join(dir, 'word', 'document.xml'),
+    '<w:document><w:body><w:p><w:r><w:t>Hola &amp; adios</w:t></w:r></w:p></w:body></w:document>'
+  );
   try {
     execFileSync('zip', ['-q', '-r', 'doc.docx', 'word'], { cwd: dir });
   } catch {

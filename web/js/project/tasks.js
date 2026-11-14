@@ -2,16 +2,27 @@
 
 // Panel de agentes: tarjetas de tareas, etapas, permisos, commit y fusion.
 
-function dismissedAgentsKey(chatId) { return `optimia:dismissed-agents:${chatId}`; }
-function loadDismissedAgents(chatId) {
-  try { return new Set(JSON.parse(localStorage.getItem(dismissedAgentsKey(chatId)) || '[]')); }
-  catch { return new Set(); }
+function dismissedAgentsKey(chatId) {
+  return `optimia:dismissed-agents:${chatId}`;
 }
-function isAgentDismissed(chatId, taskId) { return loadDismissedAgents(chatId).has(taskId); }
+function loadDismissedAgents(chatId) {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(dismissedAgentsKey(chatId)) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+function isAgentDismissed(chatId, taskId) {
+  return loadDismissedAgents(chatId).has(taskId);
+}
 function markAgentDismissed(chatId, taskId) {
   const ids = loadDismissedAgents(chatId);
   ids.add(taskId);
-  try { localStorage.setItem(dismissedAgentsKey(chatId), JSON.stringify([...ids])); } catch { /* best-effort only */ }
+  try {
+    localStorage.setItem(dismissedAgentsKey(chatId), JSON.stringify([...ids]));
+  } catch {
+    /* best-effort only */
+  }
 }
 
 function stepLabelFor(event) {
@@ -35,14 +46,16 @@ function describeTaskEvent(event) {
     for (const block of event.message?.content || []) {
       if (block.type === 'text' && block.text?.trim()) lines.push(block.text.trim().slice(0, 300));
       if (block.type === 'tool_use') {
-        const detail = block.input?.command || block.input?.description || block.input?.file_path || block.input?.pattern || '';
+        const detail =
+          block.input?.command || block.input?.description || block.input?.file_path || block.input?.pattern || '';
         lines.push(`→ ${block.name}${detail ? `: ${String(detail).slice(0, 200)}` : ''}`);
       }
     }
     return lines;
   }
   if (event.type === 'result') return [event.is_error ? '— turno con error —' : '— turno completado —'];
-  if (event.type === 'system' && event.subtype === 'permission_denied') return [`× bloqueado: ${event.tool_name || 'herramienta'}`];
+  if (event.type === 'system' && event.subtype === 'permission_denied')
+    return [`× bloqueado: ${event.tool_name || 'herramienta'}`];
   return [];
 }
 
@@ -75,7 +88,10 @@ function renderDeleteButton(onClick) {
   btn.type = 'button';
   btn.textContent = '✕';
   btn.title = 'Eliminar';
-  btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick();
+  });
   return btn;
 }
 
@@ -131,7 +147,10 @@ function actionButton(label, { primary = false, disabled = false, onClick }) {
   btn.textContent = label;
   if (primary) btn.className = 'primary';
   btn.disabled = disabled;
-  btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick();
+  });
   return btn;
 }
 
@@ -145,7 +164,9 @@ function renderPermissionRequest(taskId, perm) {
   box.appendChild(label);
   const row = document.createElement('div');
   row.className = 'task-actions';
-  row.appendChild(actionButton('Permitir y reintentar', { primary: true, onClick: () => approveTaskPermission(taskId, perm) }));
+  row.appendChild(
+    actionButton('Permitir y reintentar', { primary: true, onClick: () => approveTaskPermission(taskId, perm) })
+  );
   box.appendChild(row);
   return box;
 }
@@ -196,13 +217,16 @@ function applyTaskFromServer(task) {
 function taskStepText(task, lastStep) {
   const stage = STAGE_LABELS[task.stage] || 'Agente';
   switch (task.status) {
-    case 'in_progress': return `${stage} · ${lastStep || 'iniciando...'}`;
+    case 'in_progress':
+      return `${stage} · ${lastStep || 'iniciando...'}`;
     case 'awaiting_input':
       return task.pendingQuestion?.kind === 'doc-options'
         ? 'investigacion lista · elige modo, formato y destino'
         : `${stage} · necesita tu respuesta para continuar`;
-    case 'ready_to_test': return `${stage} · lista para revisar (cambios en stage, sin commitear)`;
-    default: return task.error || 'pendiente';
+    case 'ready_to_test':
+      return `${stage} · lista para revisar (cambios en stage, sin commitear)`;
+    default:
+      return task.error || 'pendiente';
   }
 }
 
@@ -217,15 +241,17 @@ function renderAnswerForm(taskId, stage) {
   area.rows = 3;
   area.placeholder = 'Tu respuesta al agente';
   form.appendChild(area);
-  form.appendChild(actionButton('Responder y continuar', {
-    primary: true,
-    onClick: () => {
-      const answer = area.value.trim();
-      if (!answer) return;
-      cardDrafts.delete(key);
-      runTaskStage(taskId, { stage, answer });
-    }
-  }));
+  form.appendChild(
+    actionButton('Responder y continuar', {
+      primary: true,
+      onClick: () => {
+        const answer = area.value.trim();
+        if (!answer) return;
+        cardDrafts.delete(key);
+        runTaskStage(taskId, { stage, answer });
+      }
+    })
+  );
   return form;
 }
 
@@ -233,19 +259,21 @@ function renderPathPicker(input) {
   const row = document.createElement('div');
   row.className = 'path-picker';
   row.appendChild(input);
-  row.appendChild(actionButton('Elegir…', {
-    onClick: async () => {
-      const res = await fetch('/api/pick-file', { method: 'POST' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        appendMessage('system', `No se pudo abrir el explorador: ${data.error || res.status}`);
-        return;
+  row.appendChild(
+    actionButton('Elegir…', {
+      onClick: async () => {
+        const res = await fetch('/api/pick-file', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          appendMessage('system', `No se pudo abrir el explorador: ${data.error || res.status}`);
+          return;
+        }
+        if (!data.path) return;
+        input.value = data.path;
+        input.dispatchEvent(new Event('change'));
       }
-      if (!data.path) return;
-      input.value = data.path;
-      input.dispatchEvent(new Event('change'));
-    }
-  }));
+    })
+  );
   return row;
 }
 
@@ -291,21 +319,23 @@ function renderDocOptions(taskId, task) {
   template.placeholder = 'Plantilla opcional (ruta relativa)';
   form.appendChild(renderPathPicker(template));
 
-  form.appendChild(actionButton('Generar', {
-    primary: true,
-    onClick: () => {
-      const mode = (form.querySelector(`input[name="mode-${taskId}"]:checked`) || {}).value || 'new';
-      runTaskStage(taskId, {
-        stage: 'write',
-        docOptions: {
-          mode,
-          format: format.value,
-          targetPath: target.value.trim(),
-          template: template.value.trim()
-        }
-      });
-    }
-  }));
+  form.appendChild(
+    actionButton('Generar', {
+      primary: true,
+      onClick: () => {
+        const mode = (form.querySelector(`input[name="mode-${taskId}"]:checked`) || {}).value || 'new';
+        runTaskStage(taskId, {
+          stage: 'write',
+          docOptions: {
+            mode,
+            format: format.value,
+            targetPath: target.value.trim(),
+            template: template.value.trim()
+          }
+        });
+      }
+    })
+  );
   return form;
 }
 
@@ -335,7 +365,9 @@ function renderCommitAndMerge(taskId, task) {
   } else {
     const row = document.createElement('div');
     row.className = 'task-actions';
-    row.appendChild(actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, { primary: true, onClick: () => mergeTask(taskId) }));
+    row.appendChild(
+      actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, { primary: true, onClick: () => mergeTask(taskId) })
+    );
     box.appendChild(row);
   }
   return box;
@@ -343,10 +375,15 @@ function renderCommitAndMerge(taskId, task) {
 
 async function commitTask(taskId, message) {
   const res = await fetch(`/api/tasks/${taskId}/commit`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message })
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message })
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) { appendMessage('system', `Commit no realizado: ${data.error || res.status}`); return; }
+  if (!res.ok) {
+    appendMessage('system', `Commit no realizado: ${data.error || res.status}`);
+    return;
+  }
   applyTaskFromServer(data);
   renderTasks();
 }
@@ -354,7 +391,10 @@ async function commitTask(taskId, message) {
 async function mergeTask(taskId) {
   const res = await fetch(`/api/tasks/${taskId}/merge`, { method: 'POST' });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) { appendMessage('system', `Fusion no realizada: ${data.error || res.status}`); return; }
+  if (!res.ok) {
+    appendMessage('system', `Fusion no realizada: ${data.error || res.status}`);
+    return;
+  }
   applyTaskFromServer(data);
   renderTasks();
 }
@@ -363,7 +403,9 @@ function renderReadyActions(taskId) {
   const row = document.createElement('div');
   row.className = 'task-actions';
   row.appendChild(actionButton('Revision final', { onClick: () => runTaskStage(taskId, { stage: 'review' }) }));
-  row.appendChild(actionButton('Preparar git add y commit', { onClick: () => runTaskStage(taskId, { stage: 'commit' }) }));
+  row.appendChild(
+    actionButton('Preparar git add y commit', { onClick: () => runTaskStage(taskId, { stage: 'commit' }) })
+  );
   return row;
 }
 
@@ -403,7 +445,10 @@ function renderTaskWorkspace(taskId, task) {
       name.className = 'task-file-name marquee-text';
       name.textContent = rel;
       name.title = 'Abrir con la aplicacion del sistema';
-      name.addEventListener('click', (e) => { e.stopPropagation(); openTaskFile(taskId, rel, false); });
+      name.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openTaskFile(taskId, rel, false);
+      });
       row.appendChild(name);
       row.appendChild(actionButton('Ver', { onClick: () => openFilePreview(taskId, rel) }));
       row.appendChild(actionButton('Carpeta', { onClick: () => openTaskFile(taskId, rel, true) }));
@@ -413,9 +458,15 @@ function renderTaskWorkspace(taskId, task) {
   const logRow = document.createElement('div');
   logRow.className = 'task-actions';
   const open = openTaskLogs.has(taskId);
-  logRow.appendChild(actionButton(open ? 'Ocultar registro' : 'Ver registro del agente', {
-    onClick: () => { if (open) openTaskLogs.delete(taskId); else openTaskLogs.add(taskId); renderTasks(); }
-  }));
+  logRow.appendChild(
+    actionButton(open ? 'Ocultar registro' : 'Ver registro del agente', {
+      onClick: () => {
+        if (open) openTaskLogs.delete(taskId);
+        else openTaskLogs.add(taskId);
+        renderTasks();
+      }
+    })
+  );
   box.appendChild(logRow);
   if (open) {
     const log = document.createElement('pre');
@@ -454,14 +505,19 @@ function openFilePreview(taskId, rel) {
   body.textContent = 'Cargando...';
   panel.append(head, body);
   overlay.appendChild(panel);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
   document.body.appendChild(overlay);
 
   fetch(`/api/tasks/${taskId}/files/preview?path=${encodeURIComponent(rel)}`)
     .then((r) => r.json())
     .then((data) => {
       body.textContent = '';
-      if (data.error) { body.textContent = data.error; return; }
+      if (data.error) {
+        body.textContent = data.error;
+        return;
+      }
       if (data.kind === 'text') {
         const pre = document.createElement('pre');
         pre.textContent = data.content;
@@ -476,7 +532,9 @@ function openFilePreview(taskId, rel) {
         body.textContent = data.reason || 'Sin previsualizacion. Usa "Abrir con el sistema".';
       }
     })
-    .catch(() => { body.textContent = 'No se pudo cargar la previsualizacion.'; });
+    .catch(() => {
+      body.textContent = 'No se pudo cargar la previsualizacion.';
+    });
 }
 
 function buildTaskCard(taskId, task, lastStep) {
@@ -548,9 +606,8 @@ function renderTasks() {
   for (const [taskId, agent] of chatAgents) {
     if (agent.chatId !== currentChatId) continue;
     const card = document.createElement('div');
-    card.className = 'task-card chat-agent-card'
-      + (agent.interrupted ? ' interrupted' : '')
-      + (agent.finished ? ' ready' : '');
+    card.className =
+      'task-card chat-agent-card' + (agent.interrupted ? ' interrupted' : '') + (agent.finished ? ' ready' : '');
     if (agent.finished) card.appendChild(renderDeleteButton(() => dismissChatAgent(taskId)));
     const title = document.createElement('div');
     title.className = 'task-title marquee-text';
@@ -559,7 +616,9 @@ function renderTasks() {
     const step = document.createElement('div');
     step.className = 'task-step marquee-text';
     step.textContent = agent.finished
-      ? (agent.status === 'failed' ? 'agente de chat · fallido' : 'agente de chat · completado')
+      ? agent.status === 'failed'
+        ? 'agente de chat · fallido'
+        : 'agente de chat · completado'
       : agent.interrupted
         ? 'interrumpido · necesita permiso en la terminal'
         : `agente de chat · ${agent.lastStep || 'iniciando...'}`;
@@ -581,4 +640,3 @@ async function loadInitialTasks() {
   for (const task of list) tasks.set(task.id, { task, lastStep: null });
   renderTasks();
 }
-

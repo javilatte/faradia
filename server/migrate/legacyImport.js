@@ -17,9 +17,7 @@ function readLegacyDefaults(projectRoot) {
   const securityFile = path.join(optimiaDir, 'security.md');
   const claudeFile = claudeSettingsPath(projectRoot);
 
-  const instructions = fs.existsSync(systemPromptFile)
-    ? fs.readFileSync(systemPromptFile, 'utf8')
-    : null;
+  const instructions = fs.existsSync(systemPromptFile) ? fs.readFileSync(systemPromptFile, 'utf8') : null;
 
   let noGo = null;
   let noGoSource = null;
@@ -32,7 +30,9 @@ function readLegacyDefaults(projectRoot) {
         noGo = parsed.permissions.deny;
         noGoSource = '.claude/settings.json';
       }
-    } catch { /* leave noGo null, nothing reliable to import */ }
+    } catch {
+      /* leave noGo null, nothing reliable to import */
+    }
   }
   if (noGo === null && fs.existsSync(securityFile)) {
     // security.md is prose, not a structured deny list — auto-parsing it

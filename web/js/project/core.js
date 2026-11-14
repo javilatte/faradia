@@ -21,7 +21,9 @@ const CLAUDE_MODEL_OPTIONS = [
 async function populateChatModelSelect(settings) {
   chatModelSelect.innerHTML = '';
   if (settings.ai.mode === 'local') {
-    const models = await fetch('/api/local-models').then((r) => r.json()).catch(() => []);
+    const models = await fetch('/api/local-models')
+      .then((r) => r.json())
+      .catch(() => []);
     if (models.length === 0) {
       const opt = document.createElement('option');
       opt.value = '';
@@ -54,7 +56,11 @@ chatModelSelect.addEventListener('change', async () => {
   const settings = await fetch('/api/settings').then((r) => r.json());
   if (settings.ai.mode === 'local') settings.ai.localAi.model = chatModelSelect.value;
   else settings.ai.claude.model = chatModelSelect.value;
-  await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
+  await fetch('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  });
   appendMessage('system', `Modelo actualizado a "${chatModelSelect.value}" para la proxima sesion.`);
 });
 const connectionStatus = document.getElementById('connection-status');
@@ -111,4 +117,3 @@ const tasks = new Map();
 // until the user dismisses them with the card's ✕ (tracked in localStorage
 // per chat so a reload doesn't resurrect a dismissed card via replay).
 const chatAgents = new Map();
-

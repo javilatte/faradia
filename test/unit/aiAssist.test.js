@@ -24,12 +24,16 @@ test('getAiAssistSuggestion: returns an error for an unknown field, without spaw
   assert.match(result.error, /unknown field/);
 });
 
-test('getAiAssistSuggestion: a real "nogo" request returns a non-empty suggestion from the claude CLI', { skip: !claudeAvailable() && 'claude CLI not installed in this environment' }, () => {
-  const result = getAiAssistSuggestion(
-    { field: 'nogo', prompt: 'no dejes que se borren los ficheros .env' },
-    { projectRoot: process.cwd() }
-  );
-  assert.equal(result.error, null);
-  assert.equal(typeof result.suggestion, 'string');
-  assert.ok(result.suggestion.length > 0);
-});
+test(
+  'getAiAssistSuggestion: a real "nogo" request returns a non-empty suggestion from the claude CLI',
+  { skip: !claudeAvailable() && 'claude CLI not installed in this environment' },
+  () => {
+    const result = getAiAssistSuggestion(
+      { field: 'nogo', prompt: 'no dejes que se borren los ficheros .env' },
+      { projectRoot: process.cwd() }
+    );
+    assert.equal(result.error, null);
+    assert.equal(typeof result.suggestion, 'string');
+    assert.ok(result.suggestion.length > 0);
+  }
+);
