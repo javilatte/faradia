@@ -1,5 +1,29 @@
 'use strict';
 
+// Proyecto activo: el de ?p=<id> en la URL o, sin el, el proyecto desde el que se
+// lanzo optimia. Toda la vista de proyecto (chat, agentes, ajustes, terminal) habla
+// con la API de ese proyecto, y cambiar de proyecto recarga la vista con otro ?p=.
+const currentProjectId = new URLSearchParams(location.search).get('p') || null;
+let defaultProjectId = null;
+function apiPath(p) {
+  return currentProjectId ? `/api/projects/${currentProjectId}${p.slice('/api'.length)}` : p;
+}
+function wsPayload(obj) {
+  return JSON.stringify(currentProjectId ? { ...obj, projectId: currentProjectId } : obj);
+}
+// Un mensaje del servidor es de este proyecto si no lleva projectId o si coincide.
+function isForThisProject(msg) {
+  if (!msg.projectId) return true;
+  const mine = currentProjectId || defaultProjectId;
+  return !mine || msg.projectId === mine;
+}
+fetch('/api/projects')
+  .then((r) => r.json())
+  .then((d) => {
+    defaultProjectId = d.defaultProjectId;
+  })
+  .catch(() => {});
+
 const chatLog = document.getElementById('chat-log');
 const input = document.getElementById('chat-input');
 const sendButton = document.getElementById('send-button');
@@ -21,7 +45,7 @@ const CLAUDE_MODEL_OPTIONS = [
 async function populateChatModelSelect(settings) {
   chatModelSelect.innerHTML = '';
   if (settings.ai.mode === 'local') {
-    const models = await fetch('/api/local-models')
+    const models = await fetch(apiPath('/api/local-models'))
       .then((r) => r.json())
       .catch(() => []);
     if (models.length === 0) {
@@ -53,10 +77,10 @@ async function populateChatModelSelect(settings) {
 }
 
 chatModelSelect.addEventListener('change', async () => {
-  const settings = await fetch('/api/settings').then((r) => r.json());
+  const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
   if (settings.ai.mode === 'local') settings.ai.localAi.model = chatModelSelect.value;
   else settings.ai.claude.model = chatModelSelect.value;
-  await fetch('/api/settings', {
+  await fetch(apiPath('/api/settings'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings)

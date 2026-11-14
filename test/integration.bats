@@ -6,6 +6,9 @@
 OPTIMIA_BIN="${BATS_TEST_DIRNAME}/../bin/optimia"
 
 setup() {
+    # Estado global de optimia (workbenches, timeline) en una carpeta temporal, nunca en el HOME real.
+    export XDG_CONFIG_HOME=$(mktemp -d)
+    export XDG_DATA_HOME=$(mktemp -d)
     TESTDIR=$(mktemp -d)
     cd "$TESTDIR"
     git init -q
@@ -26,6 +29,7 @@ setup() {
 }
 
 teardown() {
+    rm -rf "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
     rm -rf "$TESTDIR"

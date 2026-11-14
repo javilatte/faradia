@@ -11,7 +11,7 @@ const taskBaseSelect = document.getElementById('task-base-select');
 const taskBranchInput = document.getElementById('task-branch-input');
 
 async function loadTaskBranches() {
-  const { current, branches } = await fetch('/api/git/branches').then((r) => r.json());
+  const { current, branches } = await fetch(apiPath('/api/git/branches')).then((r) => r.json());
   const saved = localStorage.getItem('optimia:task-base');
   taskBaseSelect.innerHTML = '';
   for (const name of branches) {
@@ -46,7 +46,7 @@ async function createTaskFromChat(kind, text) {
   const title = text.split('\n')[0].slice(0, 80);
   input.value = '';
   input.style.height = 'auto';
-  const res = await fetch('/api/tasks', {
+  const res = await fetch(apiPath('/api/tasks'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -96,7 +96,7 @@ function sendCurrentInput() {
   const images = pendingImages.map(({ mediaType, base64Data }) => ({ mediaType, base64Data }));
   const previewUrls = pendingImages.map((img) => img.dataUrl);
   appendMessage('user', text, previewUrls);
-  ws.send(JSON.stringify({ type: 'user_message', chatId: currentChatId, text, images }));
+  ws.send(wsPayload({ type: 'user_message', chatId: currentChatId, text, images }));
   input.value = '';
   input.style.height = 'auto';
   pendingImages = [];
@@ -133,7 +133,7 @@ function renderChatTabs() {
 }
 
 async function deleteChat(chatId) {
-  await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
+  await fetch(apiPath(`/api/chats/${chatId}`), { method: 'DELETE' });
   chatsMeta.delete(chatId);
   if (chatId === currentChatId) {
     const next = Array.from(chatsMeta.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
@@ -166,16 +166,16 @@ function replayChat(chat) {
 async function selectChat(chatId) {
   currentChatId = chatId;
   renderChatTabs();
-  const chat = await fetch(`/api/chats/${chatId}`).then((r) => r.json());
+  const chat = await fetch(apiPath(`/api/chats/${chatId}`)).then((r) => r.json());
   replayChat(chat);
   setWaiting(false);
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'subscribe', chatId }));
+    ws.send(wsPayload({ type: 'subscribe', chatId }));
   }
 }
 
 async function createAndSelectChat() {
-  const chat = await fetch('/api/chats', {
+  const chat = await fetch(apiPath('/api/chats'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({})
@@ -185,7 +185,7 @@ async function createAndSelectChat() {
 }
 
 async function loadInitialChats() {
-  const list = await fetch('/api/chats').then((r) => r.json());
+  const list = await fetch(apiPath('/api/chats')).then((r) => r.json());
   chatsMeta.clear();
   for (const meta of list) chatsMeta.set(meta.id, meta);
   const mostRecent = list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];

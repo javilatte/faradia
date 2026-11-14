@@ -16,12 +16,12 @@ function ensureTerminal() {
   term.open(terminalMount);
 
   term.onData((data) => {
-    if (ws && wsOpen) ws.send(JSON.stringify({ type: 'terminal_input', data }));
+    if (ws && wsOpen) ws.send(wsPayload({ type: 'terminal_input', data }));
   });
 
   new ResizeObserver(() => {
     fitAddon.fit();
-    if (ws && wsOpen) ws.send(JSON.stringify({ type: 'terminal_resize', cols: term.cols, rows: term.rows }));
+    if (ws && wsOpen) ws.send(wsPayload({ type: 'terminal_resize', cols: term.cols, rows: term.rows }));
   }).observe(terminalMount);
 }
 
@@ -30,7 +30,7 @@ function openTerminal() {
   terminalButton.classList.remove('needs-attention');
   ensureTerminal();
   fitAddon.fit();
-  if (ws && wsOpen) ws.send(JSON.stringify({ type: 'terminal_subscribe' }));
+  if (ws && wsOpen) ws.send(wsPayload({ type: 'terminal_subscribe' }));
 }
 
 function closeTerminal() {

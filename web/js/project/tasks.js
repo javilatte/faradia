@@ -101,7 +101,7 @@ async function deleteRealTask(taskId) {
   const branch = entry.task.branch ? `\nRama: ${entry.task.branch}` : '';
   const ok = confirm(`Se borran la tarea, su worktree y sus cambios sin commitear.${branch}\n\n¿Continuar?`);
   if (!ok) return;
-  const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+  const res = await fetch(apiPath(`/api/tasks/${taskId}`), { method: 'DELETE' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     appendMessage('system', `No se pudo eliminar la tarea: ${data.error || res.status}`);
@@ -172,7 +172,7 @@ function renderPermissionRequest(taskId, perm) {
 }
 
 async function approveTaskPermission(taskId, perm) {
-  const res = await fetch(`/api/tasks/${taskId}/approve`, {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/approve`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tool: perm.tool, command: perm.command })
@@ -187,7 +187,7 @@ async function approveTaskPermission(taskId, perm) {
 }
 
 async function runTaskStage(taskId, body) {
-  const res = await fetch(`/api/tasks/${taskId}/run`, {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/run`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -262,7 +262,7 @@ function renderPathPicker(input) {
   row.appendChild(
     actionButton('Elegir…', {
       onClick: async () => {
-        const res = await fetch('/api/pick-file', { method: 'POST' });
+        const res = await fetch(apiPath('/api/pick-file'), { method: 'POST' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           appendMessage('system', `No se pudo abrir el explorador: ${data.error || res.status}`);
@@ -374,7 +374,7 @@ function renderCommitAndMerge(taskId, task) {
 }
 
 async function commitTask(taskId, message) {
-  const res = await fetch(`/api/tasks/${taskId}/commit`, {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/commit`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message })
@@ -389,7 +389,7 @@ async function commitTask(taskId, message) {
 }
 
 async function mergeTask(taskId) {
-  const res = await fetch(`/api/tasks/${taskId}/merge`, { method: 'POST' });
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/merge`), { method: 'POST' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     appendMessage('system', `Fusion no realizada: ${data.error || res.status}`);
@@ -479,7 +479,7 @@ function renderTaskWorkspace(taskId, task) {
 }
 
 async function openTaskFile(taskId, rel, reveal) {
-  const res = await fetch(`/api/tasks/${taskId}/files/open`, {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/files/open`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path: rel, reveal })
@@ -510,7 +510,7 @@ function openFilePreview(taskId, rel) {
   });
   document.body.appendChild(overlay);
 
-  fetch(`/api/tasks/${taskId}/files/preview?path=${encodeURIComponent(rel)}`)
+  fetch(apiPath(`/api/tasks/${taskId}/files/preview?path=${encodeURIComponent(rel)}`))
     .then((r) => r.json())
     .then((data) => {
       body.textContent = '';
@@ -636,7 +636,7 @@ function renderTasks() {
 }
 
 async function loadInitialTasks() {
-  const list = await fetch('/api/tasks').then((r) => r.json());
+  const list = await fetch(apiPath('/api/tasks')).then((r) => r.json());
   for (const task of list) tasks.set(task.id, { task, lastStep: null });
   renderTasks();
 }

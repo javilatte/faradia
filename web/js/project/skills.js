@@ -102,7 +102,7 @@ async function updateSkillSuggest() {
   const range = currentSkillQuery();
   if (!range) return hideSkillSuggest();
   const token = ++skillSuggestToken;
-  const skills = await fetch('/api/skills')
+  const skills = await fetch(apiPath('/api/skills'))
     .then((r) => r.json())
     .catch(() => []);
   if (token !== skillSuggestToken) return;

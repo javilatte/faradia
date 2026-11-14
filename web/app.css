@@ -1,0 +1,333 @@
+/* Estilos de la carcasa (workbenches, navegacion) y de las vistas nuevas.
+   Usa los mismos tokens que styles.css (--bg, --panel, --accent...). */
+
+:root {
+  --ok: #30d158;
+  --warn: #ff9f0a;
+  --add-bg: rgba(48, 209, 88, 0.14);
+  --add-text: #1a7f37;
+  --del-bg: rgba(255, 59, 48, 0.12);
+  --del-text: #cf222e;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+:root[data-theme='dark'] {
+  --add-text: #56d364;
+  --del-text: #ff7b72;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --add-text: #56d364;
+    --del-text: #ff7b72;
+  }
+}
+
+/* Varias clases fijan display (grid, flex): el atributo hidden debe ganar siempre. */
+[hidden] {
+  display: none !important;
+}
+
+/* ---- barra superior: selector de workbench/repo y navegacion ---- */
+
+.wb-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+.wb-switcher select {
+  max-width: 180px;
+  font-size: 12.5px;
+  padding: 4px 8px;
+}
+
+.main-nav {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  -webkit-app-region: no-drag;
+}
+.main-nav-item {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.main-nav-item:hover {
+  color: var(--text);
+}
+.main-nav-item.active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.main-nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---- contenedor de vistas ---- */
+
+.views {
+  display: contents;
+}
+.view {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+.view-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.view-header h2 {
+  font-size: 15px;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.view-header .spacer {
+  flex: 1;
+}
+.empty-state {
+  color: var(--text-dim);
+  text-align: center;
+  padding: 48px 16px;
+  font-size: 13.5px;
+}
+
+/* ---- botones genericos de las vistas nuevas ---- */
+
+.view button,
+.wb-modal button,
+.toast button {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.view button:hover:not(:disabled),
+.wb-modal button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.view button:disabled,
+.wb-modal button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.view button.primary,
+.wb-modal button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.view button.danger,
+.wb-modal button.danger {
+  color: var(--danger);
+}
+.view button.icon-button,
+.wb-modal button.icon-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+.link-button {
+  border: none !important;
+  background: transparent !important;
+  color: var(--accent) !important;
+  padding: 2px 4px !important;
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.view .segmented button {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-dim);
+}
+.view .segmented button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.error-text {
+  color: var(--danger);
+}
+
+/* ---- gestor de workbenches ---- */
+
+.wb-modal {
+  width: min(820px, 94vw);
+  height: min(620px, 88vh);
+}
+.wb-list {
+  width: 200px;
+}
+.wb-list .settings-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.wb-badge {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-dim);
+  border: 1px solid var(--panel-border);
+}
+.wb-badge.danger {
+  color: var(--danger);
+}
+.wb-new {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+}
+.wb-new input,
+.wb-inline-form input {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  min-width: 0;
+}
+.wb-pane {
+  overflow-y: auto;
+}
+.wb-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.wb-h {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin: 18px 0 8px;
+}
+.wb-repos,
+.wb-scan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wb-repos li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 9px;
+  background: var(--bg);
+}
+.wb-repos li.missing {
+  opacity: 0.7;
+}
+.wb-repo-name {
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.wb-repo-path {
+  grid-column: 1;
+  font-family: var(--mono);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-repos li button {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+.wb-inline-form {
+  display: flex;
+  gap: 6px;
+}
+.wb-inline-form input {
+  flex: 1;
+}
+.wb-scan-results {
+  margin-top: 8px;
+}
+.wb-scan-list {
+  font-family: var(--mono);
+  font-size: 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+/* ---- avisos breves ---- */
+
+.toast-host {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  max-width: 420px;
+}
+.toast-error {
+  border-color: var(--danger);
+}
+.toast-action {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+  .main-nav {
+    margin-left: 0;
+    width: 100%;
+    overflow-x: auto;
+  }
+}

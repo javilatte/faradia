@@ -60,7 +60,28 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
   fs.writeFileSync(path.join(dir, 'mcp.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
 }
 
+// La carpeta .optimia de un repo abierto desde un workbench no debe aparecer como
+// cambio en git. Se excluye en .git/info/exclude (local, no versionado) en vez de
+// tocar el .gitignore del usuario. Si ya la ignora, no se hace nada.
+function ensureOptimiaExcluded(projectRoot) {
+  const gitDir = path.join(projectRoot, '.git');
+  try {
+    if (!fs.statSync(gitDir).isDirectory()) return; // worktree o submodulo: .git es un fichero
+    const gitignore = path.join(projectRoot, '.gitignore');
+    const ignored = fs.existsSync(gitignore) && /^\/?\.optimia\/?$/m.test(fs.readFileSync(gitignore, 'utf8'));
+    if (ignored) return;
+    const exclude = path.join(gitDir, 'info', 'exclude');
+    const current = fs.existsSync(exclude) ? fs.readFileSync(exclude, 'utf8') : '';
+    if (/^\/?\.optimia\/?$/m.test(current)) return;
+    fs.mkdirSync(path.dirname(exclude), { recursive: true });
+    fs.appendFileSync(exclude, `${current && !current.endsWith('\n') ? '\n' : ''}/.optimia\n`);
+  } catch {
+    /* no es un repo git o no se puede escribir: nada que excluir */
+  }
+}
+
 function createProjectRuntime({ projectId, projectRoot, port, token, sendToClients }) {
+  ensureOptimiaExcluded(projectRoot);
   const log = logger.createLogger(projectRoot);
   writeMcpConfig(projectRoot, { port, projectId, token });
   // Both task and chat sessions are project-wide (one ClaudeSession per
@@ -566,4 +587,4 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   return { id: projectId, root: projectRoot, app, log, handleWsMessage, dispose };
 }
 
-module.exports = { createProjectRuntime, writeMcpConfig };
+module.exports = { createProjectRuntime, writeMcpConfig, ensureOptimiaExcluded };

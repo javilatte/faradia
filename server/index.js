@@ -8,6 +8,8 @@ const { createApp } = require('./runtime/projectApp');
 const { ProjectRegistry } = require('./runtime/registry');
 const { openInBrowser, serveStatic, sendJson, readJsonBody } = require('./http/util');
 const security = require('./http/security');
+const { handleWorkbenchRoutes } = require('./http/workbenchRoutes');
+const { ensureLaunchRepo } = require('./store/workbenchStore');
 
 // Rutas de la API:
 //   /api/health, /api/projects            globales
@@ -69,6 +71,14 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       } catch (err) {
         return sendJson(res, 400, { error: err.message });
       }
+    }
+
+    if (url.pathname.startsWith('/api/workbenches') || url.pathname === '/api/scan') {
+      const handled = await handleWorkbenchRoutes(req, res, url, {
+        registry,
+        onChange: () => sendToClients({ type: 'workbenches_changed' })
+      });
+      if (handled !== null) return handled;
     }
 
     const match = PROJECT_ROUTE.exec(url.pathname);
@@ -139,6 +149,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       actualPort = server.address().port;
       registry = new ProjectRegistry({ port: actualPort, token: sessionToken, sendToClients });
       defaultProjectId = registry.register(projectRoot).id;
+      try {
+        ensureLaunchRepo(projectRoot);
+      } catch (err) {
+        console.error(`optimia: no se pudo guardar el workbench por defecto: ${err.message}`);
+      }
       const rt = registry.runtime(defaultProjectId);
       const url = `http://127.0.0.1:${actualPort}`;
       const openUrl = `${url}/?token=${sessionToken}`;

@@ -12,12 +12,13 @@ function connect() {
     wsOpen = true;
     setConnectionState(true, 'Conectado');
     setWaiting(waitingForResult);
-    if (currentChatId) ws.send(JSON.stringify({ type: 'subscribe', chatId: currentChatId }));
-    if (window.TerminalView && window.TerminalView.isOpen()) ws.send(JSON.stringify({ type: 'terminal_subscribe' }));
+    if (currentChatId) ws.send(wsPayload({ type: 'subscribe', chatId: currentChatId }));
+    if (window.TerminalView && window.TerminalView.isOpen()) ws.send(wsPayload({ type: 'terminal_subscribe' }));
   });
 
   ws.addEventListener('message', (raw) => {
     const msg = JSON.parse(raw.data);
+    if (!isForThisProject(msg)) return;
     if (msg.type === 'claude_event') {
       if (msg.chatId === currentChatId) handleClaudeEvent(msg.event);
     } else if (msg.type === 'bridge_error') {

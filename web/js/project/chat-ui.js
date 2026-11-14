@@ -213,7 +213,7 @@ function setWaiting(isWaiting) {
 
 function stopCurrentChat() {
   if (!currentChatId || !wsOpen) return;
-  ws.send(JSON.stringify({ type: 'stop_chat', chatId: currentChatId }));
+  ws.send(wsPayload({ type: 'stop_chat', chatId: currentChatId }));
 }
 
 function renderAssistantEvent(event) {

@@ -6,6 +6,7 @@
     <title>optimia</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="app.css" />
   </head>
   <body>
     <header class="topbar">
@@ -57,9 +58,11 @@
         <span class="topbar-project" id="project-label">proyecto</span>
         <span class="topbar-mode" id="mode-label">Claude Code</span>
       </div>
+      <div class="wb-switcher" id="wb-switcher"></div>
+      <nav class="main-nav" id="main-nav" aria-label="Vistas"></nav>
     </header>
 
-    <div class="layout">
+    <div class="layout" id="project-view">
       <section class="panel" id="chat-panel">
         <div class="panel-header">
           <span>Chat with Claude</span>
@@ -132,6 +135,8 @@
         </div>
       </section>
     </div>
+
+    <div class="views" id="views"></div>
 
     <div class="modal-overlay" id="terminal-overlay" hidden>
       <div class="modal terminal-modal">
@@ -391,5 +396,6 @@
     <script src="js/project/settings.js"></script>
     <script src="js/project/main.js"></script>
     <script src="terminal.js"></script>
+    <script type="module" src="js/app/shell.js"></script>
   </body>
 </html>

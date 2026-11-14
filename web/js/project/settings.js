@@ -7,9 +7,9 @@
 // this app has no verified list of installed/available Claude model ids to
 // offer without guessing at strings.
 effortSelect.addEventListener('change', async () => {
-  const settings = await fetch('/api/settings').then((r) => r.json());
+  const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
   settings.ai.claude.effort = effortSelect.value;
-  await fetch('/api/settings', {
+  await fetch(apiPath('/api/settings'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings)
@@ -18,13 +18,13 @@ effortSelect.addEventListener('change', async () => {
 });
 
 async function loadInitialSettings() {
-  const settings = await fetch('/api/settings').then((r) => r.json());
+  const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
   applyUi(settings.ui || {});
   modeLabel.textContent = settings.ai.mode === 'local' ? 'IA local' : 'Claude Code';
   effortSelect.value = settings.ai.claude.effort || 'default';
   await populateChatModelSelect(settings);
 
-  const health = await fetch('/api/health').then((r) => r.json());
+  const health = await fetch(apiPath('/api/health')).then((r) => r.json());
   projectLabel.textContent = health.projectRoot.split('/').pop();
 }
 
@@ -80,7 +80,7 @@ document.querySelectorAll('.ai-assist-button').forEach((button) => {
     button.disabled = true;
     button.textContent = '...';
     try {
-      const res = await fetch('/api/ai-assist', {
+      const res = await fetch(apiPath('/api/ai-assist'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ field: button.dataset.field, prompt, current: target.value })
@@ -146,7 +146,7 @@ function renderMigrationBanner(el, field, preview, label) {
   applyBtn.className = 'send-button';
   applyBtn.textContent = 'Importar';
   applyBtn.addEventListener('click', async () => {
-    const next = await fetch('/api/settings/migrate', { method: 'POST' }).then((r) => r.json());
+    const next = await fetch(apiPath('/api/settings/migrate'), { method: 'POST' }).then((r) => r.json());
     currentSettings = next;
     populateSettingsForm();
     el.hidden = true;
@@ -156,7 +156,7 @@ function renderMigrationBanner(el, field, preview, label) {
 }
 
 async function renderSkillsList() {
-  const skills = await fetch('/api/skills').then((r) => r.json());
+  const skills = await fetch(apiPath('/api/skills')).then((r) => r.json());
   skillsList.innerHTML = '';
   for (const skill of skills) {
     const row = document.createElement('div');
@@ -183,7 +183,7 @@ skillAddButton.addEventListener('click', async () => {
   const slug = skillSlugInput.value.trim();
   if (!slug) return;
   const description = skillDescInput.value.trim();
-  const res = await fetch('/api/skills', {
+  const res = await fetch(apiPath('/api/skills'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ slug, description })
@@ -235,7 +235,7 @@ function renderAccountInfo(auth) {
 
 async function refreshAccountInfo() {
   claudeAccountInfo.textContent = 'Comprobando...';
-  const auth = await fetch('/api/claude-auth').then((r) => r.json());
+  const auth = await fetch(apiPath('/api/claude-auth')).then((r) => r.json());
   renderAccountInfo(auth);
 }
 
@@ -246,10 +246,10 @@ async function openSettings() {
   claudeAccountSwitchNote.hidden = true;
 
   const [settings, memory, auth, migrationPreview] = await Promise.all([
-    fetch('/api/settings').then((r) => r.json()),
-    fetch('/api/memory').then((r) => r.json()),
-    fetch('/api/claude-auth').then((r) => r.json()),
-    fetch('/api/settings/migration-preview').then((r) => r.json())
+    fetch(apiPath('/api/settings')).then((r) => r.json()),
+    fetch(apiPath('/api/memory')).then((r) => r.json()),
+    fetch(apiPath('/api/claude-auth')).then((r) => r.json()),
+    fetch(apiPath('/api/settings/migration-preview')).then((r) => r.json())
   ]);
 
   currentSettings = settings;
@@ -265,7 +265,7 @@ async function openSettings() {
 claudeAccountSwitch.addEventListener('click', async () => {
   claudeAccountSwitch.disabled = true;
   try {
-    const result = await fetch('/api/claude-auth/login', { method: 'POST' }).then((r) => r.json());
+    const result = await fetch(apiPath('/api/claude-auth/login'), { method: 'POST' }).then((r) => r.json());
     claudeAccountSwitchNote.hidden = false;
     if (result.ok === false) claudeAccountSwitchNote.textContent = result.error;
   } finally {
@@ -351,7 +351,7 @@ function renderLogPane() {
 }
 
 async function loadLogPane() {
-  logEntries = await fetch('/api/logs?limit=300')
+  logEntries = await fetch(apiPath('/api/logs?limit=300'))
     .then((r) => r.json())
     .catch(() => []);
   renderLogPane();
@@ -376,12 +376,12 @@ settingsSave.addEventListener('click', async () => {
   currentSettings.preferences.instructions = instructionsTextarea.value;
   currentSettings.ui = currentUiDraft();
 
-  const saved = await fetch('/api/settings', {
+  const saved = await fetch(apiPath('/api/settings'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(currentSettings)
   }).then((r) => r.json());
-  await fetch('/api/memory', {
+  await fetch(apiPath('/api/memory'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: memoryTextarea.value })
