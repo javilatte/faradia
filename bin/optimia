@@ -18,8 +18,12 @@ Opciones:
   -V, --version           Muestra la version.
   -h, --help              Muestra esta ayuda.
 
-La configuracion (modelo de Claude, IA local, instrucciones, memoria, no-go,
-skills) se gestiona desde la interfaz web (icono de ajustes), no desde la CLI.
+Variables de entorno:
+  OPTIMIA_NO_OPEN=1       No abre el navegador (p. ej. por SSH): usa el enlace que se imprime.
+
+Toda la configuracion (workbenches, agentes y sus modelos, IA local, instrucciones,
+memoria, no-go, skills, avisos y lista de vigilancia) se gestiona desde la
+interfaz web (icono de ajustes), no desde la CLI.
 `);
 }
 

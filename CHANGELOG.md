@@ -2,6 +2,35 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.0] - 2026-11-14
+
+Supervisión de agentes y de varios repos a la vez. Cambio incompatible con 1.x en la API local (ver "Cambios incompatibles").
+
+### Added
+- **Workbenches**: conjuntos de repos con nombre, en `~/.config/optimia/workbenches.json`. Se añaden a mano o buscando repos git bajo una carpeta, y el chat y los agentes funcionan en cualquier repo del workbench (selector en la barra superior).
+- **Agentes configurables**: diez agentes por defecto (Planificador, Implementador, Verificador, Revisor, Redactor de commits, Investigador, Redactor de documentación, Depurador, Escritor de tests y Auditor), cada uno con su motor (Claude o local), modelo, effort, acceso y prompt de rol. Se pueden ajustar o crear agentes propios por proyecto o para todos (Ajustes > Agentes), y elegir qué agente hace cada etapa.
+- **Pipelines nuevos**: bug (diagnosticar, implementar, verificar), tests, auditoría (solo informe) y agente propio, y una etapa de verificación que ejecuta tests, lint y build y da un veredicto. Cada tarjeta muestra qué agente y modelo hizo cada etapa.
+- **Dashboard** con el estado git en vivo de cada repo, la actividad de los agentes en sus worktrees, la actividad de las últimas 24 h y los avisos recientes.
+- **Diffs en vivo** (vista Cambios) de repos y worktrees de tareas: en línea o lado a lado, con contexto o el fichero entero, resaltado de sintaxis con Shiki y mapa de cambios.
+- **Timeline** de ficheros, commits, ramas, lista de vigilancia, tareas, avisos y cambios huérfanos, con filtros e historial de commits.
+- **Avisos pasivos**: borrados grandes, ficheros sensibles (marcados si git los commitearía), posibles secretos (reglas propias y gitleaks si está instalado; nunca se guarda el valor) y cambios en tests. Con notificaciones del sistema y modo compacto (glance).
+- **Lista de vigilancia** por repo (plano 2) para ficheros que git ignora.
+- **Explorador de ficheros** con vistas previas (markdown, código, imagen, audio, vídeo, PDF), portapapeles, renombrar, copiar, mover y borrar con Deshacer, y papelera restaurable.
+- CI en GitHub Actions (lint, formato, unitarios, bats, e2e con Playwright y gitleaks), ESLint y Prettier, `docs/design.md` y `docs/roadmap.md`.
+- `OPTIMIA_NO_OPEN=1` para arrancar sin abrir el navegador.
+
+### Changed
+- Requiere Node 22 o posterior.
+- Los modelos locales se pasan por su nombre real de Ollama, sin el alias `claude-haiku-4-5`, así que cada agente puede usar un modelo local distinto a la vez.
+- `web/app.js` se divide en `web/js/project/`; las vistas nuevas son módulos ES en `web/js/app/`.
+
+### Security
+- La API local y el WebSocket comprueban el `Host` (contra DNS rebinding), el `Origin` (contra CSRF) y un token por ejecución (cabecera o cookie `SameSite=Strict`).
+
+### Cambios incompatibles
+- Los clientes de la API tienen que enviar `X-Optimia-Token`: el token sale en el enlace que imprime optimia al arrancar.
+- La API de un proyecto concreto vive en `/api/projects/:id/*`; `/api/*` sigue apuntando al proyecto de arranque.
+
 ## [1.0.1] - 2026-11-01
 
 ### Added
