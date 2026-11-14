@@ -27,13 +27,17 @@
     "web"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
-    "test": "node --test && bats test/",
-    "test:unit": "node --test",
+    "test": "node --test 'test/unit/**/*.test.js' && bats test/",
+    "test:unit": "node --test 'test/unit/**/*.test.js'",
     "test:bats": "bats test/",
-    "prepublishOnly": "node --test && bats test/"
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "node --test 'test/unit/**/*.test.js' && bats test/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -42,7 +46,12 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "bats": "^1.11.1"
+    "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.49.1",
+    "bats": "^1.11.1",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2"
   },
   "allowScripts": {
     "node-pty@1.1.0": true

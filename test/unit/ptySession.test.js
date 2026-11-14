@@ -34,7 +34,7 @@ test('scrollback: accumulates data and trims to the configured limit', () => {
   assert.ok(session.scrollback.endsWith('abcdefghij'));
 });
 
-test('write/resize/kill: no-op once the session has exited, and never throw', async (t) => {
+test('write/resize/kill: no-op once the session has exited, and never throw', async () => {
   const session = new PtySession({ cwd: process.cwd() });
   await new Promise((resolve) => session.once('data', resolve));
 
