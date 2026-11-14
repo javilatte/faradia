@@ -13,6 +13,8 @@ import { langFor, tokenizeLines, paintTokens } from './syntax.js';
 const sel = {
   projectId: null,
   taskId: null, // null = arbol de trabajo del repo
+  ref: null, // sha de un commit: se ven sus cambios (navegacion desde el timeline)
+  commit: null, // { short, subject } del commit abierto
   path: null,
   mode: 'head',
   layout: localStorage.getItem('optimia:diff-layout') || 'inline',
@@ -21,13 +23,26 @@ const sel = {
 let root = null;
 let monitorRepos = [];
 let lastDiff = null;
+let commitFiles = []; // ficheros del commit abierto (sel.ref)
 let refreshTimer = null;
 
-export function openChanges({ projectId, taskId = null, path = null } = {}) {
+export function openChanges({ projectId, taskId = null, path = null, ref = null, commit = null } = {}) {
   sel.projectId = projectId;
-  sel.taskId = taskId;
+  sel.taskId = ref ? null : taskId;
+  sel.ref = ref;
+  sel.commit = commit;
   sel.path = path;
+  if (ref) sel.mode = 'commit';
+  else if (sel.mode === 'commit') sel.mode = 'head';
   showView('changes', {});
+}
+
+function leaveCommit() {
+  sel.ref = null;
+  sel.commit = null;
+  sel.mode = 'head';
+  sel.path = null;
+  refresh();
 }
 
 function target() {
@@ -52,6 +67,7 @@ async function loadState() {
 function diffUrl() {
   const q = new URLSearchParams({ projectId: sel.projectId, mode: sel.mode, context: sel.full ? 'full' : '3' });
   if (sel.taskId) q.set('taskId', sel.taskId);
+  if (sel.ref) q.set('ref', sel.ref);
   if (sel.path) q.set('path', sel.path);
   return `/api/monitor/diff?${q}`;
 }
@@ -132,11 +148,20 @@ function renderToolbar(repo) {
     'div',
     { class: 'view-header' },
     h('h2', {}, 'Cambios'),
+    sel.ref
+      ? h(
+          'span',
+          { class: 'commit-chip', title: sel.ref },
+          `Commit ${sel.commit?.short || sel.ref.slice(0, 7)}`,
+          sel.commit?.subject ? h('span', { class: 'muted' }, ` · ${sel.commit.subject}`) : null,
+          h('button', { class: 'link-button', onclick: leaveCommit }, 'Volver al árbol de trabajo')
+        )
+      : null,
     repoSelect,
     targetSelect,
     h('span', { class: 'live-badge', title: 'Se actualiza solo con cada cambio' }, 'EN VIVO'),
     h('span', { class: 'spacer' }),
-    sel.taskId
+    sel.taskId || sel.ref
       ? null
       : seg(
           [
@@ -181,6 +206,7 @@ function renderToolbar(repo) {
 }
 
 function filesFor(state) {
+  if (sel.ref) return commitFiles;
   if (!state) return [];
   if (sel.taskId || sel.mode === 'head') return state.files;
   if (sel.mode === 'staged') return state.files.filter((f) => f.staged);
@@ -190,7 +216,7 @@ function filesFor(state) {
 function renderFileList(state, worktree) {
   const list = h('nav', { class: 'changes-files', 'aria-label': 'Ficheros cambiados' });
   const files = filesFor(state);
-  if (!state) {
+  if (!state && !sel.ref) {
     list.append(h('p', { class: 'muted' }, worktree ? 'Leyendo el worktree…' : 'Sin estado git para este repo.'));
     return list;
   }
@@ -384,6 +410,16 @@ async function paintSyntax() {
 async function refresh() {
   try {
     await loadState();
+    if (sel.ref) {
+      const q = new URLSearchParams({ projectId: sel.projectId, mode: 'commit', ref: sel.ref, context: '0' });
+      const all = await api.get(`/api/monitor/diff?${q}`);
+      commitFiles = all.files.map((f) => ({
+        path: f.newPath || f.oldPath,
+        status: f.status === 'modified' ? 'modified' : f.status,
+        added: f.added,
+        removed: f.removed
+      }));
+    }
     const { state } = target();
     const files = filesFor(state);
     if (files.length && (!sel.path || !files.some((f) => f.path === sel.path))) sel.path = files[0].path;

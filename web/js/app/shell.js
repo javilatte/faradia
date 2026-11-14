@@ -8,6 +8,7 @@ import { h } from './dom.js';
 import './agents.js';
 import './dashboard.js';
 import './changes.js';
+import './timeline.js';
 
 const ctx = { state };
 

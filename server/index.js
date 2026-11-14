@@ -11,6 +11,8 @@ const security = require('./http/security');
 const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRoutes');
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
 const { MonitorService } = require('./monitor/monitorService');
+const { Timeline } = require('./monitor/timeline');
+const { loadPrefs, savePrefs } = require('./store/globalPrefs');
 const { ensureLaunchRepo } = require('./store/workbenchStore');
 
 // Rutas de la API:
@@ -25,10 +27,19 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   const wss = new WebSocketServer({ noServer: true });
   let registry = null;
   let monitor = null;
+  let timeline = null;
+  let orphanTimer = null;
+  const taskStatus = new Map(); // taskId -> ultimo estado visto (para el timeline)
   let defaultProjectId = null;
   let actualPort = null;
 
   function sendToClients(payload) {
+    // Las tareas que cambian de estado tambien van al timeline.
+    if (payload.type === 'task_updated' && payload.task && timeline) {
+      const prev = taskStatus.get(payload.task.id);
+      taskStatus.set(payload.task.id, payload.task.status);
+      timeline.recordTask(payload.projectId, registry?.info(payload.projectId)?.name, payload.task, prev);
+    }
     const data = JSON.stringify(payload);
     for (const client of wss.clients) {
       if (client.readyState === WebSocket.OPEN) client.send(data);
@@ -85,6 +96,29 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
         }
       });
       if (handled !== null) return handled;
+    }
+
+    if (url.pathname === '/api/timeline' && req.method === 'GET') {
+      const q = url.searchParams;
+      const list = (name) => (q.get(name) ? q.get(name).split(',').filter(Boolean) : null);
+      const projectIds = list('projectId') || activeRepos().map((r) => r.projectId);
+      return sendJson(res, 200, {
+        entries: timeline.query({
+          projectIds,
+          kinds: list('kind'),
+          ext: q.get('ext'),
+          since: q.get('since'),
+          until: q.get('until'),
+          limit: Number(q.get('limit')) || 200
+        })
+      });
+    }
+
+    if (url.pathname === '/api/preferences' && req.method === 'GET') return sendJson(res, 200, loadPrefs());
+    if (url.pathname === '/api/preferences' && req.method === 'PUT') {
+      const body = await readJsonBody(req).catch(() => null);
+      if (!body) return sendJson(res, 400, { error: 'invalid JSON body' });
+      return sendJson(res, 200, savePrefs(body));
     }
 
     if (url.pathname.startsWith('/api/monitor/')) {
@@ -166,7 +200,14 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   }
 
   function startMonitor() {
+    timeline = new Timeline();
+    timeline.on('entry', (entry) => sendToClients({ type: 'timeline_entry', entry }));
     monitor = new MonitorService({ getRepos: activeRepos });
+    monitor.on('activity', (e) => timeline.recordFiles(e));
+    monitor.on('state', (e) => timeline.recordState(e));
+    monitor.on('watch_event', (e) => timeline.recordWatch(e));
+    orphanTimer = setInterval(() => timeline.checkOrphans(monitor.snapshot()), 60 * 1000);
+    orphanTimer.unref?.();
     const relay = (type) => (event) => sendToClients({ type, ...event, previous: undefined });
     monitor.on('state', relay('monitor_state'));
     monitor.on('activity', relay('monitor_activity'));
@@ -193,6 +234,8 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       if (open) openInBrowser(openUrl);
       startMonitor();
       server.on('close', () => {
+        clearInterval(orphanTimer);
+        timeline?.stop();
         monitor?.stop();
         registry.dispose();
       });
