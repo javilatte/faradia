@@ -6,6 +6,8 @@ import { loadWorkbenches, state } from './workbenches.js';
 import { viewNames, viewLabel, showView, viewFromHash } from './views.js';
 import { h } from './dom.js';
 import './agents.js';
+import './dashboard.js';
+import './changes.js';
 
 const ctx = { state };
 

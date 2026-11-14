@@ -347,7 +347,7 @@ function renderNewAgent() {
       required: true,
       'aria-label': 'Nombre del agente'
     }),
-    h('input', { name: 'description', placeholder: 'Que hace, en una frase', 'aria-label': 'Descripcion del agente' }),
+    h('input', { name: 'description', placeholder: 'Qué hace, en una frase', 'aria-label': 'Descripción del agente' }),
     h(
       'select',
       { name: 'access', 'aria-label': 'Acceso del agente' },
@@ -356,7 +356,7 @@ function renderNewAgent() {
     h('textarea', {
       name: 'prompt',
       rows: 4,
-      placeholder: 'Prompt de rol: como trabaja este agente',
+      placeholder: 'Prompt de rol: cómo trabaja este agente',
       'aria-label': 'Prompt del agente'
     }),
     h('button', { type: 'submit', class: 'primary' }, 'Crear agente')

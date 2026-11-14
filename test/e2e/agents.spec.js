@@ -46,7 +46,7 @@ test('un agente propio aparece en el selector de modo y ejecuta su tarea de una 
   await page.locator('#settings-button').click();
   await page.locator('.settings-nav-item[data-pane="agents"]').click();
   await page.getByLabel('Nombre del agente').fill('Revisor de accesibilidad');
-  await page.getByLabel('Descripcion del agente').fill('Revisa contraste y etiquetas');
+  await page.getByLabel('Descripción del agente').fill('Revisa contraste y etiquetas');
   await page.getByLabel('Prompt del agente').fill('Revisa la accesibilidad (WCAG).');
   await page.getByRole('button', { name: 'Crear agente' }).click();
   const card = page.locator('.agent-card[data-agent="revisor-de-accesibilidad"]');

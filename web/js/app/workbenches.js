@@ -264,7 +264,7 @@ function renderWorkbenchPane(wb) {
 
   pane.append(h('h3', { class: 'wb-h' }, `Repos (${wb.repos.length})`));
   const repoList = h('ul', { class: 'wb-repos' });
-  if (wb.repos.length === 0) repoList.append(h('li', { class: 'muted' }, 'Todavia no hay repos en este workbench.'));
+  if (wb.repos.length === 0) repoList.append(h('li', { class: 'muted' }, 'Todavía no hay repos en este workbench.'));
   for (const repo of wb.repos) {
     repoList.append(
       h(
@@ -292,7 +292,7 @@ function renderWorkbenchPane(wb) {
   pane.append(repoList);
 
   pane.append(
-    h('h3', { class: 'wb-h' }, 'Anadir un repo'),
+    h('h3', { class: 'wb-h' }, 'Añadir un repo'),
     h(
       'form',
       {
@@ -304,7 +304,7 @@ function renderWorkbenchPane(wb) {
         }
       },
       h('input', { name: 'path', placeholder: '/ruta/al/repo', 'aria-label': 'Ruta del repo', spellcheck: 'false' }),
-      h('button', { type: 'submit' }, 'Anadir')
+      h('button', { type: 'submit' }, 'Añadir')
     ),
     h('h3', { class: 'wb-h' }, 'Buscar repos en una carpeta'),
     renderScanForm(wb)
@@ -351,9 +351,9 @@ function renderScanResults(host, wb, repos) {
   clear(host);
   const known = new Set(wb.repos.map((r) => r.path));
   const fresh = repos.filter((r) => !known.has(r));
-  if (repos.length === 0) return host.append(h('p', { class: 'muted' }, 'No se encontro ningun repo git.'));
+  if (repos.length === 0) return host.append(h('p', { class: 'muted' }, 'No se encontró ningún repo git.'));
   if (fresh.length === 0)
-    return host.append(h('p', { class: 'muted' }, 'Todos los repos encontrados ya estan en este workbench.'));
+    return host.append(h('p', { class: 'muted' }, 'Todos los repos encontrados ya están en este workbench.'));
   const boxes = fresh.map((path) => h('input', { type: 'checkbox', value: path, checked: true }));
   host.append(
     h(
@@ -370,7 +370,7 @@ function renderScanResults(host, wb, repos) {
           if (paths.length) run(() => api.post(`/api/workbenches/${wb.id}/repos`, { paths }));
         }
       },
-      `Anadir ${fresh.length === 1 ? 'el repo' : 'los seleccionados'}`
+      `Añadir ${fresh.length === 1 ? 'el repo' : 'los seleccionados'}`
     )
   );
 }

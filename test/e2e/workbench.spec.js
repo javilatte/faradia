@@ -37,7 +37,7 @@ test('crear un workbench, buscar repos en una carpeta y cambiar de proyecto', as
   await page.getByLabel('Carpeta donde buscar').fill(root);
   await page.getByRole('button', { name: 'Buscar' }).click();
   await expect(page.locator('.wb-scan-list')).toContainText(path.join(root, 'web', 'app'));
-  await page.getByRole('button', { name: /Anadir los seleccionados/ }).click();
+  await page.getByRole('button', { name: /Añadir los seleccionados/ }).click();
   await expect(page.locator('.wb-repos')).toContainText('api');
   await expect(page.locator('.wb-repos')).toContainText('app');
 

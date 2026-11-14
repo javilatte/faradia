@@ -466,3 +466,407 @@
 .agent-new button {
   align-self: flex-start;
 }
+
+/* ---- Dashboard ---- */
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.dash-grid.compact {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.dash-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.dash-card.active {
+  border-color: var(--accent);
+}
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dash-card-head h3 {
+  margin: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-branch {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+}
+.dash-ab {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.dash-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--panel-border);
+  flex-shrink: 0;
+}
+.active > .dash-pulse,
+.dash-card.active .dash-card-head .dash-pulse {
+  background: var(--ok);
+  box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.6);
+  animation: dash-pulse 1.6s infinite;
+}
+@keyframes dash-pulse {
+  70% {
+    box-shadow: 0 0 0 7px rgba(48, 209, 88, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(48, 209, 88, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .active > .dash-pulse,
+  .dash-card.active .dash-card-head .dash-pulse {
+    animation: none;
+  }
+}
+.dash-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12.5px;
+  align-items: baseline;
+}
+.dash-stat.danger {
+  color: var(--danger);
+}
+.dash-lines,
+.changes-file-lines {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  display: inline-flex;
+  gap: 6px;
+}
+.add {
+  color: var(--add-text);
+}
+.del {
+  color: var(--del-text);
+}
+.dash-commit {
+  margin: 0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-files li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.dash-file {
+  font-family: var(--mono);
+  font-size: 11.5px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.dash-fstatus {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+}
+.st-added,
+.st-untracked {
+  color: var(--add-text);
+}
+.st-deleted,
+.st-conflict {
+  color: var(--del-text);
+}
+.st-modified,
+.st-renamed {
+  color: var(--warn);
+}
+.dash-worktree {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px dashed var(--panel-border);
+}
+.dash-wt-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-worktree .link-button {
+  margin-left: auto;
+}
+.dash-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  font-size: 11.5px;
+}
+.dash-card-foot .muted {
+  margin-right: auto;
+}
+
+/* ---- Cambios (visor de diffs) ---- */
+
+.view-changes {
+  display: flex;
+  flex-direction: column;
+}
+.live-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ok);
+  border: 1px solid var(--ok);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.view-header select {
+  font-size: 12.5px;
+  padding: 4px 8px;
+  max-width: 240px;
+}
+.changes-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  gap: 12px;
+}
+.changes-files {
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.view .changes-file {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.view .changes-file.active {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+.changes-file .dash-fstatus {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+.changes-file-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.changes-file-dir {
+  grid-column: 2;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.changes-file .changes-file-lines {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+.diff-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.diff-file-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--panel-border);
+  font-size: 12.5px;
+}
+.diff-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.diff-scroll {
+  position: relative; /* offsetTop de las lineas relativo a este contenedor (mapa de cambios) */
+  flex: 1;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  background: var(--bg);
+}
+.dl {
+  display: flex;
+  white-space: pre;
+  min-width: max-content;
+}
+.dl-no {
+  width: 4.2em;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 8px;
+  color: var(--text-dim);
+  user-select: none;
+  opacity: 0.8;
+}
+.dl-sign {
+  width: 1.4em;
+  flex-shrink: 0;
+  text-align: center;
+  user-select: none;
+  color: var(--text-dim);
+}
+.dl-code {
+  font-family: inherit;
+  padding-right: 16px;
+}
+.dl-add {
+  background: var(--add-bg);
+}
+.dl-add .dl-sign {
+  color: var(--add-text);
+}
+.dl-del {
+  background: var(--del-bg);
+}
+.dl-del .dl-sign {
+  color: var(--del-text);
+}
+.dl-hunk {
+  color: var(--accent);
+  background: var(--panel);
+  padding: 2px 12px;
+  border-block: 1px solid var(--panel-border);
+}
+.dl-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.dl-row > .dl {
+  min-width: 0;
+  overflow: hidden;
+}
+.dl-row > .dl + .dl {
+  border-left: 1px solid var(--panel-border);
+}
+.dl-empty {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--panel) 6px 7px);
+}
+/* Colores de Shiki: una variable por tema, elegida con el tema de optimia. */
+.dl-code span {
+  color: var(--shiki-light);
+}
+:root[data-theme='dark'] .dl-code span {
+  color: var(--shiki-dark);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .dl-code span {
+    color: var(--shiki-dark);
+  }
+}
+.diff-ruler {
+  width: 12px;
+  flex-shrink: 0;
+  position: relative;
+  border-left: 1px solid var(--panel-border);
+  background: var(--panel);
+  cursor: pointer;
+}
+.ruler-mark {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 2px;
+  border-radius: 1px;
+}
+.ruler-mark.add {
+  background: var(--add-text);
+}
+.ruler-mark.del {
+  background: var(--del-text);
+}
+.ruler-viewport {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(127, 127, 127, 0.18);
+  pointer-events: none;
+}
+@media (max-width: 900px) {
+  .changes-body {
+    grid-template-columns: 1fr;
+  }
+  .changes-files {
+    max-height: 30vh;
+  }
+}
