@@ -5,6 +5,7 @@ import { connectEvents } from './events.js';
 import { loadWorkbenches, state } from './workbenches.js';
 import { viewNames, viewLabel, showView, viewFromHash } from './views.js';
 import { h } from './dom.js';
+import './agents.js';
 
 const ctx = { state };
 

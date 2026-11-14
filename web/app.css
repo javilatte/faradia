@@ -331,3 +331,138 @@
     overflow-x: auto;
   }
 }
+
+/* ---- Ajustes > Agentes ---- */
+
+#settings-overlay .modal {
+  width: min(900px, 95vw);
+  height: min(680px, 90vh);
+}
+.agents-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.agents-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.agents-pane button,
+.agents-pane select,
+.agents-pane input,
+.agents-pane textarea {
+  font: inherit;
+  font-size: 12.5px;
+}
+.agents-pane button {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.agents-pane button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.agents-pane button.danger {
+  color: var(--danger);
+}
+.agents-pane .segmented button {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-dim);
+}
+.agents-pane .segmented button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.agents-help {
+  font-size: 11.5px;
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+.agents-stage-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 260px);
+  gap: 6px 12px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.agent-card {
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-card.disabled {
+  opacity: 0.6;
+}
+.agent-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.agent-desc {
+  margin: 0;
+  font-size: 12px;
+}
+.agent-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+.agent-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.agent-fields select,
+.agent-fields input {
+  width: 100%;
+}
+.agent-prompt,
+.agent-new textarea {
+  width: 100%;
+  font-family: var(--mono) !important;
+  font-size: 12px !important;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  padding: 8px;
+  resize: vertical;
+}
+.agent-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.agent-new {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 16px;
+}
+.agent-new input,
+.agent-new select {
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+}
+.agent-new button {
+  align-self: flex-start;
+}

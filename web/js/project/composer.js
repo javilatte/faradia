@@ -2,11 +2,51 @@
 
 // Compositor: modo chat/tarea, ramas y pestanas de chats.
 
-// Modo del chat: "chat" es una conversacion normal; "coding" y "documentation"
-// convierten cada mensaje en una tarea con su flujo fijo (ver taskStages.js).
-const CHAT_KIND_LABEL = { coding: 'de código', documentation: 'de documentación' };
+// Modo del chat: "chat" es una conversacion normal; el resto convierte cada
+// mensaje en una tarea con su pipeline de agentes (ver server/bridge/taskStages.js).
+// "custom:<id>" lanza una tarea de una sola etapa con un agente propio.
+const CHAT_KIND_LABEL = {
+  coding: 'de código',
+  bugfix: 'de bug',
+  tests: 'de tests',
+  documentation: 'de documentación',
+  audit: 'de auditoría'
+};
 const chatKindSelect = document.getElementById('chat-kind-select');
 chatKindSelect.value = localStorage.getItem('optimia:chat-kind') || 'chat';
+
+// Rellena el selector de modo con los tipos de tarea y los agentes propios activos.
+async function loadTaskKinds() {
+  const data = await fetch(apiPath('/api/agents')).then((r) => r.json());
+  const saved = localStorage.getItem('optimia:chat-kind') || 'chat';
+  chatKindSelect.innerHTML = '';
+  const add = (parent, value, label) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    parent.appendChild(opt);
+  };
+  add(chatKindSelect, 'chat', 'Chat');
+  const tasksGroup = document.createElement('optgroup');
+  tasksGroup.label = 'Tarea para agentes';
+  for (const [type, def] of Object.entries(data.taskTypes)) {
+    if (type !== 'custom') add(tasksGroup, type, def.label);
+  }
+  chatKindSelect.appendChild(tasksGroup);
+  const custom = data.agents.filter((a) => !a.builtin && a.enabled);
+  if (custom.length) {
+    const group = document.createElement('optgroup');
+    group.label = 'Agentes propios';
+    for (const a of custom) {
+      add(group, `custom:${a.id}`, a.name);
+      CHAT_KIND_LABEL[`custom:${a.id}`] = `de ${a.name}`;
+    }
+    chatKindSelect.appendChild(group);
+  }
+  const values = [...chatKindSelect.querySelectorAll('option')].map((o) => o.value);
+  chatKindSelect.value = values.includes(saved) ? saved : 'chat';
+  syncTaskControls();
+}
 const taskBaseSelect = document.getElementById('task-base-select');
 const taskBranchInput = document.getElementById('task-branch-input');
 
@@ -35,6 +75,7 @@ chatKindSelect.addEventListener('change', () => {
   syncTaskControls();
 });
 syncTaskControls();
+loadTaskKinds().catch(() => {});
 
 async function createTaskFromChat(kind, text) {
   if (!currentChatId) return;
@@ -51,7 +92,8 @@ async function createTaskFromChat(kind, text) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       title,
-      type: kind,
+      type: kind.startsWith('custom:') ? 'custom' : kind,
+      agentId: kind.startsWith('custom:') ? kind.slice('custom:'.length) : undefined,
       instruction: text,
       chatId: currentChatId,
       baseBranch: taskBaseSelect.value || undefined,
@@ -66,7 +108,10 @@ async function createTaskFromChat(kind, text) {
   applyTaskFromServer(data);
   taskBranchInput.value = '';
   renderTasks();
-  appendMessage('system', `Tarea ${CHAT_KIND_LABEL[kind]} lanzada: "${title}". Te avisaré aquí si necesita algo.`);
+  appendMessage(
+    'system',
+    `Tarea ${CHAT_KIND_LABEL[kind] || ''} lanzada: "${title}". Te avisaré aquí si necesita algo.`
+  );
 }
 
 // Avisa en la conversacion cuando una tarea lanzada desde ella necesita al usuario.

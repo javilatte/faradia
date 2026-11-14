@@ -1506,3 +1506,56 @@ select,
   overflow-wrap: anywhere;
   min-width: 0;
 }
+
+/* ---- agentes en las tarjetas de tareas ---- */
+.task-type-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 6px;
+  margin: 2px 0 4px;
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text-dim);
+}
+.task-type-badge.type-bugfix {
+  color: var(--danger);
+}
+.task-type-badge.type-audit {
+  color: #bf5af2;
+}
+.agent-trail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+}
+.agent-chip {
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.agent-chip.running {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.agent-chip.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.verification {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0;
+}
+.verification.ok {
+  color: #30d158;
+}
+.verification.fail {
+  color: var(--danger);
+}

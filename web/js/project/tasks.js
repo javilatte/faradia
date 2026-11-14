@@ -231,7 +231,50 @@ function taskStepText(task, lastStep) {
 }
 
 // Preguntas que puede hacer una etapa, y la etapa que se reanuda al responder.
-const QUESTION_STAGE = { 'plan-details': 'plan', 'research-details': 'research', 'implement-details': 'implement' };
+// Las preguntas de una etapa llegan como "<etapa>-details" (ver QUESTION_KIND en taskStages.js).
+const QUESTION_STAGE = new Proxy(
+  {},
+  {
+    get: (_t, kind) =>
+      typeof kind === 'string' && kind.endsWith('-details') ? kind.slice(0, -'-details'.length) : undefined
+  }
+);
+
+const TASK_TYPE_LABEL = {
+  coding: 'Código',
+  bugfix: 'Bug',
+  tests: 'Tests',
+  documentation: 'Docs',
+  audit: 'Auditoría',
+  custom: 'Agente propio'
+};
+
+// Rastro de agentes: que agente (y con que modelo) hizo cada etapa de la tarea.
+function renderAgentTrail(task) {
+  const runs = task.stageRuns || [];
+  if (!runs.length) return null;
+  const row = document.createElement('div');
+  row.className = 'agent-trail';
+  for (const run of runs) {
+    const chip = document.createElement('span');
+    chip.className = `agent-chip ${run.status || 'running'}`;
+    const model = run.engine === 'local' ? `local · ${run.model}` : run.model;
+    chip.textContent = `${run.agentName} · ${model}`;
+    const files = Number.isFinite(run.filesTouched) ? ` · ${run.filesTouched} ficheros` : '';
+    const cost = Number.isFinite(run.costUsd) && run.costUsd > 0 ? ` · ${run.costUsd.toFixed(3)} $` : '';
+    chip.title = `Etapa ${run.stage}${files}${cost}`;
+    row.appendChild(chip);
+  }
+  return row;
+}
+
+function renderVerification(task) {
+  if (!task.verification) return null;
+  const el = document.createElement('div');
+  el.className = `verification ${task.verification.ok ? 'ok' : 'fail'}`;
+  el.textContent = task.verification.ok ? 'Verificación superada' : task.verification.line;
+  return el;
+}
 
 function renderAnswerForm(taskId, stage) {
   const form = document.createElement('div');
@@ -399,9 +442,12 @@ async function mergeTask(taskId) {
   renderTasks();
 }
 
-function renderReadyActions(taskId) {
+function renderReadyActions(taskId, task) {
   const row = document.createElement('div');
   row.className = 'task-actions';
+  if (task && ['coding', 'bugfix', 'tests'].includes(task.type)) {
+    row.appendChild(actionButton('Verificar otra vez', { onClick: () => runTaskStage(taskId, { stage: 'verify' }) }));
+  }
   row.appendChild(actionButton('Revision final', { onClick: () => runTaskStage(taskId, { stage: 'review' }) }));
   row.appendChild(
     actionButton('Preparar git add y commit', { onClick: () => runTaskStage(taskId, { stage: 'commit' }) })
@@ -548,6 +594,16 @@ function buildTaskCard(taskId, task, lastStep) {
   title.className = 'task-title marquee-text';
   title.textContent = task.title;
   card.appendChild(title);
+  if (task.type && TASK_TYPE_LABEL[task.type]) {
+    const badge = document.createElement('span');
+    badge.className = `task-type-badge type-${task.type}`;
+    badge.textContent = TASK_TYPE_LABEL[task.type];
+    card.appendChild(badge);
+  }
+  const trail = renderAgentTrail(task);
+  if (trail) card.appendChild(trail);
+  const verification = renderVerification(task);
+  if (verification) card.appendChild(verification);
   if (task.phases?.length) card.appendChild(renderPhaseChips(task));
 
   const step = document.createElement('div');
@@ -555,7 +611,7 @@ function buildTaskCard(taskId, task, lastStep) {
   step.textContent = taskStepText(task, lastStep);
   card.appendChild(step);
   if (task.status === 'in_progress') {
-    const planning = task.stage === 'plan' || task.stage === 'research';
+    const planning = ['plan', 'research', 'diagnose', 'audit'].includes(task.stage);
     card.appendChild(renderOrb(!lastStep ? 'thinking' : planning ? 'planning' : 'working'));
   }
 
@@ -581,9 +637,15 @@ function buildTaskCard(taskId, task, lastStep) {
     card.appendChild(renderAnswerForm(taskId, answerStage));
   } else if (task.status === 'awaiting_input' && task.pendingQuestion?.kind === 'doc-options') {
     card.appendChild(renderDocOptions(taskId, task));
+  } else if (ready && task.reportOnly) {
+    // Auditorias y agentes de solo lectura: entregan un informe, no hay nada que commitear.
+    const note = document.createElement('div');
+    note.className = 'task-meta';
+    note.textContent = 'Informe entregado: esta tarea no cambia ficheros.';
+    card.appendChild(note);
   } else if (ready) {
     card.appendChild(renderCommitAndMerge(taskId, task));
-    card.appendChild(renderReadyActions(taskId));
+    card.appendChild(renderReadyActions(taskId, task));
   } else if (task.status === 'pending' && task.pendingPermission) {
     card.appendChild(renderPermissionRequest(taskId, task.pendingPermission));
   } else if (task.status === 'pending' && task.stage) {
