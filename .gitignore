@@ -5,7 +5,10 @@ node_modules/
 /.codegraph
 /.tokensave
 .DS_Store
-/docs
+# docs/ es la salida por defecto de las tareas de documentacion; el diseno y el roadmap si se versionan
+/docs/*
+!/docs/design.md
+!/docs/roadmap.md
 
 # AI assistant config
 .claude/

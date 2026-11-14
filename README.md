@@ -2,25 +2,35 @@
 
 [![npm](https://img.shields.io/npm/v/@javilatte/optimia?logo=npm&style=flat-square)](https://www.npmjs.com/package/@javilatte/optimia)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=node.js)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![macOS](https://img.shields.io/badge/macOS-tested-brightgreen?style=flat-square&logo=apple)](https://www.apple.com/macos)
-[![Linux](https://img.shields.io/badge/Linux-untested-yellow?style=flat-square&logo=linux)](https://github.com/)
+[![Linux](https://img.shields.io/badge/Linux-tested-brightgreen?style=flat-square&logo=linux)](https://github.com/)
 [![Windows](https://img.shields.io/badge/Windows-untested%20%2F%20WIP-yellow?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
 
 Run `optimia` in any project directory. It starts a local web server and opens a
-dashboard in your browser: a chat against a real **Claude Code** session (or a
-local model via **Ollama**), plus a kanban board for coding agent tasks running
-in git worktrees.
+dashboard in your browser where you can **direct** coding agents and **watch**
+what they do, across every repo you work on:
+
+- **Chat** against a real **Claude Code** session (or a local model via **Ollama**).
+- **Agents with their own model**: ten default agents (planner, implementer,
+  verifier, reviewer, debugger, test writer, auditor…) wired into task pipelines,
+  each with its own engine, model, effort and role prompt — plus your own agents.
+- **Workbenches**: group repos, auto-detect them under a folder, and run chats and
+  agents in any of them.
+- **Live supervision, read-only**: git state per repo, a live diff viewer (watch an
+  agent write in its worktree), a timeline, passive signals (large deletes,
+  sensitive files, possible secrets, test changes), metrics, desktop notifications
+  and a compact glance window.
+- **File explorer** with previews and undoable operations.
 
 ```
 $ optimia
 
-optimia running at http://127.0.0.1:54213 (project: /path/to/your-project)
+optimia running at http://127.0.0.1:54213/?token=… (project: /path/to/your-project)
 ```
 
-That's it — no terminal wizard, no questions to answer up front. Everything else
-(model, local AI endpoint, instructions, project memory, permission rules,
-skills) is configured from the Settings panel in the web UI.
+No terminal wizard: everything (models, agents, local AI, instructions, memory,
+permission rules, skills, signals, watchlists) is configured in the web UI.
 
 ---
 
@@ -50,78 +60,158 @@ npx @javilatte/optimia
 
 | Tool | Required | Purpose |
 |---|---|---|
-| `node` ≥ 18 | yes | runs the server and the CLI launcher |
-| [`claude`](https://claude.ai/code) (Claude Code CLI) | yes | the chat is a real `claude` subprocess — optimia never calls the Anthropic API directly |
-| [Ollama](https://ollama.com) | optional | local AI mode, used as an Anthropic-Messages-API-compatible backend |
-| `npx`/`git` | optional | only needed if you enable CodeGraph indexing |
+| `node` ≥ 22 | yes | runs the server and the CLI launcher |
+| `git` | yes | worktrees for agent tasks, and all repo supervision |
+| [`claude`](https://claude.ai/code) (Claude Code CLI) | yes | chats and agents are real `claude` subprocesses — optimia never calls the Anthropic API directly |
+| [Ollama](https://ollama.com) | optional | local models for the chat or for any agent (Anthropic-Messages-compatible endpoint, Ollama ≥ 0.14) |
+| [`gitleaks`](https://github.com/gitleaks/gitleaks) | optional | extra secret detection rules on top of the built-in ones |
 
 ---
 
-## What `optimia` does on launch
+## The views
 
-```
-optimia
-  │
-  ├─ 1. Create .optimia/ in the current directory (project-local state)
-  │
-  ├─ 2. In a git repo: offer to enable CodeGraph
-  │       Not enabled yet  → ask once, remembered in .optimia/codegraph.json
-  │       Enabled, not initialised → offer to run `npx @colbymchenry/codegraph init -i`
-  │       Enabled, initialised     → offer to sync
-  │       Also: symlink .codegraph → .optimia/.codegraph, update .gitignore
-  │
-  └─ 3. Start the local web server (random free port) and open it in your browser
-```
+| View | What it does |
+|---|---|
+| **Proyecto** | Chat with Claude and the kanban of agent tasks for the selected repo. |
+| **Dashboard** | One card per repo of the active workbench: branch, ahead/behind, changes, lines ±, last commit, live activity (including agents in their worktrees), 24 h activity and recent signals. |
+| **Cambios** | Live diff of any repo or task worktree: inline or side by side, with context or the whole file, syntax highlighting and a change map. It refreshes by itself while files change. Commits open here too. |
+| **Timeline** | Chronological feed of changed files, commits, branch switches, watchlist events, agent task updates, signals and orphaned changes, with filters and the commit history of each repo. |
+| **Archivos** | File tree with previews (markdown, code, images, audio, video, PDF), copy path, a file clipboard, rename/copy/move/delete with **Undo**, and a trash you can restore from. |
 
-From there, everything happens in the browser:
-
-- **Chat** — talks to a long-lived `claude` CLI subprocess over a WebSocket bridge (NDJSON). Multi-turn, with cost reported per turn. Paste or drag-and-drop a screenshot straight into the chat input.
-- **Settings** — Claude model/effort, local AI (Ollama) endpoint, free-text Instructions (appended to the system prompt via `--append-system-prompt`), project Memory (`.optimia/memory.md`), a No-go list of denied file/command patterns (synced 1:1 into `.claude/settings.json`'s `permissions.deny`), and Skills (`.claude/skills/*/SKILL.md`).
-- **Tasks** — a kanban board; each task gets its own git worktree so coding agents don't collide with your working tree.
-
-If `.optimia/system-prompt.md` or `.claude/settings.json` already exist from an
-older optimia project, the Settings UI offers a one-time migration preview
-before overwriting anything.
+The **glance** button in the top bar opens a small window with one line per repo,
+for a corner of your screen.
 
 ---
 
-## Project-local directory — `.optimia/`
+## Agents and pipelines
 
-All per-project state lives in `.optimia/` (added to `.gitignore` automatically in git repos):
+Every task runs as a pipeline of stages, each one handled by an agent in the task's
+own git worktree:
+
+| Task type | Pipeline |
+|---|---|
+| Código (`coding`) | plan → implement → verify |
+| Bug (`bugfix`) | diagnose → implement → verify |
+| Tests (`tests`) | plan → write tests → verify |
+| Documentación (`documentation`) | research → (choose format and target) → write |
+| Auditoría (`audit`) | audit → report (no changes) |
+| Agente propio (`custom`) | one stage with one of your agents |
+
+Review and commit preparation run on demand once a task is ready. The verifier runs
+the project's tests, lint and build and gives a verdict; disable it to skip that
+stage. Each task card shows which agent and model ran every stage.
+
+In **Ajustes → Agentes** you can change any agent's engine (Claude or local), model,
+effort and role prompt, choose which agent runs each stage, and create your own
+agents — for this project or for all of them. Agents are plain Markdown files with
+frontmatter:
 
 ```
-.optimia/
-├── settings.json     AI mode, model/effort, local AI config, instructions, no-go list
-├── memory.md          Free-text project memory, included in every session's system prompt
-├── tasks.json         Kanban task board state
-├── codegraph.json     Whether CodeGraph is enabled/initialised for this repo
-└── .codegraph/         CodeGraph SQLite database (symlinked to ./.codegraph at the root)
+<project>/.optimia/agents/<id>.md      this project only (wins)
+~/.config/optimia/agents/<id>.md       every project
 ```
+
+Agents can use different local models at the same time: the model name is passed
+straight to Ollama.
+
+Agents can never commit, push, merge, rebase or run destructive commands: a deny
+list and a git hook block them. Commit and merge are always your action, from the
+task card.
 
 ---
 
-## Supported AI backends
+## Supervision
 
-Only two, by design:
+Supervision is **read-only**: optimia never writes to a repo to monitor it.
 
-- **Claude Code** — the `claude` CLI, run as a real subprocess per session.
-- **Local AI** — any Ollama instance exposing the Anthropic-Messages-API-compatible `/v1/messages` endpoint (Ollama ≥ 0.14). Configure the URL and model name in Settings → IA local.
+- **Plane 1** — git state from `git status --porcelain=v2`, refreshed when files or
+  `HEAD` change.
+- **Plane 2** — a per-repo **watchlist** of patterns (`.gitignore` syntax) that are
+  reported even when git ignores them: `.env`, keys, build output…
+- **Signals** — passive, never blocking:
+  - large deletes (lines or files at once),
+  - sensitive files (marked as exposed when git would commit them),
+  - possible secrets in files git would commit (built-in rules plus gitleaks if
+    installed; the secret value is never stored or shown),
+  - test changes, especially by an agent.
+- **Orphaned changes** — uncommitted work left untouched for a while (30 min by
+  default).
 
-No other AI CLI (opencode, Gemini CLI, GitHub Copilot CLI) is orchestrated by optimia.
+Thresholds, rules, notifications and the watchlist live in
+**Ajustes → Avisos y vigilancia**. Folders are watched one by one (not with a
+recursive watch that would put a watcher on every `node_modules` folder).
+
+---
+
+## Security
+
+The server listens on `127.0.0.1` only, and every API and WebSocket request must
+pass three checks:
+
+1. the `Host` header must be loopback with the real port (blocks DNS rebinding),
+2. the `Origin`, when present, must be optimia itself (blocks CSRF),
+3. a per-run token, sent as `X-Optimia-Token` or as a `SameSite=Strict` cookie set
+   by the link optimia prints on start.
+
+File operations stay inside the repo (no absolute paths, `..`, or symlinks pointing
+out), never touch `.git` or `.optimia`, never overwrite, and raw files are served
+with a sandbox CSP.
+
+---
+
+## Where state lives
+
+```
+<project>/.optimia/              per project (excluded from git automatically)
+├── settings.json                AI mode, model/effort, local AI, instructions, no-go list
+├── memory.md                    project memory, included in every session's system prompt
+├── tasks.json, chats.json       kanban and chat state
+├── agents/                      project agents and stage map
+├── worktrees/                   one git worktree per agent task
+└── logs/optimia.log             activity log (Ajustes → Registro)
+
+~/.config/optimia/               global
+├── workbenches.json             workbenches and their repos
+├── agents/                      agents for every project
+├── watchlists.json              plane 2 patterns per repo
+└── preferences.json             signals, thresholds, notifications
+
+~/.local/share/optimia/
+├── timeline/events.jsonl        the timeline
+└── trash/                       files deleted from the explorer
+```
+
+A repo opened from a workbench excludes `.optimia` through `.git/info/exclude`, so
+optimia never edits your `.gitignore` there.
 
 ---
 
 ## CLI
 
 ```
-optimia              Set up .optimia/ (+ CodeGraph prompt), start the server, open the browser
+optimia              Set up .optimia/, start the server, open the browser
 optimia --version    Print version
-optimia --help        Print help
+optimia --help       Print help
 ```
 
-There is no other subcommand — tool/config/repo management from the old
-multi-tool wizard is gone. Everything configurable now lives in the web UI's
-Settings panel.
+`OPTIMIA_NO_OPEN=1` starts the server without opening a browser (handy over SSH).
+
+---
+
+## Development
+
+```bash
+npm ci
+npm run lint            # ESLint
+npm run format:check    # Prettier
+npm run test:unit       # node --test
+npm run test:bats       # launcher and HTTP integration tests
+npx playwright install chromium
+npm run test:e2e        # Playwright, against a fake `claude` CLI
+```
+
+The design is described in [docs/design.md](docs/design.md) and what comes next in
+[docs/roadmap.md](docs/roadmap.md).
 
 ---
 
