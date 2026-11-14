@@ -5,16 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-// serve.js deja el proyecto de arranque en <tmp>/repos/demo; aqui se crean repos
-// hermanos para buscarlos desde el gestor de workbenches.
-function reposDir() {
-  const tmp = fs
-    .readdirSync(require('os').tmpdir())
-    .filter((d) => d.startsWith('optimia-e2e-'))
-    .map((d) => path.join(require('os').tmpdir(), d))
-    .find((d) => fs.existsSync(path.join(d, 'repos', 'demo')));
-  return path.join(tmp, 'repos');
-}
+const { e2eTmp, waitForChatReady } = require('./helpers');
+
+const reposDir = () => path.join(e2eTmp(), 'repos');
 
 function makeRepo(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -56,7 +49,7 @@ test('crear un workbench, buscar repos en una carpeta y cambiar de proyecto', as
   // Cambiar de repo recarga la vista de proyecto con ?p=<id> del nuevo repo
   await page.locator('#repo-select').selectOption({ label: 'api' });
   await expect(page).toHaveURL(/\?p=[a-f0-9]{12}/);
-  await expect(page.locator('#connection-status')).toHaveAttribute('title', 'Conectado', { timeout: 10_000 });
+  await waitForChatReady(page);
   await page.locator('#chat-kind-select').selectOption('chat');
   await page.locator('#chat-input').fill('hola desde api');
   await page.locator('#chat-input').press('Enter');

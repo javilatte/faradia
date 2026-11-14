@@ -63,7 +63,12 @@ rl.on('line', (line) => {
     const file = path.join(process.cwd(), 'e2e-agent-output.txt');
     fs.appendFileSync(file, `cambio del agente (${model})\n`);
   }
-  const reply = editing ? 'He hecho el cambio pedido.' : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
+  const verifying = /VERIFICACION/.test(text);
+  const reply = verifying
+    ? 'Tests ejecutados.\nVEREDICTO: OK'
+    : editing
+      ? 'He hecho el cambio pedido.'
+      : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
   emit({
     type: 'assistant',
     session_id: sessionId,

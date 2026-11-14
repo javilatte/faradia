@@ -10,6 +10,18 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const PORT = Number(process.env.E2E_PORT || 47321);
+
+// Playwright para este proceso con SIGKILL, asi que la limpieza al salir no siempre
+// llega: al arrancar se borran las carpetas de ejecuciones anteriores (de mas de 10 min).
+for (const name of fs.readdirSync(os.tmpdir())) {
+  if (!name.startsWith('optimia-e2e-')) continue;
+  const dir = path.join(os.tmpdir(), name);
+  try {
+    if (Date.now() - fs.statSync(dir).mtimeMs > 10 * 60 * 1000) fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    /* otra ejecucion la esta usando o ya no existe */
+  }
+}
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'optimia-e2e-'));
 const home = path.join(tmp, 'home');
 const project = path.join(tmp, 'repos', 'demo');
@@ -28,6 +40,10 @@ process.env.PATH = `${path.join(__dirname, 'fixtures', 'bin')}${path.delimiter}$
 process.env.XDG_CONFIG_HOME = path.join(home, '.config');
 process.env.XDG_DATA_HOME = path.join(home, '.local', 'share');
 process.env.OPTIMIA_E2E_TMP = tmp;
+// Los specs encuentran esta ejecucion por este fichero (ver test/e2e/helpers.js).
+fs.writeFileSync(path.join(os.tmpdir(), `optimia-e2e-current-${PORT}.txt`), tmp);
+// Cada llamada al claude simulado queda aqui (argumentos y carpeta), para los tests de agentes.
+process.env.FAKE_CLAUDE_LOG = path.join(tmp, 'claude-calls.jsonl');
 
 const cleanup = () => fs.rmSync(tmp, { recursive: true, force: true });
 process.on('exit', cleanup);
