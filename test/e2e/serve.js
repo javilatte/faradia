@@ -34,4 +34,4 @@ process.on('exit', cleanup);
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(0));
 
 const { start } = require('../../server/index.js');
-start({ projectRoot: project, port: PORT, open: false });
+start({ projectRoot: project, port: PORT, open: false, token: 'e2e-token' });

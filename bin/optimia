@@ -147,7 +147,8 @@ async function main() {
   await setupCodegraph(projectRoot);
 
   const { start } = require('../server/index.js');
-  await start({ projectRoot });
+  // OPTIMIA_NO_OPEN=1: no abrir el navegador (tests, servidores remotos por SSH).
+  await start({ projectRoot, open: !process.env.OPTIMIA_NO_OPEN });
 }
 
 main().catch((err) => {

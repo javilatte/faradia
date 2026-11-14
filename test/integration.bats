@@ -15,7 +15,7 @@ setup() {
     git add README.md
     git commit -q -m init
 
-    node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
+    OPTIMIA_TOKEN=bats-token OPTIMIA_NO_OPEN=1 node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
     SERVER_PID=$!
     PORT=""
     for i in $(seq 1 50); do
@@ -33,7 +33,7 @@ teardown() {
 
 @test "GET /api/health: reports ok and the project root" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/health').then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/health',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
     [ "$status" -eq 0 ]
     [[ "$output" == *'"ok":true'* ]]
     [[ "$output" == *"$TESTDIR"* ]]
@@ -48,21 +48,35 @@ teardown() {
 
 @test "GET /api/settings: returns default settings for a project with no settings.json yet" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/settings').then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/settings',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
     [ "$status" -eq 0 ]
     [[ "$output" == *'"mode":"claude"'* ]]
 }
 
 @test "GET /api/tasks: returns an empty list for a fresh project" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/tasks').then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/tasks',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
     [ "$status" -eq 0 ]
     [[ "$output" == "[]" ]]
 }
 
 @test "GET /api/local-models: returns a real array (Ollama's own models, or empty if not installed)" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/local-models').then(r=>r.json()).then(d=>console.log(JSON.stringify(Array.isArray(d))))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/local-models',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(Array.isArray(d))))"
     [ "$status" -eq 0 ]
     [[ "$output" == "true" ]]
+}
+
+@test "API sin token: responde 401" {
+    [ -n "$PORT" ]
+    run node -e "fetch('http://127.0.0.1:$PORT/api/settings').then(r=>console.log(r.status))"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "401" ]]
+}
+
+@test "API con un Host ajeno (DNS rebinding): responde 421" {
+    [ -n "$PORT" ]
+    run curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example:1234' -H 'X-Optimia-Token: bats-token' "http://127.0.0.1:$PORT/api/settings"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "421" ]]
 }

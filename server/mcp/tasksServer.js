@@ -16,7 +16,11 @@ if (!port) {
   console.error('tasksServer: OPTIMIA_PORT env var is required');
   process.exit(1);
 }
-const base = `http://127.0.0.1:${port}`;
+// Cada proyecto tiene su propio mcp.json con su id y el token de esta ejecucion de
+// optimia (ver server/runtime/projectRuntime.js#writeMcpConfig).
+const projectId = process.env.OPTIMIA_PROJECT;
+const base = projectId ? `http://127.0.0.1:${port}/api/projects/${projectId}` : `http://127.0.0.1:${port}/api`;
+const authHeaders = process.env.OPTIMIA_TOKEN ? { 'X-Optimia-Token': process.env.OPTIMIA_TOKEN } : {};
 const fixedTaskId = process.env.OPTIMIA_TASK_ID || null;
 
 const server = new McpServer({ name: 'optimia-tasks', version: '1.0.0' });
@@ -36,9 +40,9 @@ server.registerTool(
     }
   },
   async ({ title, type, instruction }) => {
-    const res = await fetch(`${base}/api/tasks`, {
+    const res = await fetch(`${base}/tasks`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ title, type, instruction })
     });
     if (!res.ok) {
@@ -74,9 +78,9 @@ server.registerTool(
         isError: true
       };
     }
-    const res = await fetch(`${base}/api/tasks/${id}/phase`, {
+    const res = await fetch(`${base}/tasks/${id}/phase`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ phase, status })
     });
     if (!res.ok) {

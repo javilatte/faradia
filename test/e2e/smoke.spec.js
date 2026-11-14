@@ -11,7 +11,7 @@ function trackErrors(page) {
 
 test('la vista de proyecto carga sin errores y conecta', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.goto('/');
+  await page.goto('/?token=e2e-token');
   await expect(page.locator('#connection-status')).toHaveAttribute('title', 'Conectado', { timeout: 10_000 });
   await expect(page.locator('#chat-input')).toBeVisible();
   expect(errors).toEqual([]);
@@ -19,7 +19,7 @@ test('la vista de proyecto carga sin errores y conecta', async ({ page }) => {
 
 test('el chat envia un mensaje y muestra la respuesta del agente', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.goto('/');
+  await page.goto('/?token=e2e-token');
   await expect(page.locator('#connection-status')).toHaveAttribute('title', 'Conectado', { timeout: 10_000 });
   await page.locator('#chat-kind-select').selectOption('chat');
   await page.locator('#chat-input').fill('hola agente');

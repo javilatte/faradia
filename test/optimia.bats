@@ -38,7 +38,7 @@ teardown() {
 
     # stdin redirected from /dev/null -> not a TTY -> codegraph prompt
     # auto-declines instead of hanging; server keeps running until killed.
-    node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
+    OPTIMIA_NO_OPEN=1 node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
     pid=$!
     for i in $(seq 1 50); do
         [ -d .optimia ] && break
@@ -57,7 +57,7 @@ teardown() {
 @test "optimia: outside a git repo, still creates .optimia/ but skips CodeGraph setup" {
     cd "$TESTDIR"
 
-    node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
+    OPTIMIA_NO_OPEN=1 node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
     pid=$!
     for i in $(seq 1 50); do
         [ -d .optimia ] && break

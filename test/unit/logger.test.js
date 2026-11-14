@@ -56,3 +56,24 @@ test('readRecent: devuelve las entradas más recientes primero, con límite', (t
     ['c.third', 'b.second']
   );
 });
+
+test('createLogger: cada proyecto escribe en su propio registro', (t) => {
+  const a = mkTmpDir('logger-a');
+  const b = mkTmpDir('logger-b');
+  t.after(() => {
+    rmTmpDir(a);
+    rmTmpDir(b);
+  });
+  const la = logger.createLogger(a);
+  const lb = logger.createLogger(b);
+  la.info('solo.a', {});
+  lb.info('solo.b', {});
+  assert.deepEqual(
+    la.readRecent().map((e) => e.event),
+    ['solo.a']
+  );
+  assert.deepEqual(
+    lb.readRecent().map((e) => e.event),
+    ['solo.b']
+  );
+});
