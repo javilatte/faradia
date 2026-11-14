@@ -5,12 +5,12 @@
 const registry = new Map(); // name -> { label, mount, show, hide, mounted, el }
 let current = null;
 
-export function registerView(name, { label, mount, show, hide }) {
-  registry.set(name, { label, mount, show, hide, mounted: false, el: null });
+export function registerView(name, { label, order = 100, mount, show, hide }) {
+  registry.set(name, { label, order, mount, show, hide, mounted: false, el: null });
 }
 
 export function viewNames() {
-  return ['project', ...registry.keys()];
+  return ['project', ...[...registry.entries()].sort((a, b) => a[1].order - b[1].order).map(([k]) => k)];
 }
 
 export function viewLabel(name) {
