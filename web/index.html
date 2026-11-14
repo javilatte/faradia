@@ -46,6 +46,26 @@
             <path d="M13 15h4" />
           </svg>
         </button>
+        <button
+          class="icon-button"
+          id="glance-button"
+          title="Modo compacto: una ventana pequeña con el estado de todos los repos"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <rect x="12" y="12" width="7" height="7" rx="1" />
+          </svg>
+        </button>
       </div>
       <span
         class="status-dot offline"
@@ -168,6 +188,8 @@
           <button class="settings-nav-item active" data-pane="claude">Claude</button>
           <button class="settings-nav-item" data-pane="local-ai">IA local</button>
           <button class="settings-nav-item" data-pane="agents">Agentes</button>
+          <div class="settings-nav-group">Supervisión</div>
+          <button class="settings-nav-item" data-pane="monitor">Avisos y vigilancia</button>
           <div class="settings-nav-group">Preferences</div>
           <button class="settings-nav-item" data-pane="appearance">Apariencia</button>
           <button class="settings-nav-item" data-pane="instructions">Instructions</button>
@@ -320,6 +342,10 @@
                   <button class="send-button" id="nogo-add">Anadir</button>
                 </div>
               </div>
+            </section>
+
+            <section class="settings-pane" data-pane="monitor" hidden>
+              <div id="monitor-pane" class="agents-pane"></div>
             </section>
 
             <section class="settings-pane" data-pane="agents" hidden>

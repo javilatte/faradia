@@ -377,11 +377,11 @@ async function open() {
 
 document.querySelector('.settings-nav-item[data-pane="agents"]')?.addEventListener('click', open);
 
-// Cada agente se guarda con su propio boton: el "Guardar" general del pie solo
-// confundiria aqui, asi que se oculta mientras este panel esta abierto.
+// Agentes y Supervision guardan cada cambio al momento: el "Guardar" general del
+// pie solo confundiria ahi, asi que se oculta mientras esos paneles estan abiertos.
 document.querySelectorAll('.settings-nav-item').forEach((item) =>
   item.addEventListener('click', () => {
     const footer = document.querySelector('#settings-overlay .settings-footer');
-    if (footer) footer.hidden = item.dataset.pane === 'agents';
+    if (footer) footer.hidden = ['agents', 'monitor'].includes(item.dataset.pane);
   })
 );

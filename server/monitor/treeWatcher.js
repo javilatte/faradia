@@ -175,6 +175,23 @@ class TreeWatcher extends EventEmitter {
     const dirs = new Set();
     walkDirs(this.root, rel, dirs, this.maxDirs - this.watchers.size);
     for (const d of dirs) this.watchDir(d);
+    // Lo que se escribio dentro antes de que el watch estuviera puesto (p. ej. mkdir y
+    // un fichero justo despues) no genero evento: se informa ahora.
+    let reported = 0;
+    for (const d of dirs) {
+      let entries = [];
+      try {
+        entries = fs.readdirSync(path.join(this.root, d), { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const e of entries) {
+        if (!e.isFile() || reported >= 500) continue;
+        this.pending.add(`${d}/${e.name}`);
+        reported++;
+      }
+    }
+    if (reported) this.schedule();
   }
 
   schedule() {

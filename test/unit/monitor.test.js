@@ -135,6 +135,19 @@ test('TreeWatcher: agrupa cambios, vigila carpetas nuevas y no entra en las igno
   assert.ok((await batch).paths.includes('lib/b.js'));
 });
 
+test('TreeWatcher: un fichero creado justo despues de su carpeta no se pierde', async (t) => {
+  const { dir } = makeRepo(t);
+  const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();
+  t.after(() => w.close());
+  const seen = new Set();
+  w.on('change', ({ paths }) => paths.forEach((p) => seen.add(p)));
+  fs.mkdirSync(path.join(dir, 'test'));
+  fs.writeFileSync(path.join(dir, 'test', 'a.test.js'), 'x'); // antes de que llegue el watch de test/
+  const deadline = Date.now() + 3000;
+  while (!seen.has('test/a.test.js') && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+  assert.ok(seen.has('test/a.test.js'));
+});
+
 test('TreeWatcher: un commit se ve como cambio de git', async (t) => {
   const { dir, git } = makeRepo(t);
   const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();

@@ -8,17 +8,27 @@ import { on } from './events.js';
 import { registerView } from './views.js';
 import { openProject, onWorkbenchesChange } from './workbenches.js';
 import { openChanges } from './changes.js';
+import { onSignal, RULE_LABEL } from './signals.js';
 
 const ACTIVE_MS = 60 * 1000;
 const repos = new Map(); // projectId -> snapshot del monitor
+const metrics = new Map(); // projectId -> metricas (actividad 24 h, sesiones de agentes)
+let signals = [];
 let root = null;
 let compact = localStorage.getItem('optimia:dashboard-compact') === '1';
 let tick = null;
 
 async function load() {
-  const { repos: list } = await api.get('/api/monitor/state');
+  const [{ repos: list }, m, sig] = await Promise.all([
+    api.get('/api/monitor/state'),
+    api.get('/api/monitor/metrics').catch(() => ({ repos: [] })),
+    api.get('/api/monitor/signals').catch(() => ({ signals: [] }))
+  ]);
   repos.clear();
   for (const r of list) repos.set(r.projectId, r);
+  metrics.clear();
+  for (const r of m.repos) metrics.set(r.projectId, r);
+  signals = sig.signals;
   render();
 }
 
@@ -135,6 +145,18 @@ function renderCard(repo) {
       );
     }
   }
+  const met = metrics.get(repo.projectId);
+  if (met && !compact) card.append(renderActivity(met));
+  const repoSignals = signals.filter((x) => x.projectId === repo.projectId && x.severity === 'high');
+  if (repoSignals.length) {
+    card.append(
+      h(
+        'p',
+        { class: 'dash-signal sev-high', title: repoSignals[0].message },
+        `⚠ ${repoSignals.length} ${repoSignals.length === 1 ? 'aviso' : 'avisos'}: ${repoSignals[0].message}`
+      )
+    );
+  }
   card.append(
     h(
       'footer',
@@ -145,6 +167,67 @@ function renderCard(repo) {
     )
   );
   return card;
+}
+
+// Actividad de las ultimas 24 h (ficheros cambiados por hora) y metricas de agentes.
+function renderActivity(met) {
+  const max = Math.max(1, ...met.hourly);
+  const bars = h(
+    'div',
+    { class: 'spark', role: 'img', 'aria-label': `${met.changesToday} ficheros cambiados en 24 horas` },
+    met.hourly.map((v, i) => {
+      const bar = h('span', { title: `hace ${23 - i} h: ${v}` });
+      bar.style.height = `${Math.max(v ? 12 : 4, (v / max) * 100)}%`;
+      if (v) bar.classList.add('on');
+      return bar;
+    })
+  );
+  return h(
+    'div',
+    { class: 'dash-activity' },
+    bars,
+    h(
+      'span',
+      { class: 'muted' },
+      `${met.changesToday} cambios en 24 h`,
+      met.agentSessions.length
+        ? ` · agentes: ${met.agentFilesTouched} ficheros${met.agentCostUsd ? `, ${met.agentCostUsd.toFixed(2)} $` : ''}`
+        : ''
+    )
+  );
+}
+
+function renderSignals() {
+  if (!signals.length) return null;
+  return h(
+    'section',
+    { class: 'dash-signals', 'aria-label': 'Avisos recientes' },
+    h('h3', {}, 'Avisos recientes'),
+    h(
+      'ul',
+      {},
+      signals.slice(0, 6).map((x) =>
+        h(
+          'li',
+          {},
+          h('span', { class: `tl-sev sev-${x.severity}` }, RULE_LABEL[x.rule] || x.rule),
+          h('b', {}, ` ${x.name} `),
+          h('span', {}, x.message),
+          x.path
+            ? h(
+                'button',
+                {
+                  class: 'link-button',
+                  onclick: () => openChanges({ projectId: x.projectId, taskId: x.taskId || null, path: x.path })
+                },
+                'ver'
+              )
+            : null,
+          h('span', { class: 'muted' }, ` · ${timeAgo(x.at)}`)
+        )
+      )
+    )
+  );
 }
 
 function render() {
@@ -171,6 +254,8 @@ function render() {
     );
     return;
   }
+  const panel = renderSignals();
+  if (panel) root.append(panel);
   const sorted = [...repos.values()].sort(
     (a, b) =>
       (Date.parse(b.lastActivity || 0) || 0) - (Date.parse(a.lastActivity || 0) || 0) || a.name.localeCompare(b.name)
@@ -209,6 +294,13 @@ on('monitor_activity', (e) => {
     const wt = repo.worktrees.find((w) => w.taskId === e.taskId);
     if (wt) wt.lastActivity = e.at;
   } else repo.lastActivity = e.at;
+  // Las metricas de actividad tambien se actualizan en vivo (la hora actual es la ultima).
+  const met = metrics.get(e.projectId);
+  if (met) {
+    met.hourly[23] += e.paths.length;
+    met.changesToday += e.paths.length;
+    met.changesLastHour += e.paths.length;
+  }
   queueRender();
 });
 on('monitor_worktree_state', (e) => {
@@ -217,6 +309,10 @@ on('monitor_worktree_state', (e) => {
   const wt = repo.worktrees.find((w) => w.taskId === e.taskId);
   if (wt) wt.state = e.state;
   else repo.worktrees.push({ taskId: e.taskId, title: e.title, state: e.state });
+  queueRender();
+});
+onSignal((signal) => {
+  signals.unshift(signal);
   queueRender();
 });
 on('workbenches_changed', () => setTimeout(() => load().catch(() => {}), 300));

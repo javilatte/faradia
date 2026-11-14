@@ -192,8 +192,16 @@ class MonitorService extends EventEmitter {
 
   async refreshWorktree(entry, taskId, wt) {
     try {
+      const previous = wt.state;
       wt.state = await getRepoState(wt.path);
-      this.emit('worktree_state', { projectId: entry.projectId, taskId, title: wt.title, state: wt.state });
+      this.emit('worktree_state', {
+        projectId: entry.projectId,
+        name: entry.name,
+        taskId,
+        title: wt.title,
+        state: wt.state,
+        previous
+      });
     } catch {
       /* el worktree se borro */
     }

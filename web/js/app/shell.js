@@ -9,6 +9,7 @@ import './agents.js';
 import './dashboard.js';
 import './changes.js';
 import './timeline.js';
+import './signals.js';
 
 const ctx = { state };
 
@@ -27,6 +28,9 @@ function renderNav() {
 
 async function boot() {
   connectEvents();
+  document
+    .getElementById('glance-button')
+    ?.addEventListener('click', () => window.open('/glance.html', 'optimia-glance', 'popup,width=420,height=300'));
   renderNav();
   try {
     await loadWorkbenches();

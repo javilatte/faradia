@@ -1091,3 +1091,131 @@
     grid-column: 2;
   }
 }
+
+/* ---- Avisos, actividad y modo compacto ---- */
+
+.dash-signals {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+}
+.dash-signals h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.dash-signals ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.dash-signal {
+  margin: 0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-activity {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  font-size: 11px;
+}
+.spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 22px;
+  width: 96px;
+  flex-shrink: 0;
+}
+.spark span {
+  flex: 1;
+  background: var(--panel-border);
+  border-radius: 1px;
+}
+.spark span.on {
+  background: var(--accent);
+}
+.sig-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.sig-table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.sig-table th,
+.sig-table td {
+  padding: 4px 14px 4px 0;
+  text-align: left;
+}
+.sig-table th {
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 11.5px;
+}
+.sig-thresholds {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  align-items: flex-start;
+}
+.sig-thresholds input {
+  width: 6em;
+  font: inherit;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.glance-body {
+  padding: 10px 12px;
+  background: var(--bg);
+}
+.glance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.glance-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.glance-line.active .dash-pulse {
+  background: var(--ok);
+}
+.glance-agent {
+  font-size: 10.5px;
+  color: #bf5af2;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  padding: 0 5px;
+}
+.glance-signal {
+  font-size: 11.5px;
+  margin: 8px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

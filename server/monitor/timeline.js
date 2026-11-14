@@ -85,8 +85,9 @@ class Timeline extends EventEmitter {
     const now = Date.parse(at) || Date.now();
     const current = this.open.get(key);
     if (current && now - current.lastAt < COALESCE_MS) {
-      for (const p of paths)
-        if (!current.entry.paths.includes(p) && current.entry.paths.length < MAX_PATHS) current.entry.paths.push(p);
+      // Lo mas reciente primero: es lo que se ve en la entrada (que solo ensena unas pocas rutas).
+      const fresh = [...new Set(paths)];
+      current.entry.paths = [...fresh, ...current.entry.paths.filter((p) => !fresh.includes(p))].slice(0, MAX_PATHS);
       current.entry.count = new Set([...current.all, ...paths]).size;
       for (const p of paths) current.all.add(p);
       current.lastAt = now;

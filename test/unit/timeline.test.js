@@ -29,7 +29,7 @@ test('recordFiles: agrupa lotes seguidos del mismo repo en una entrada', (t) => 
   const a = tl.recordFiles({ projectId: 'p', name: 'r', paths: ['a.js'], at: iso() });
   const b = tl.recordFiles({ projectId: 'p', name: 'r', paths: ['b.js', 'a.js'], at: iso() });
   assert.equal(a.id, b.id);
-  assert.deepEqual(b.paths, ['a.js', 'b.js']);
+  assert.deepEqual(b.paths, ['b.js', 'a.js']); // lo mas reciente primero
   assert.equal(b.count, 2);
   // Otro repo u otro worktree: entrada distinta
   assert.notEqual(tl.recordFiles({ projectId: 'p', taskId: 't1', name: 'r', paths: ['c.js'], at: iso() }).id, a.id);

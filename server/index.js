@@ -12,6 +12,9 @@ const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRout
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
 const { MonitorService } = require('./monitor/monitorService');
 const { Timeline } = require('./monitor/timeline');
+const { SignalEngine } = require('./monitor/signals');
+const { Metrics } = require('./monitor/metrics');
+const { git } = require('./monitor/gitState');
 const { loadPrefs, savePrefs } = require('./store/globalPrefs');
 const { ensureLaunchRepo } = require('./store/workbenchStore');
 
@@ -28,6 +31,8 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   let registry = null;
   let monitor = null;
   let timeline = null;
+  let signals = null;
+  let metrics = null;
   let orphanTimer = null;
   const taskStatus = new Map(); // taskId -> ultimo estado visto (para el timeline)
   let defaultProjectId = null;
@@ -112,6 +117,17 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
           limit: Number(q.get('limit')) || 200
         })
       });
+    }
+
+    if (url.pathname === '/api/monitor/signals' && req.method === 'GET') {
+      const only = url.searchParams.get('projectId');
+      return sendJson(res, 200, {
+        signals: signals.recentSignals(only ? [only] : activeRepos().map((r) => r.projectId))
+      });
+    }
+
+    if (url.pathname === '/api/monitor/metrics' && req.method === 'GET') {
+      return sendJson(res, 200, { repos: monitor.snapshot().map((r) => metrics.forRepo(r)) });
     }
 
     if (url.pathname === '/api/preferences' && req.method === 'GET') return sendJson(res, 200, loadPrefs());
@@ -203,8 +219,33 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     timeline = new Timeline();
     timeline.on('entry', (entry) => sendToClients({ type: 'timeline_entry', entry }));
     monitor = new MonitorService({ getRepos: activeRepos });
-    monitor.on('activity', (e) => timeline.recordFiles(e));
-    monitor.on('state', (e) => timeline.recordState(e));
+    signals = new SignalEngine();
+    metrics = new Metrics();
+    signals.on('signal', (signal) => {
+      timeline.recordSignal(signal);
+      sendToClients({ type: 'signal', signal });
+    });
+    monitor.on('activity', (e) => {
+      timeline.recordFiles(e);
+      metrics.recordActivity(e);
+      const entry = monitor.entry(e.projectId);
+      const root = e.taskId ? entry?.worktrees.get(e.taskId)?.path : entry?.path;
+      // Solo se buscan secretos en lo que git commitearia (no en ficheros ignorados como .env).
+      const committable = async (rel) => {
+        try {
+          await git(root, ['check-ignore', '-q', '--', rel]);
+          return false;
+        } catch {
+          return true;
+        }
+      };
+      signals.onActivity({ ...e, root, committable }).catch(() => {});
+    });
+    monitor.on('state', (e) => {
+      timeline.recordState(e);
+      signals.onState(e);
+    });
+    monitor.on('worktree_state', (e) => signals.onState(e));
     monitor.on('watch_event', (e) => timeline.recordWatch(e));
     orphanTimer = setInterval(() => timeline.checkOrphans(monitor.snapshot()), 60 * 1000);
     orphanTimer.unref?.();
