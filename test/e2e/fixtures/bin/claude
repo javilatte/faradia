@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+'use strict';
+
+// Fake `claude` CLI for end-to-end tests. It implements just enough of the
+// real CLI for optimia to run without network access or an account:
+//   claude --help          lists the flags checkClaudeCapabilities() looks for
+//   claude auth status     reports a logged-in test account
+//   claude -p ...          stream-json chat: answers every user message, and in
+//                          an editing stage writes a file so the task has changes
+// Set FAKE_CLAUDE_LOG to a file path to record every invocation's argv.
+
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
+
+const args = process.argv.slice(2);
+if (process.env.FAKE_CLAUDE_LOG) {
+  fs.appendFileSync(process.env.FAKE_CLAUDE_LOG, JSON.stringify({ args, cwd: process.cwd() }) + '\n');
+}
+
+if (args.includes('--help')) {
+  console.log('Usage: claude [options]\n  --input-format\n  --output-format\n  --session-id\n  --permission-mode\n  --model\n  --effort');
+  process.exit(0);
+}
+if (args[0] === 'auth' && args[1] === 'status') {
+  console.log(JSON.stringify({ loggedIn: true, authMethod: 'claude.ai', email: 'e2e@example.com', subscriptionType: 'max' }));
+  process.exit(0);
+}
+if (!args.includes('-p')) {
+  console.log('fake claude: interactive mode is not supported');
+  process.exit(0);
+}
+
+const flag = (name) => {
+  const i = args.indexOf(name);
+  return i === -1 ? undefined : args[i + 1];
+};
+const sessionId = flag('--session-id') || flag('--resume') || 'fake-session';
+const model = flag('--model') || 'default';
+const emit = (event) => process.stdout.write(JSON.stringify(event) + '\n');
+
+emit({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: process.cwd(), tools: [] });
+
+const rl = readline.createInterface({ input: process.stdin });
+rl.on('line', (line) => {
+  if (!line.trim()) return;
+  let msg;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return;
+  }
+  const text = (msg.message?.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+  const editing = /IMPLEMENTACION|REDACCION|TESTS|VERIFICACION/.test(text);
+  if (editing) {
+    const file = path.join(process.cwd(), 'e2e-agent-output.txt');
+    fs.appendFileSync(file, `cambio del agente (${model})\n`);
+  }
+  const reply = editing ? 'He hecho el cambio pedido.' : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
+  emit({ type: 'assistant', session_id: sessionId, message: { role: 'assistant', content: [{ type: 'text', text: reply }] } });
+  emit({ type: 'result', subtype: 'success', session_id: sessionId, is_error: false, result: reply, total_cost_usd: 0 });
+});
+rl.on('close', () => process.exit(0));
