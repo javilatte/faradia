@@ -17,7 +17,8 @@ test('el dashboard refleja en vivo un cambio hecho fuera de optimia', async ({ p
   fs.writeFileSync(path.join(demo(), 'README.md'), '# demo\n\nlinea nueva desde fuera\n');
   await expect(card).toContainText('1 modificados', { timeout: 10_000 });
   await expect(card.locator('.dash-lines .add')).toHaveText('+2');
-  await expect(card.locator('.dash-file')).toHaveText('README.md');
+  // Otros tests comparten el repo y dejan ficheros nuevos: basta con que README.md este entre ellos.
+  await expect(card.locator('.dash-file', { hasText: 'README.md' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

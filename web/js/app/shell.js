@@ -10,6 +10,7 @@ import './dashboard.js';
 import './changes.js';
 import './timeline.js';
 import './signals.js';
+import './files.js';
 
 const ctx = { state };
 
