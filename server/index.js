@@ -8,7 +8,9 @@ const { createApp } = require('./runtime/projectApp');
 const { ProjectRegistry } = require('./runtime/registry');
 const { openInBrowser, serveStatic, sendJson, readJsonBody } = require('./http/util');
 const security = require('./http/security');
-const { handleWorkbenchRoutes } = require('./http/workbenchRoutes');
+const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRoutes');
+const { handleMonitorRoutes } = require('./http/monitorRoutes');
+const { MonitorService } = require('./monitor/monitorService');
 const { ensureLaunchRepo } = require('./store/workbenchStore');
 
 // Rutas de la API:
@@ -22,6 +24,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   const server = http.createServer();
   const wss = new WebSocketServer({ noServer: true });
   let registry = null;
+  let monitor = null;
   let defaultProjectId = null;
   let actualPort = null;
 
@@ -76,8 +79,16 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     if (url.pathname.startsWith('/api/workbenches') || url.pathname === '/api/scan') {
       const handled = await handleWorkbenchRoutes(req, res, url, {
         registry,
-        onChange: () => sendToClients({ type: 'workbenches_changed' })
+        onChange: () => {
+          sendToClients({ type: 'workbenches_changed' });
+          monitor?.sync().catch(() => {});
+        }
       });
+      if (handled !== null) return handled;
+    }
+
+    if (url.pathname.startsWith('/api/monitor/')) {
+      const handled = await handleMonitorRoutes(req, res, url, { monitor, registry });
       if (handled !== null) return handled;
     }
 
@@ -144,6 +155,26 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     });
   });
 
+  // Vigilancia (solo lectura) de los repos del workbench activo. Sus eventos van
+  // por el mismo WebSocket con tipos monitor_*; la vista de proyecto los ignora.
+  function activeRepos() {
+    const view = workbenchesView(registry);
+    const wb = view.workbenches.find((w) => w.id === view.activeWorkbenchId) || view.workbenches[0];
+    return (wb?.repos || [])
+      .filter((r) => r.exists && r.projectId)
+      .map((r) => ({ projectId: r.projectId, name: r.name, path: r.path }));
+  }
+
+  function startMonitor() {
+    monitor = new MonitorService({ getRepos: activeRepos });
+    const relay = (type) => (event) => sendToClients({ type, ...event, previous: undefined });
+    monitor.on('state', relay('monitor_state'));
+    monitor.on('activity', relay('monitor_activity'));
+    monitor.on('watch_event', relay('monitor_watch_event'));
+    monitor.on('worktree_state', relay('monitor_worktree_state'));
+    monitor.start().catch((err) => console.error(`optimia: no se pudo iniciar la vigilancia: ${err.message}`));
+  }
+
   return new Promise((resolve) => {
     server.listen(port, '127.0.0.1', () => {
       actualPort = server.address().port;
@@ -160,8 +191,22 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       console.log(`optimia running at ${openUrl} (project: ${projectRoot})`);
       rt.log.info('server.start', { url, port: actualPort, projectRoot });
       if (open) openInBrowser(openUrl);
-      server.on('close', () => registry.dispose());
-      resolve({ server, wss, url, openUrl, port: actualPort, token: sessionToken, registry, defaultProjectId });
+      startMonitor();
+      server.on('close', () => {
+        monitor?.stop();
+        registry.dispose();
+      });
+      resolve({
+        server,
+        wss,
+        url,
+        openUrl,
+        port: actualPort,
+        token: sessionToken,
+        registry,
+        defaultProjectId,
+        monitor
+      });
     });
   });
 }
