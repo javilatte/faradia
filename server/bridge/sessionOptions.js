@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ALIAS_MODEL_NAME, ensureOllamaAlias } = require('./localAi');
 const { loadMemory } = require('../store/memoryStore');
 
 const CHAT_TASKS_PROMPT = `## Crear tareas para agentes
@@ -33,7 +32,24 @@ o "blocked" si no puedes continuar. No esperes al final para reportar todo de go
  * via update_task_progress without having to carry its own id around; leave
  * it undefined for the main chat session, which instead gets create_task.
  */
-function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId) {
+function localDefaults(ai) {
+  return {
+    baseUrl: ai.localAi.url || undefined,
+    authHeader: ai.localAi.authHeader || undefined
+  };
+}
+
+/**
+ * `agent` (opcional): el agente del catalogo que ejecuta esta sesion (ver
+ * server/agents/catalog.js). Si se pasa, su motor, modelo, effort y prompt de rol
+ * mandan sobre los ajustes generales de IA, que quedan para el chat.
+ *
+ * Modelos locales: el CLI de claude actual (verificado con 2.1.x) envia a
+ * ANTHROPIC_BASE_URL el nombre de modelo tal cual, tambien nombres de Ollama como
+ * "qwen2.5-coder:7b", asi que ya no hace falta el alias de ensureOllamaAlias y
+ * cada agente puede usar un modelo local distinto a la vez.
+ */
+function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;
   const opts = { projectRoot: cwd };
 
@@ -41,22 +57,25 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId) {
   if (fs.existsSync(mcpConfigPath)) opts.mcpConfigPath = mcpConfigPath;
 
   const parts = [];
+  if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);
   if (settings.preferences?.instructions) parts.push(settings.preferences.instructions);
   const memory = loadMemory(projectRoot);
   if (memory.trim()) parts.push(`## Memoria del proyecto\n${memory}`);
   if (opts.mcpConfigPath) parts.push(taskId ? taskProgressPrompt(taskId) : CHAT_TASKS_PROMPT);
   if (parts.length) opts.systemPrompt = parts.join('\n\n');
 
-  if (ai.mode === 'local') {
-    opts.baseUrl = ai.localAi.url || undefined;
-    opts.authHeader = ai.localAi.authHeader || undefined;
-    if (ai.localAi.model) {
-      ensureOllamaAlias(ai.localAi.model);
-      opts.model = ALIAS_MODEL_NAME;
-    }
+  const engine = agent ? agent.engine : ai.mode === 'local' ? 'local' : 'claude';
+  if (engine === 'local') {
+    Object.assign(opts, localDefaults(ai));
+    if (!opts.baseUrl) throw new Error('configura la URL de la IA local en Ajustes > IA local');
+    const model = (agent ? agent.model : '') || ai.localAi.model;
+    if (!model) throw new Error('elige un modelo local para este agente o en Ajustes > IA local');
+    opts.model = model;
   } else {
-    opts.model = ai.claude.model && ai.claude.model !== 'default' ? ai.claude.model : undefined;
-    opts.effort = ai.claude.effort || undefined;
+    const model = agent ? agent.model : ai.claude.model;
+    const effort = agent ? agent.effort : ai.claude.effort;
+    opts.model = model && model !== 'default' ? model : undefined;
+    opts.effort = effort && effort !== 'default' ? effort : undefined;
   }
   return opts;
 }

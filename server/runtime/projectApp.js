@@ -28,6 +28,9 @@ const { getClaudeAuthStatus, openAuthLoginInTerminal } = require('../bridge/clau
 const { listLocalModels } = require('../bridge/localAi');
 const { getAiAssistSuggestion } = require('../bridge/aiAssist');
 const { sendJson, readJsonBody } = require('../http/util');
+const { handleAgentRoutes } = require('../http/agentRoutes');
+const { getAgent } = require('../agents/catalog');
+const { isKnownType, TASK_TYPES } = require('../bridge/taskStages');
 
 function createApp(
   projectRoot,
@@ -119,6 +122,14 @@ function createApp(
     if (url.pathname === '/api/tasks' && req.method === 'POST') {
       const body = await readJsonBody(req).catch(() => null);
       if (!body || !body.title) return sendJson(res, 400, { error: 'title is required' });
+      if (!isKnownType(body.type)) {
+        return sendJson(res, 400, { error: `tipo de tarea no valido; usa: ${Object.keys(TASK_TYPES).join(', ')}` });
+      }
+      if (body.type === 'custom') {
+        const agent = typeof body.agentId === 'string' ? getAgent(projectRoot, body.agentId) : null;
+        if (!agent) return sendJson(res, 400, { error: 'elige un agente existente para la tarea' });
+        if (!agent.enabled) return sendJson(res, 409, { error: `el agente "${agent.name}" esta desactivado` });
+      }
       const git = listLocalBranches(projectRoot);
       if (body.baseBranch && !git.branches.includes(body.baseBranch)) {
         return sendJson(res, 400, { error: `la rama base "${body.baseBranch}" no existe` });
@@ -320,6 +331,11 @@ function createApp(
       const removed = deleteChat(projectRoot, chatId);
       if (!removed) return sendJson(res, 404, { error: 'chat not found' });
       return sendJson(res, 200, { ok: true });
+    }
+
+    if (url.pathname.startsWith('/api/agents')) {
+      const handled = await handleAgentRoutes(req, res, url, projectRoot);
+      if (handled !== null) return handled;
     }
 
     if (url.pathname.startsWith('/api/')) {

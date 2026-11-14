@@ -33,17 +33,22 @@ server.registerTool(
       'Usar solo despues de cerrar un plan concreto con el usuario (p. ej. con la skill plan-optimizer), no para pedidos vagos.',
     inputSchema: {
       title: z.string().describe('Titulo corto de la tarea, visible en el panel de agentes'),
-      type: z.enum(['coding', 'documentation']).describe('Tipo de tarea'),
+      type: z
+        .enum(['coding', 'bugfix', 'tests', 'documentation', 'audit', 'custom'])
+        .describe(
+          'Tipo de tarea: coding (plan, implementar, verificar), bugfix (diagnosticar, arreglar, verificar), tests (escribir tests), documentation, audit (informe sin cambios) o custom (un agente propio, indica agentId)'
+        ),
+      agentId: z.string().optional().describe('Id del agente propio, solo para type "custom"'),
       instruction: z
         .string()
         .describe('Instruccion completa y autocontenida para el agente que ejecutara la tarea en su propio worktree')
     }
   },
-  async ({ title, type, instruction }) => {
+  async ({ title, type, instruction, agentId }) => {
     const res = await fetch(`${base}/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
-      body: JSON.stringify({ title, type, instruction })
+      body: JSON.stringify({ title, type, instruction, agentId })
     });
     if (!res.ok) {
       return { content: [{ type: 'text', text: `Error creando la tarea: HTTP ${res.status}` }], isError: true };

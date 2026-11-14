@@ -120,10 +120,17 @@ test('decideAfterStage: implementacion bloqueada pasa a awaiting_input con la pr
   assert.deepEqual(patch.pendingQuestion, { kind: 'implement-details', text: 'Necesito el color?' });
 });
 
-test('decideAfterStage: implementacion con cambios queda lista para revisar', () => {
-  const { patch } = decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, phaseStatus: 'done' });
-  assert.equal(patch.status, 'ready_to_test');
+test('decideAfterStage: implementacion con cambios encadena la verificacion', () => {
+  const { patch, next } = decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, phaseStatus: 'done' });
+  assert.equal(next, 'verify');
+  assert.equal(patch.status, 'pending');
   assert.equal(patch.error, null);
+});
+
+test('decideAfterStage: con el Verificador desactivado, la implementacion queda lista para revisar', () => {
+  const { patch, next } = decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, skip: ['verify'] });
+  assert.equal(next, null);
+  assert.equal(patch.status, 'ready_to_test');
 });
 
 test('decideAfterStage: implementacion sin cambios vuelve a pendiente con motivo', () => {

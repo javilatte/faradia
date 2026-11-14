@@ -20,13 +20,15 @@ function saveTasks(projectRoot, tasks) {
   fs.writeFileSync(tasksPath(projectRoot), JSON.stringify(tasks, null, 2) + '\n');
 }
 
-function addTask(projectRoot, { title, type, steps, instruction, chatId, baseBranch, branchName }) {
+function addTask(projectRoot, { title, type, steps, instruction, chatId, baseBranch, branchName, agentId }) {
   const tasks = loadTasks(projectRoot);
   const now = new Date().toISOString();
   const task = {
     id: crypto.randomUUID(),
     title,
-    type, // 'coding' | 'documentation'
+    type, // coding | bugfix | tests | documentation | audit | custom (ver bridge/taskStages.js TASK_TYPES)
+    agentId: type === 'custom' ? agentId || null : null, // agente propio de una tarea custom
+    stageRuns: [], // { stage, agentId, agentName, engine, model, startedAt, finishedAt, status, filesTouched, costUsd }
     chatId: chatId || null, // chat desde el que se lanzo, para avisar en esa conversacion
     // pending | in_progress | awaiting_input | ready_to_test (ver bridge/taskStages.js)
     status: 'pending',

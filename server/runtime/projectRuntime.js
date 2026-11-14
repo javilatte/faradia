@@ -12,6 +12,7 @@ const { loadChat, updateChatMeta, appendMessage } = require('../store/chatStore'
 const { ClaudeSession } = require('../bridge/claudeProcess');
 const { PtySession } = require('../bridge/ptySession');
 const { buildSessionOptions } = require('../bridge/sessionOptions');
+const { resolveStageAgent, skippedStages } = require('../agents/stageMap');
 const { createTaskWorktree, stageForReview, changedFiles } = require('../bridge/worktree');
 const logger = require('../bridge/logger');
 
@@ -149,10 +150,15 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       }
     }
 
+    // Cada etapa la hace un agente del catalogo, con su motor, modelo y prompt de rol.
+    const agent = resolveStageAgent(projectRoot, task, stage);
+    if (!agent) return { error: `no hay ningun agente para la etapa "${stage}"`, code: 409 };
+    if (!agent.enabled && stage === 'custom') return { error: `el agente "${agent.name}" esta desactivado`, code: 409 };
+
     let opts;
     const settings = loadSettings(projectRoot);
     try {
-      opts = buildSessionOptions(settings, worktreeDir, projectRoot, task.id);
+      opts = buildSessionOptions(settings, worktreeDir, projectRoot, task.id, agent);
     } catch (err) {
       return { error: err.message, code: 500 };
     }
@@ -161,20 +167,27 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // (la sesion de la etapa anterior) para que el agente conserve el contexto.
     const resuming = answer !== undefined && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
-    let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions });
+    let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent });
     if (answer !== undefined)
       prompt = resuming
         ? answerPrompt(answer, stage)
         : `${prompt}\n\nRespuesta del usuario a tus preguntas:\n${answer.trim()}`;
 
     const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
-    opts.extraAllowedTools = [...stageTools(stage), ...approved];
+    opts.extraAllowedTools = [...stageTools(stage, agent), ...approved];
     opts.disallowedTools = stageDisallowed();
     opts.gitHooksPath = ensureGitGuardHooks(projectRoot);
     const session = new ClaudeSession(opts);
     taskSessions.set(taskId, session);
     updateTaskPhase(projectRoot, taskId, STAGE_PHASE[stage], 'active');
-    log.info('task.stage.start', { taskId, stage, branch, resumed: resuming });
+    log.info('task.stage.start', {
+      taskId,
+      stage,
+      branch,
+      resumed: resuming,
+      agent: agent.id,
+      model: opts.model || 'default'
+    });
     if (answer !== undefined) log.info('task.answer', { taskId, stage, text: cut(answer) });
     const started = updateTask(projectRoot, taskId, {
       stage,
@@ -185,6 +198,18 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       branch,
       worktreePath: worktreeDir,
       sessionId: session.sessionId,
+      // Historial de etapas: que agente y modelo hizo cada una (lo muestra la tarjeta).
+      stageRuns: [
+        ...(task.stageRuns || []),
+        {
+          stage,
+          agentId: agent.id,
+          agentName: agent.name,
+          engine: agent.engine,
+          model: agent.model || 'default',
+          startedAt: new Date().toISOString()
+        }
+      ],
       docOptions: effectiveDocOptions || task.docOptions
     });
     broadcast({ type: 'task_updated', task: started });
@@ -297,11 +322,14 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     if (!current) return; // la tarea se borro mientras corria
 
     const phaseStatus = (current.phases || []).find((p) => p.key === STAGE_PHASE[stage])?.status;
+    const agent = resolveStageAgent(projectRoot, current, stage);
     const { patch, next } = decideAfterStage(current, stage, {
       text,
       hasChanges,
       phaseStatus,
-      isError: event.is_error === true
+      isError: event.is_error === true,
+      skip: skippedStages(projectRoot),
+      agent
     });
     const touched = changedFiles(worktreeDir);
     log.info('file.stage_changes', { taskId, stage, files: touched.slice(0, 200), total: touched.length });
@@ -315,7 +343,17 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         kind: patch.pendingQuestion.kind,
         text: cut(patch.pendingQuestion.text)
       });
-    const updated = updateTask(projectRoot, taskId, { ...patch, outputFiles: [...knownFiles].sort() });
+    const runs = [...(current.stageRuns || [])];
+    if (runs.length && runs[runs.length - 1].stage === stage && !runs[runs.length - 1].finishedAt) {
+      runs[runs.length - 1] = {
+        ...runs[runs.length - 1],
+        finishedAt: new Date().toISOString(),
+        status: patch.error ? 'error' : patch.status === 'awaiting_input' ? 'asked' : 'done',
+        filesTouched: touched.length,
+        costUsd: typeof event.total_cost_usd === 'number' ? event.total_cost_usd : null
+      };
+    }
+    const updated = updateTask(projectRoot, taskId, { ...patch, stageRuns: runs, outputFiles: [...knownFiles].sort() });
     log.info('task.stage.finish', {
       taskId,
       stage,
