@@ -150,6 +150,25 @@ stored where the value lives: in the repo if it overrides it, otherwise for all 
 Settings saved by older versions (a full copy in every repo) are migrated on first
 read: only what differs from the defaults stays as a repo override.
 
+### Your configuration file
+
+**Ajustes → General → Exportar configuración…** saves everything global in one
+JSON file: settings, common instructions and no-go list, global agents, the stage
+map and signal preferences. It leaves out your repos, their memory and anything
+tied to this machine; the local AI auth header only goes in if you tick it. Keep
+the file somewhere private — it holds your instructions and your agents' prompts.
+
+To import it, **drop it anywhere on the optimia window** (or use Importar
+configuración…). optimia shows what will change and backs up the current
+configuration to `~/.config/optimia/backups/` first. On a fresh install, the
+welcome sheet offers exactly that.
+
+### Updates
+
+optimia asks the npm registry at most once a day whether a newer version exists and
+shows a notice in the toolbar with the install command and the release notes. Turn
+it off in Ajustes → General, or with `OPTIMIA_NO_UPDATE_CHECK=1`.
+
 ## Supervision
 
 Supervision is **read-only**: optimia never writes to a repo to monitor it.

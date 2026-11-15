@@ -26,6 +26,8 @@ Supervisión de agentes y de varios repos a la vez. Cambio incompatible con 1.x 
 - Fusionar una tarea hace fast-forward cuando la base no ha avanzado, borra después su worktree y su rama, y la tarea pasa al grupo "Hechas".
 - Effort `xhigh` y `max`.
 - **Configuración global y por repo**: `~/.config/optimia/settings.json` guarda lo común (apariencia, modelo y effort, IA local, instrucciones de flujo de trabajo y lista "Prohibido") y cada repo solo lo que cambia; sus instrucciones y prohibiciones se suman a las globales. Ajustes tiene un selector "Todos los repos / Solo este repo" (también para agentes y pipelines), y cada campo dice si se hereda, con "Restablecer" y "Usar en todos los repos". Los `settings.json` antiguos se migran solos.
+- **Fichero de configuración**: Ajustes > General exporta todo lo global (ajustes, instrucciones y "Prohibido" comunes, agentes globales, pipelines y avisos) a un JSON privado, sin repos ni memoria, y sin la cabecera de autenticación de la IA local salvo que se pida. Se importa arrastrándolo a la ventana: antes se ve qué cambia y se guarda una copia de la configuración actual. En una instalación nueva, una hoja de bienvenida lo ofrece.
+- **Aviso de versiones nuevas**: optimia consulta el registro de npm una vez al día como mucho y avisa en la barra de herramientas con el comando para actualizar y las novedades. Se desactiva en Ajustes > General o con `OPTIMIA_NO_UPDATE_CHECK=1`.
 - **Conocer este repo**: un agente de solo lectura estudia el repo (comandos, estructura, convenciones, trampas) y propone su memoria, que se guarda con un clic. El tablero vacío de un repo sin memoria lo sugiere.
 
 ### Changed

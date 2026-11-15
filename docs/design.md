@@ -172,3 +172,18 @@ La interfaz sigue las Human Interface Guidelines de Apple para macOS:
   vista), menús desplegables, campos, controles segmentados y anillos de foco.
 - **Ajustes**: se aplican al momento, sin botón Guardar, y se abren en el último
   apartado visitado.
+
+## Configuración portátil y actualizaciones
+
+`server/config/portable.js` exporta e importa lo global en un JSON con
+`format: "optimia-config"` y `formatVersion: 1`: ajustes globales, agentes globales
+(sus `.md`), mapa de etapas y preferencias de avisos. La importación valida el fichero
+(ids, campos del frontmatter, etapas conocidas), enseña una vista previa y guarda antes
+una copia en `~/.config/optimia/backups/` (las 10 últimas). `isFirstRun()` detecta una
+instalación nueva (sin ajustes ni agentes globales y sin `state.json`) para la hoja de
+bienvenida.
+
+`server/config/updateCheck.js` pregunta a `registry.npmjs.org` por la última versión
+como mucho una vez al día (caché en `update-check.json`) y compara con semver. La
+petición no lleva datos del usuario; `updates.check` u `OPTIMIA_NO_UPDATE_CHECK=1` la
+desactivan, y los tests la desactivan siempre.
