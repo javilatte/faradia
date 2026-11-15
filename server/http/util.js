@@ -50,10 +50,19 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function readJsonBody(req) {
+// JSON body of a request, with a size limit (UI requests are small; an imported
+// configuration is a few hundred KB at most).
+function readJsonBody(req, { maxBytes = 5 * 1024 * 1024 } = {}) {
   return new Promise((resolve, reject) => {
     let raw = '';
+    let size = 0;
     req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(new Error('cuerpo demasiado grande'));
+        req.destroy();
+        return;
+      }
       raw += chunk;
     });
     req.on('end', () => {

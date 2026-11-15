@@ -40,6 +40,11 @@ process.env.PATH = `${path.join(__dirname, 'fixtures', 'bin')}${path.delimiter}$
 process.env.XDG_CONFIG_HOME = path.join(home, '.config');
 process.env.XDG_DATA_HOME = path.join(home, '.local', 'share');
 process.env.OPTIMIA_E2E_TMP = tmp;
+// No network in tests: never ask the npm registry for updates.
+process.env.OPTIMIA_NO_UPDATE_CHECK = '1';
+// Skip the first-run welcome sheet (test/e2e/config.spec.js brings it back on purpose).
+fs.mkdirSync(path.join(home, '.config', 'optimia'), { recursive: true });
+fs.writeFileSync(path.join(home, '.config', 'optimia', 'state.json'), JSON.stringify({ welcomed: 'e2e' }));
 // Los specs encuentran esta ejecucion por este fichero (ver test/e2e/helpers.js).
 fs.writeFileSync(path.join(os.tmpdir(), `optimia-e2e-current-${PORT}.txt`), tmp);
 // Cada llamada al claude simulado queda aqui (argumentos y carpeta), para los tests de agentes.

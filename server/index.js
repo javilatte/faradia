@@ -11,6 +11,7 @@ const security = require('./http/security');
 const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRoutes');
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
 const { handleFsRoutes } = require('./http/fsRoutes');
+const { handleConfigRoutes } = require('./http/configRoutes');
 const { MonitorService } = require('./monitor/monitorService');
 const { Timeline } = require('./monitor/timeline');
 const { SignalEngine } = require('./monitor/signals');
@@ -136,6 +137,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       const body = await readJsonBody(req).catch(() => null);
       if (!body) return sendJson(res, 400, { error: 'invalid JSON body' });
       return sendJson(res, 200, savePrefs(body));
+    }
+
+    if (url.pathname.startsWith('/api/config/') || url.pathname === '/api/update') {
+      const handled = await handleConfigRoutes(req, res, url);
+      if (handled !== null) return handled;
     }
 
     if (url.pathname.startsWith('/api/fs/')) {

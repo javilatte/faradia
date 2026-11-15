@@ -94,7 +94,7 @@ function createApp(
       }
       const list = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
       if (body.scope === 'global') {
-        saveGlobalSettings({ ui: body.ui, ai: body.ai, preferences: body.preferences });
+        saveGlobalSettings({ ui: body.ui, ai: body.ai, preferences: body.preferences, updates: body.updates });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
         if (body.ui) return sendJson(res, 400, { error: 'la apariencia es la misma para todos los repos' });

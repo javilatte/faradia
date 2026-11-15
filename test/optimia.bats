@@ -10,6 +10,7 @@ setup() {
     # Estado global de optimia (workbenches, timeline) en una carpeta temporal, nunca en el HOME real.
     export XDG_CONFIG_HOME=$(mktemp -d)
     export XDG_DATA_HOME=$(mktemp -d)
+    export OPTIMIA_NO_UPDATE_CHECK=1
     TESTDIR=$(mktemp -d)
 }
 

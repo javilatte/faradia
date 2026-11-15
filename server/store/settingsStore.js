@@ -124,7 +124,9 @@ function sanitizeGlobal(raw) {
     preferences: {
       instructions: str(g.preferences?.instructions),
       noGo: strList(g.preferences?.noGo)
-    }
+    },
+    // Notify about new versions (asks the npm registry once a day).
+    updates: { check: g.updates?.check !== false }
   };
 }
 
@@ -136,6 +138,7 @@ function loadGlobalSettings() {
 function saveGlobalSettings(patch = {}) {
   const current = loadGlobalSettings();
   const next = {
+    ...current,
     ui: { ...current.ui, ...(patch.ui || {}) },
     ai: JSON.parse(JSON.stringify(current.ai)),
     preferences: { ...current.preferences }
@@ -146,6 +149,7 @@ function saveGlobalSettings(patch = {}) {
   }
   if (patch.preferences?.instructions !== undefined) next.preferences.instructions = patch.preferences.instructions;
   if (patch.preferences?.noGo !== undefined) next.preferences.noGo = patch.preferences.noGo;
+  next.updates = { ...current.updates, ...(patch.updates || {}) };
   const clean = sanitizeGlobal(next);
   writeJson(globalSettingsPath(), clean);
   return clean;

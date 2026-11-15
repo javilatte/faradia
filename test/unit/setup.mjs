@@ -9,4 +9,5 @@ import process from 'node:process';
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'optimia-unit-'));
 process.env.XDG_CONFIG_HOME = path.join(root, 'config');
 process.env.XDG_DATA_HOME = path.join(root, 'data');
+process.env.OPTIMIA_NO_UPDATE_CHECK = '1';
 process.on('exit', () => fs.rmSync(root, { recursive: true, force: true }));
