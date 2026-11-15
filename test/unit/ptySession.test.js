@@ -7,9 +7,14 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { spawnSync } = require('child_process');
 const { PtySession } = require('../../server/bridge/ptySession');
 
-test('constructor: spawns a real claude process in a pty and emits real data', async (t) => {
+// Without the claude CLI (e.g. on CI runners) there is nothing real to spawn.
+const HAS_CLAUDE = spawnSync('claude', ['--version'], { stdio: 'ignore' }).error === undefined;
+const needsClaude = { skip: HAS_CLAUDE ? false : 'claude CLI not installed in this environment' };
+
+test('constructor: spawns a real claude process in a pty and emits real data', needsClaude, async (t) => {
   const session = new PtySession({ cwd: process.cwd() });
   t.after(() => session.kill());
 
@@ -19,7 +24,7 @@ test('constructor: spawns a real claude process in a pty and emits real data', a
   assert.ok(session.scrollback.length > 0);
 });
 
-test('scrollback: accumulates data and trims to the configured limit', () => {
+test('scrollback: accumulates data and trims to the configured limit', needsClaude, () => {
   const session = Object.create(PtySession.prototype);
   session.scrollback = 'x'.repeat(199_995);
   const { EventEmitter } = require('events');
@@ -34,7 +39,7 @@ test('scrollback: accumulates data and trims to the configured limit', () => {
   assert.ok(session.scrollback.endsWith('abcdefghij'));
 });
 
-test('write/resize/kill: no-op once the session has exited, and never throw', async () => {
+test('write/resize/kill: no-op once the session has exited, and never throw', needsClaude, async () => {
   const session = new PtySession({ cwd: process.cwd() });
   await new Promise((resolve) => session.once('data', resolve));
 
@@ -46,7 +51,7 @@ test('write/resize/kill: no-op once the session has exited, and never throw', as
   assert.doesNotThrow(() => session.kill());
 });
 
-test('constructor: with mcpConfigPath set, still spawns and emits real data', async (t) => {
+test('constructor: with mcpConfigPath set, still spawns and emits real data', needsClaude, async (t) => {
   // claude re-execs itself on startup, so by the time it's running the pty's
   // own pid no longer maps to a process whose argv we can inspect via ps —
   // this just proves passing mcpConfigPath doesn't break the spawn.
@@ -57,7 +62,7 @@ test('constructor: with mcpConfigPath set, still spawns and emits real data', as
   assert.ok(chunk.length > 0);
 });
 
-test('constructor: with resumeSessionId set, still spawns and emits real data', async (t) => {
+test('constructor: with resumeSessionId set, still spawns and emits real data', needsClaude, async (t) => {
   // A nonexistent session id makes claude print an error and exit rather than
   // hang — either way proves --resume is passed and the spawn isn't broken,
   // which is all this test needs (no real session to actually resume here).
