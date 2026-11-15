@@ -72,7 +72,7 @@ function findWorkbench(store, id) {
 
 function cleanName(name) {
   const n = typeof name === 'string' ? name.trim() : '';
-  if (!n) throw new Error('el nombre no puede estar vacio');
+  if (!n) throw new Error('el nombre no puede estar vacío');
   if (n.length > 60) throw new Error('el nombre es demasiado largo (maximo 60 caracteres)');
   return n;
 }
@@ -101,7 +101,7 @@ function renameWorkbench(id, name) {
 function deleteWorkbench(id) {
   const store = load();
   findWorkbench(store, id);
-  if (store.workbenches.length === 1) throw new Error('no se puede borrar el unico workbench');
+  if (store.workbenches.length === 1) throw new Error('no se puede borrar el único workbench');
   store.workbenches = store.workbenches.filter((w) => w.id !== id);
   if (store.activeWorkbenchId === id) store.activeWorkbenchId = store.workbenches[0].id;
   save(store);

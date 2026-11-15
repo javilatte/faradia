@@ -52,7 +52,7 @@ function isInside(root, abs) {
 function resolveRepoPath(root, rel, { mustExist = true, allowRoot = true } = {}) {
   const clean = typeof rel === 'string' ? rel.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') : null;
   if (clean === null || clean.includes('\0')) throw new FsError(400, 'ruta no valida');
-  if (!clean && !allowRoot) throw new FsError(400, 'no se puede operar sobre la raiz del repo');
+  if (!clean && !allowRoot) throw new FsError(400, 'no se puede operar sobre la raíz del repo');
   const abs = path.resolve(root, clean);
   if (!isInside(root, abs)) throw new FsError(400, 'la ruta sale del repo');
   if (clean.split('/').some((part) => HIDDEN.has(part)))

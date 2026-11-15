@@ -62,7 +62,7 @@ function assertFree(abs, rel) {
 
 function validName(name) {
   if (typeof name !== 'string' || !name.trim() || /[/\\\0]/.test(name) || name === '.' || name === '..') {
-    throw new FsError(400, 'nombre no valido');
+    throw new FsError(400, 'nombre no válido');
   }
   return name.trim();
 }
@@ -83,7 +83,7 @@ function move(root, rel, destDir) {
   const dir = resolveRepoPath(root, destDir || '');
   if (!fs.statSync(dir.abs).isDirectory()) throw new FsError(400, 'el destino no es una carpeta');
   const destRel = dir.rel ? `${dir.rel}/${path.basename(src.abs)}` : path.basename(src.abs);
-  if (destRel === src.rel) throw new FsError(400, 'ya esta en esa carpeta');
+  if (destRel === src.rel) throw new FsError(400, 'ya está en esa carpeta');
   if (destRel.startsWith(`${src.rel}/`)) throw new FsError(400, 'no se puede mover una carpeta dentro de si misma');
   const dest = resolveRepoPath(root, destRel, { mustExist: false });
   assertFree(dest.abs, dest.rel);
@@ -141,7 +141,7 @@ function listTrash({ repoRoot } = {}) {
 function restore(trashId) {
   const items = loadManifest();
   const item = items.find((i) => i.id === trashId);
-  if (!item) throw new FsError(404, 'no esta en la papelera');
+  if (!item) throw new FsError(404, 'no está en la papelera');
   const stored = path.join(trashDir(), item.id, item.name);
   let rel = item.path;
   const ext = item.dir ? '' : path.extname(rel);

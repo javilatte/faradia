@@ -32,7 +32,7 @@ function setWatchlist(repoPath, patterns) {
   const clean = [...new Set(patterns.map((p) => String(p).trim()).filter(Boolean))];
   if (clean.length > 100) throw new Error('como maximo 100 patrones');
   for (const p of clean) {
-    if (p.length > 200 || p.includes('..') || p.includes('\0')) throw new Error(`patron no valido: ${p}`);
+    if (p.length > 200 || p.includes('..') || p.includes('\0')) throw new Error(`patrón no válido: ${p}`);
   }
   const all = loadAll();
   all[repoPath] = clean;

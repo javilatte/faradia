@@ -49,8 +49,8 @@ test('crear, renombrar, activar y borrar workbenches', (t) => {
   assert.equal(wb.listWorkbenches().workbenches[0].name, 'Oficina');
   wb.deleteWorkbench(b.id);
   assert.equal(wb.listWorkbenches().activeWorkbenchId, a.id);
-  assert.throws(() => wb.deleteWorkbench(a.id), /unico workbench/);
-  assert.throws(() => wb.createWorkbench('   '), /vacio/);
+  assert.throws(() => wb.deleteWorkbench(a.id), /único workbench/);
+  assert.throws(() => wb.createWorkbench('   '), /vacío/);
   assert.throws(() => wb.renameWorkbench('nope', 'x'), /no encontrado/);
 });
 

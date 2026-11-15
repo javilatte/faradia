@@ -112,7 +112,7 @@ test('onState: borrado grande frente al estado anterior', (t) => {
   assert.equal(got.length, 0);
   engine.onState({ projectId: 'p', name: 'r', previous: st(10, 0), state: st(400, 0) });
   assert.equal(got[0].rule, 'largeDelete');
-  assert.match(got[0].message, /390 lineas/);
+  assert.match(got[0].message, /390 líneas/);
   engine.onState({ projectId: 'q', name: 'r', previous: st(0, 0), state: st(0, 30) });
   assert.equal(got[1].severity, 'high');
 });

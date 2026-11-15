@@ -64,7 +64,7 @@ const SECRET_RULES = [
   { id: 'private-key', label: 'clave privada', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/, severity: 'high' },
   {
     id: 'generic-secret',
-    label: 'credencial en el codigo',
+    label: 'credencial en el código',
     re: /\b(api[_-]?key|secret|token|passw(or)?d)\b["']?\s*[:=]\s*["'][^"'\s]{12,}["']/i,
     severity: 'medium'
   }
@@ -240,7 +240,7 @@ class SignalEngine extends EventEmitter {
     const deletedFiles = state.counts.deleted - (previous.counts?.deleted || 0);
     if (removed >= prefs.largeDeleteLines || deletedFiles >= prefs.largeDeleteFiles) {
       const parts = [];
-      if (removed >= prefs.largeDeleteLines) parts.push(`${removed} lineas`);
+      if (removed >= prefs.largeDeleteLines) parts.push(`${removed} líneas`);
       if (deletedFiles >= prefs.largeDeleteFiles) parts.push(`${deletedFiles} ficheros`);
       this.fire({
         projectId,

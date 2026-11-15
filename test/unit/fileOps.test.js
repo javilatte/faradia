@@ -33,7 +33,7 @@ test('resolveRepoPath: nunca sale del repo ni toca .git', (t) => {
   assert.throws(() => resolveRepoPath(repo, '.git/config', { mustExist: false }), /\.git/);
   assert.throws(() => resolveRepoPath(repo, '.optimia/tasks.json', { mustExist: false }), /\.optimia/);
   assert.throws(() => resolveRepoPath(repo, 'no/existe'), /no existe/);
-  assert.throws(() => resolveRepoPath(repo, '', { allowRoot: false }), /raiz/);
+  assert.throws(() => resolveRepoPath(repo, '', { allowRoot: false }), /raíz/);
   fs.symlinkSync('/etc', path.join(repo, 'etc-link'));
   assert.throws(() => resolveRepoPath(repo, 'etc-link'), /fuera del repo/);
 });
@@ -64,7 +64,7 @@ test('rename, move y copy no sobrescriben y devuelven su deshacer', (t) => {
   ops.undo(repo, r.undo);
   assert.ok(fs.existsSync(path.join(repo, 'README.md')));
   assert.throws(() => ops.rename(repo, 'README.md', 'src'), /ya existe/);
-  assert.throws(() => ops.rename(repo, 'README.md', '../x'), /nombre no valido/);
+  assert.throws(() => ops.rename(repo, 'README.md', '../x'), /nombre no válido/);
 
   const m = ops.move(repo, 'README.md', 'src');
   assert.equal(m.path, 'src/README.md');

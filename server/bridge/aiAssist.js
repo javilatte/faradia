@@ -6,13 +6,13 @@ const { execFileSync } = require('child_process');
 // field actually expects (a single permission pattern vs. free-form prose).
 const FIELD_PROMPTS = {
   instructions: (prompt, current) =>
-    `Escribe una instruccion breve en espanol para anadir al system prompt de un asistente de codigo, segun esta peticion: "${prompt}".${current ? ` Instrucciones actuales: "${current}".` : ''} Responde solo con el texto de la instruccion, sin explicaciones ni comillas.`,
+    `Escribe una instrucción breve en español para añadir al system prompt de un asistente de código, según esta petición: "${prompt}".${current ? ` Instrucciones actuales: "${current}".` : ''} Responde solo con el texto de la instrucción, sin explicaciones ni comillas.`,
   memory: (prompt, current) =>
-    `Escribe una nota breve en espanol de texto libre para la memoria de un proyecto, segun esta peticion: "${prompt}".${current ? ` Memoria actual: "${current}".` : ''} Responde solo con el texto de la nota, sin explicaciones ni comillas.`,
+    `Escribe una nota breve en español de texto libre para la memoria de un proyecto, según esta petición: "${prompt}".${current ? ` Memoria actual: "${current}".` : ''} Responde solo con el texto de la nota, sin explicaciones ni comillas.`,
   nogo: (prompt) =>
-    `Un usuario quiere prohibir esto a un asistente de codigo: "${prompt}". Responde con un unico patron de permiso estilo Claude Code "permissions.deny" (ej. "Read(**/.env*)" o "Bash(rm -rf *)"). Responde solo con el patron, sin explicaciones ni comillas.`,
+    `Un usuario quiere prohibir esto a un asistente de código: "${prompt}". Responde con un único patron de permiso estilo Claude Code "permissions.deny" (ej. "Read(**/.env*)" o "Bash(rm -rf *)"). Responde solo con el patrón, sin explicaciones ni comillas.`,
   skills: (prompt) =>
-    `Escribe una descripcion breve (una frase, en espanol) para una skill de Claude Code segun esta peticion: "${prompt}". Responde solo con la descripcion, sin explicaciones ni comillas.`
+    `Escribe una descripción breve (una frase, en español) para una skill de Claude Code según esta petición: "${prompt}". Responde solo con la descripción, sin explicaciones ni comillas.`
 };
 
 function buildPrompt(field, prompt, current) {

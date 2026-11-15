@@ -30,9 +30,9 @@ server.registerTool(
   {
     description:
       'Crea una tarea nueva para un agente de optimia a partir de un plan acordado con el usuario en el chat. ' +
-      'Usar solo despues de cerrar un plan concreto con el usuario (p. ej. con la skill plan-optimizer), no para pedidos vagos.',
+      'Usar solo después de cerrar un plan concreto con el usuario (p. ej. con la skill plan-optimizer), no para pedidos vagos.',
     inputSchema: {
-      title: z.string().describe('Titulo corto de la tarea, visible en el panel de agentes'),
+      title: z.string().describe('Título corto de la tarea, visible en el panel de agentes'),
       type: z
         .enum(['coding', 'bugfix', 'tests', 'documentation', 'audit', 'custom'])
         .describe(
@@ -68,7 +68,7 @@ server.registerTool(
       taskId: z
         .string()
         .optional()
-        .describe('Id de la tarea. Si esta sesion ya corresponde a una tarea concreta, se puede omitir.'),
+        .describe('Id de la tarea. Si esta sesión ya corresponde a una tarea concreta, se puede omitir.'),
       phase: z.enum(['plan', 'implement', 'test']),
       status: z.enum(['pending', 'active', 'done', 'blocked'])
     }
@@ -78,7 +78,7 @@ server.registerTool(
     if (!id) {
       return {
         content: [
-          { type: 'text', text: 'Error: no se pudo determinar el taskId (no se paso y esta sesion no tiene uno fijo)' }
+          { type: 'text', text: 'Error: no se pudo determinar el taskId (no se pasó y esta sesión no tiene uno fijo)' }
         ],
         isError: true
       };

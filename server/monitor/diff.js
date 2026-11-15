@@ -119,7 +119,7 @@ async function isUntracked(cwd, rel) {
  * Devuelve { mode, context, files: [...], truncated }.
  */
 async function getDiff(cwd, { path: p, mode = 'head', ref, context = 3 } = {}) {
-  if (!MODES.includes(mode)) throw new Error(`modo de diff no valido: ${mode}`);
+  if (!MODES.includes(mode)) throw new Error(`modo de diff no válido: ${mode}`);
   const rel = p === undefined || p === null || p === '' ? null : safeRel(p);
   if (p && !rel) throw new Error('ruta no valida');
   const ctx = context === 'full' ? FULL_CONTEXT : Math.max(0, Math.min(1000, Number(context) || 0));
@@ -128,7 +128,7 @@ async function getDiff(cwd, { path: p, mode = 'head', ref, context = 3 } = {}) {
   }
   const args = ['-c', 'core.quotePath=false'];
   if (mode === 'commit') {
-    if (typeof ref !== 'string' || !/^[0-9a-fA-F]{4,40}$/.test(ref)) throw new Error('commit no valido');
+    if (typeof ref !== 'string' || !/^[0-9a-fA-F]{4,40}$/.test(ref)) throw new Error('commit no válido');
     args.push('show', `-U${ctx}`, '--format=', '-M', ref);
   } else {
     args.push('diff', `-U${ctx}`, '-M');

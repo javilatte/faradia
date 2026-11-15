@@ -78,7 +78,7 @@ function readPreview(abs) {
       return { kind: 'unsupported', reason: `no se pudo leer el docx: ${err.message}` };
     }
   }
-  return { kind: 'unsupported', reason: 'no hay previsualizacion para este tipo de fichero' };
+  return { kind: 'unsupported', reason: 'no hay previsualización para este tipo de fichero' };
 }
 
 // Abre el fichero (o su carpeta) con la app por defecto del sistema.
@@ -96,7 +96,7 @@ function openWithSystem(abs, { reveal = false, platform = process.platform } = {
   }
   return new Promise((resolve, reject) => {
     execFile(cmd, args, (err) => {
-      if (err && err.code === 'ENOENT') return reject(new Error(`no se encontro ${cmd} en este sistema`));
+      if (err && err.code === 'ENOENT') return reject(new Error(`no se encontró ${cmd} en este sistema`));
       if (err) return reject(err);
       resolve();
     });
