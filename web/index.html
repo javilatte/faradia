@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-glass>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,156 +7,215 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="macos.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="topbar-actions">
-        <button class="icon-button" id="settings-button" title="Ajustes">
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
+    <div class="app-window" id="app-window">
+      <aside class="sidebar" id="sidebar" aria-label="Barra lateral">
+        <div class="sidebar-top">
+          <div class="wb-switcher" id="wb-switcher"></div>
+        </div>
+        <div class="sidebar-scroll">
+          <div class="sidebar-group-title" id="nav-title">Vistas</div>
+          <nav class="sidebar-nav main-nav" id="main-nav" aria-labelledby="nav-title"></nav>
+          <div class="sidebar-group-title" id="repos-title">Repositorios</div>
+          <div class="sidebar-repos" id="repo-list" role="listbox" aria-labelledby="repos-title"></div>
+        </div>
+      </aside>
+
+      <div class="main-column">
+        <header class="toolbar topbar">
+          <button
+            class="icon-button toolbar-item"
+            id="sidebar-toggle"
+            title="Mostrar u ocultar la barra lateral (⌃⌘S · Ctrl+Alt+S)"
+            aria-label="Mostrar u ocultar la barra lateral"
+            aria-controls="sidebar"
           >
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
-            />
-          </svg>
-        </button>
-        <button class="icon-button" id="terminal-button" title="Terminal">
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <rect x="3" y="4" width="18" height="16" rx="2" />
-            <path d="M7 9l3 3-3 3" />
-            <path d="M13 15h4" />
-          </svg>
-        </button>
-        <button
-          class="icon-button"
-          id="glance-button"
-          title="Modo compacto: una ventana pequeña con el estado de todos los repos"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <rect x="12" y="12" width="7" height="7" rx="1" />
-          </svg>
-        </button>
+            <svg
+              viewBox="0 0 24 24"
+              width="17"
+              height="17"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="2.5" />
+              <path d="M9 4v16" />
+            </svg>
+          </button>
+          <div class="topbar-title toolbar-title">
+            <h1 class="toolbar-heading" id="view-title">Chat y agentes</h1>
+            <span class="toolbar-subtitle">
+              <span
+                class="status-dot offline"
+                id="connection-status"
+                role="status"
+                aria-label="Conectando…"
+                title="Conectando…"
+              ></span>
+              <span class="topbar-project" id="project-label">proyecto</span>
+              <span aria-hidden="true">·</span>
+              <span class="topbar-mode" id="mode-label">Claude Code</span>
+            </span>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <div class="topbar-actions toolbar-group">
+            <button class="icon-button toolbar-item" id="terminal-button" title="Terminal" aria-label="Terminal">
+              <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                <path d="M7 9l3 3-3 3" />
+                <path d="M13 15h4" />
+              </svg>
+            </button>
+            <button
+              class="icon-button toolbar-item"
+              id="glance-button"
+              title="Modo compacto: una ventana pequeña con el estado de todos los repos"
+              aria-label="Modo compacto"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2.5" />
+                <rect x="12" y="12" width="6" height="6" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="icon-button toolbar-item"
+              id="settings-button"
+              title="Ajustes (⌘, · Ctrl+,)"
+              aria-label="Ajustes"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
+                />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="layout" id="project-view">
+          <section class="panel" id="chat-panel">
+            <div class="panel-header">
+              <span>Chat</span>
+            </div>
+            <div class="chat-tabs" id="chat-tabs">
+              <button class="chat-tab-new" id="chat-new-button" title="Nuevo chat">+</button>
+            </div>
+            <div id="chat-log"></div>
+            <div class="thinking-orb" id="thinking-orb" hidden></div>
+            <div class="chat-input-area">
+              <div class="chat-attachments" id="chat-attachments" hidden></div>
+              <div class="skill-suggest" id="skill-suggest" role="listbox" hidden></div>
+              <div class="chat-input-row">
+                <textarea id="chat-input" rows="1" placeholder="Envía un mensaje o arrastra una imagen"></textarea>
+                <button class="send-button" id="send-button" disabled>Enviar</button>
+              </div>
+              <div class="chat-meta-row">
+                <label class="meta-field">
+                  <span class="muted">Modo</span>
+                  <select id="chat-kind-select">
+                    <option value="chat">Chat</option>
+                  </select>
+                </label>
+                <label class="meta-field chat-only">
+                  <span class="muted">Modelo</span>
+                  <select id="chat-model-select"></select>
+                </label>
+                <label class="meta-field chat-only">
+                  <span class="muted">Effort</span>
+                  <select id="model-select">
+                    <option value="default">Por defecto</option>
+                    <option value="low">Bajo</option>
+                    <option value="medium">Medio</option>
+                    <option value="high">Alto</option>
+                    <option value="xhigh">Muy alto</option>
+                    <option value="max">Máximo</option>
+                  </select>
+                </label>
+                <label class="meta-field task-only" hidden>
+                  <span class="muted">Desde</span>
+                  <select id="task-base-select" title="Rama base de la que sale la tarea"></select>
+                </label>
+                <label class="meta-field task-only" hidden>
+                  <span class="muted">Rama</span>
+                  <input
+                    type="text"
+                    id="task-branch-input"
+                    placeholder="automática"
+                    title="Nombre de la rama de la tarea; vacío = optimia/task-xxxx"
+                    spellcheck="false"
+                  />
+                </label>
+              </div>
+              <div class="task-plan-row task-only" id="task-plan-row" hidden></div>
+              <div class="chat-hint muted">Enter envía · Shift+Enter nueva línea</div>
+            </div>
+          </section>
+
+          <div
+            class="layout-splitter"
+            id="layout-splitter"
+            role="separator"
+            aria-orientation="vertical"
+            title="Arrastra para cambiar el ancho. Doble clic para restablecer."
+          ></div>
+
+          <section class="panel" id="tasks-panel">
+            <div class="panel-header agents-panel-header">
+              <span class="clock" id="clock"></span>
+              <span class="agents-title">Tareas de los agentes</span>
+            </div>
+            <div class="kanban">
+              <div class="kanban-col">
+                <div class="kanban-col-header">En curso</div>
+                <div class="kanban-cards" id="col-in_progress"></div>
+              </div>
+              <div class="kanban-col">
+                <div class="kanban-col-header">Listas para revisar</div>
+                <div class="kanban-cards" id="col-ready_to_test"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="views" id="views"></div>
       </div>
-      <span
-        class="status-dot offline"
-        id="connection-status"
-        role="status"
-        aria-label="Conectando..."
-        title="Conectando..."
-      ></span>
-      <div class="topbar-title">
-        <span class="topbar-project" id="project-label">proyecto</span>
-        <span class="topbar-mode" id="mode-label">Claude Code</span>
-      </div>
-      <div class="wb-switcher" id="wb-switcher"></div>
-      <nav class="main-nav" id="main-nav" aria-label="Vistas"></nav>
-    </header>
-
-    <div class="layout" id="project-view">
-      <section class="panel" id="chat-panel">
-        <div class="panel-header">
-          <span>Chat with Claude</span>
-        </div>
-        <div class="chat-tabs" id="chat-tabs">
-          <button class="chat-tab-new" id="chat-new-button" title="Nuevo chat">+</button>
-        </div>
-        <div id="chat-log"></div>
-        <div class="thinking-orb" id="thinking-orb" hidden></div>
-        <div class="chat-input-area">
-          <div class="chat-attachments" id="chat-attachments" hidden></div>
-          <div class="skill-suggest" id="skill-suggest" role="listbox" hidden></div>
-          <div class="chat-input-row">
-            <textarea id="chat-input" rows="1" placeholder="Envía un mensaje o arrastra una imagen"></textarea>
-            <button class="send-button" id="send-button" disabled>Enviar</button>
-          </div>
-          <div class="chat-meta-row">
-            <label for="chat-kind-select" class="muted">Modo</label>
-            <select id="chat-kind-select">
-              <option value="chat">Chat</option>
-              <option value="coding">Código</option>
-              <option value="documentation">Documentación</option>
-            </select>
-            <label for="chat-model-select" class="muted">Modelo</label>
-            <select id="chat-model-select"></select>
-            <select id="task-base-select" class="task-only" hidden title="Rama base de la que sale la tarea"></select>
-            <input
-              type="text"
-              id="task-branch-input"
-              class="task-only"
-              hidden
-              placeholder="rama (auto)"
-              title="Nombre de la rama de la tarea; vacio = optimia/task-xxxx"
-              spellcheck="false"
-            />
-            <label for="model-select" class="muted">Effort</label>
-            <select id="model-select">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="default">Default</option>
-            </select>
-            <span class="muted">Enter envia · Shift+Enter nueva linea</span>
-          </div>
-        </div>
-      </section>
-
-      <div
-        class="layout-splitter"
-        id="layout-splitter"
-        role="separator"
-        aria-orientation="vertical"
-        title="Arrastra para cambiar el ancho. Doble clic para restablecer."
-      ></div>
-
-      <section class="panel" id="tasks-panel">
-        <div class="panel-header agents-panel-header">
-          <span class="clock" id="clock"></span>
-          <span class="agents-title">Coding and documentation agents</span>
-        </div>
-        <div class="kanban">
-          <div class="kanban-col">
-            <div class="kanban-col-header">Tasks on progress</div>
-            <div class="kanban-cards" id="col-in_progress"></div>
-          </div>
-          <div class="kanban-col">
-            <div class="kanban-col-header">Ready to review &amp; ship</div>
-            <div class="kanban-cards" id="col-ready_to_test"></div>
-          </div>
-        </div>
-      </section>
     </div>
-
-    <div class="views" id="views"></div>
 
     <div class="modal-overlay" id="terminal-overlay" hidden>
       <div class="modal terminal-modal">
@@ -184,17 +243,17 @@
     <div class="modal-overlay" id="settings-overlay" hidden>
       <div class="modal">
         <nav class="settings-nav">
-          <div class="settings-nav-group">AI</div>
+          <div class="settings-nav-group">IA</div>
           <button class="settings-nav-item active" data-pane="claude">Claude</button>
           <button class="settings-nav-item" data-pane="local-ai">IA local</button>
           <button class="settings-nav-item" data-pane="agents">Agentes</button>
           <div class="settings-nav-group">Supervisión</div>
           <button class="settings-nav-item" data-pane="monitor">Avisos y vigilancia</button>
-          <div class="settings-nav-group">Preferences</div>
+          <div class="settings-nav-group">Preferencias</div>
           <button class="settings-nav-item" data-pane="appearance">Apariencia</button>
-          <button class="settings-nav-item" data-pane="instructions">Instructions</button>
-          <button class="settings-nav-item" data-pane="memory">Memory</button>
-          <button class="settings-nav-item" data-pane="nogo">No-go</button>
+          <button class="settings-nav-item" data-pane="instructions">Instrucciones</button>
+          <button class="settings-nav-item" data-pane="memory">Memoria</button>
+          <button class="settings-nav-item" data-pane="nogo">Prohibido</button>
           <button class="settings-nav-item" data-pane="skills">Skills</button>
           <button class="settings-nav-item" data-pane="registro">Registro</button>
         </nav>
@@ -220,7 +279,7 @@
             <section class="settings-pane" data-pane="claude">
               <div class="settings-field">
                 <label>Cuenta</label>
-                <div id="claude-account-info" class="account-box muted">Comprobando...</div>
+                <div id="claude-account-info" class="account-box muted">Comprobando…</div>
                 <div class="account-actions">
                   <button class="icon-button" id="claude-account-switch">Cambiar cuenta</button>
                   <button class="icon-button" id="claude-account-refresh">Actualizar</button>
@@ -232,19 +291,22 @@
               <div class="settings-field">
                 <label for="setting-claude-model">Modelo</label>
                 <select id="setting-claude-model">
-                  <option value="default">Default</option>
+                  <option value="default">Por defecto</option>
                   <option value="fable">fable</option>
                   <option value="opus">opus</option>
                   <option value="sonnet">sonnet</option>
+                  <option value="haiku">haiku</option>
                 </select>
               </div>
               <div class="settings-field">
                 <label for="setting-claude-effort">Effort</label>
                 <select id="setting-claude-effort">
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="default">Default</option>
+                  <option value="default">Por defecto</option>
+                  <option value="low">Bajo</option>
+                  <option value="medium">Medio</option>
+                  <option value="high">Alto</option>
+                  <option value="xhigh">Muy alto</option>
+                  <option value="max">Máximo</option>
                 </select>
               </div>
             </section>
@@ -259,7 +321,7 @@
                 <input type="text" id="setting-local-model" placeholder="llama3.1" />
               </div>
               <div class="settings-field">
-                <label for="setting-local-auth">Auth header</label>
+                <label for="setting-local-auth">Cabecera de autenticación</label>
                 <input type="text" id="setting-local-auth" placeholder="Authorization: Bearer ..." />
               </div>
             </section>
@@ -285,9 +347,11 @@
             <section class="settings-pane" data-pane="instructions" hidden>
               <div id="instructions-migration-banner" class="migration-banner" hidden></div>
               <div class="settings-field">
-                <label for="setting-instructions">Instrucciones (se anaden al system prompt de cada sesion)</label>
+                <label for="setting-instructions"
+                  >Instrucciones para el chat y todos los agentes (se añaden a su system prompt)</label
+                >
                 <div class="ai-assist-row">
-                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda con IA..." />
+                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />
                   <button
                     class="icon-button ai-assist-button"
                     data-field="instructions"
@@ -303,9 +367,12 @@
 
             <section class="settings-pane" data-pane="memory" hidden>
               <div class="settings-field">
-                <label for="setting-memory">Memoria del proyecto (texto libre, persistido en .optimia/memory.md)</label>
+                <label for="setting-memory"
+                  >Memoria del proyecto: contexto que el chat y los agentes conocen siempre (se guarda en
+                  .optimia/memory.md)</label
+                >
                 <div class="ai-assist-row">
-                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda con IA..." />
+                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />
                   <button
                     class="icon-button ai-assist-button"
                     data-field="memory"
@@ -323,11 +390,12 @@
               <div id="nogo-migration-banner" class="migration-banner" hidden></div>
               <div class="settings-field">
                 <label
-                  >Archivos y comandos prohibidos (patrones estilo .claude/settings.json, ej. "Read(**/.env*)")</label
+                  >Ficheros y comandos prohibidos para el chat y los agentes (patrones de .claude/settings.json, p. ej.
+                  "Read(**/.env*)")</label
                 >
                 <div id="nogo-list" class="nogo-list"></div>
                 <div class="ai-assist-row">
-                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda con IA..." />
+                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />
                   <button
                     class="icon-button ai-assist-button"
                     data-field="nogo"
@@ -339,7 +407,7 @@
                 </div>
                 <div class="new-task-row" style="padding: 0; border: none; margin-top: 8px">
                   <input type="text" id="nogo-input" placeholder="Bash(rm -rf *)" />
-                  <button class="send-button" id="nogo-add">Anadir</button>
+                  <button class="send-button" id="nogo-add">Añadir</button>
                 </div>
               </div>
             </section>
@@ -379,7 +447,7 @@
                 <label>Skills instaladas (.claude/skills/)</label>
                 <div id="skills-list" class="skills-list"></div>
                 <div class="ai-assist-row">
-                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda con IA..." />
+                  <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />
                   <button
                     class="icon-button ai-assist-button"
                     data-field="skills"
@@ -391,15 +459,14 @@
                 </div>
                 <div class="new-task-row" style="padding: 0; border: none; margin-top: 8px">
                   <input type="text" id="skill-slug-input" placeholder="nombre-kebab-case" />
-                  <input type="text" id="skill-desc-input" placeholder="Descripcion breve" />
+                  <input type="text" id="skill-desc-input" placeholder="Descripción breve" />
                   <button class="send-button" id="skill-add">Crear</button>
                 </div>
               </div>
             </section>
           </div>
           <div class="settings-footer">
-            <span class="muted" id="settings-save-status"></span>
-            <button class="send-button" id="settings-save">Guardar</button>
+            <span class="muted" id="settings-save-status" role="status" aria-live="polite"></span>
           </div>
         </div>
       </div>

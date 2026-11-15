@@ -17,8 +17,9 @@ function makeRepo(dir) {
 test('el proyecto de arranque aparece en el workbench "Por defecto"', async ({ page }) => {
   await page.goto('/?token=e2e-token');
   await expect(page.locator('#wb-select')).toContainText('Por defecto');
-  await expect(page.locator('#repo-select')).toContainText('demo');
-  await expect(page.locator('#main-nav')).toContainText('Proyecto');
+  await expect(page.locator('#repo-list .repo-item.active')).toContainText('demo');
+  await expect(page.locator('#main-nav')).toContainText('Chat y agentes');
+  await expect(page.locator('#view-title')).toHaveText('Chat y agentes');
 });
 
 test('crear un workbench, buscar repos en una carpeta y cambiar de proyecto', async ({ page }) => {
@@ -47,7 +48,7 @@ test('crear un workbench, buscar repos en una carpeta y cambiar de proyecto', as
   await expect(page.locator('#wb-select option:checked')).toContainText('Clientes');
 
   // Cambiar de repo recarga la vista de proyecto con ?p=<id> del nuevo repo
-  await page.locator('#repo-select').selectOption({ label: 'api' });
+  await page.locator('#repo-list .repo-item', { hasText: 'api' }).click();
   await expect(page).toHaveURL(/\?p=[a-f0-9]{12}/);
   await waitForChatReady(page);
   await page.locator('#chat-kind-select').selectOption('chat');

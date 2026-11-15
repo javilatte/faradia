@@ -10,9 +10,7 @@ import { registerView } from './views.js';
 import { activeRepos, currentProjectId } from './workbenches.js';
 import { langFor, tokenizeLines, paintTokens } from './syntax.js';
 import { openChanges } from './changes.js';
-
-const MARKED_URL = 'https://cdn.jsdelivr.net/npm/marked@15.0.4/+esm';
-const PURIFY_URL = 'https://cdn.jsdelivr.net/npm/dompurify@3.2.3/+esm';
+import { renderMarkdown } from './markdown.js';
 
 let root = null;
 let projectId = null;
@@ -239,18 +237,9 @@ function renderTree(dir, depth) {
 
 // ---- vista previa ----
 
-let mdLibs = null;
-async function renderMarkdown(el, text) {
-  try {
-    mdLibs ??= Promise.all([import(MARKED_URL), import(PURIFY_URL)]);
-    const [{ marked }, purify] = await mdLibs;
-    const DOMPurify = purify.default;
-    // Saneado: nada de scripts ni manejadores; el markdown nunca ejecuta codigo.
-    el.innerHTML = DOMPurify.sanitize(marked.parse(text), { USE_PROFILES: { html: true } });
-    el.classList.add('fx-markdown');
-  } catch {
-    el.textContent = text; // sin red: texto plano
-  }
+async function paintMarkdownPreview(el, text) {
+  await renderMarkdown(el, text);
+  el.classList.add('fx-markdown');
 }
 
 async function paintCode(el, text, path) {
@@ -303,7 +292,7 @@ function renderPreview() {
   else if (d.kind === 'markdown') {
     const md = h('article', { class: 'fx-md' }, d.content);
     body.append(md);
-    renderMarkdown(md, d.content);
+    paintMarkdownPreview(md, d.content);
   } else if (d.kind === 'text') {
     const code = h('div', { class: 'fx-code diff-scroll' }, h('pre', {}, d.content));
     body.append(code);

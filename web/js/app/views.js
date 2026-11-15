@@ -14,7 +14,7 @@ export function viewNames() {
 }
 
 export function viewLabel(name) {
-  return name === 'project' ? 'Proyecto' : registry.get(name)?.label || name;
+  return name === 'project' ? 'Chat y agentes' : registry.get(name)?.label || name;
 }
 
 export function currentView() {
@@ -43,6 +43,8 @@ export function showView(name, ctx) {
     view.show?.(ctx);
   }
   current = name;
+  const title = document.getElementById('view-title');
+  if (title) title.textContent = viewLabel(name);
   document.querySelectorAll('#main-nav [data-view]').forEach((b) => {
     b.classList.toggle('active', b.dataset.view === name);
     b.setAttribute('aria-current', b.dataset.view === name ? 'page' : 'false');

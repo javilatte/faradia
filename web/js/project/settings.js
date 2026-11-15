@@ -14,7 +14,7 @@ effortSelect.addEventListener('change', async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings)
   });
-  appendMessage('system', `Effort actualizado a "${effortSelect.value}" para la proxima sesion.`);
+  appendMessage('system', `Effort actualizado a "${effortSelect.value}" para la próxima sesión.`);
 });
 
 async function loadInitialSettings() {
@@ -33,7 +33,6 @@ async function loadInitialSettings() {
 const settingsOverlay = document.getElementById('settings-overlay');
 const settingsButton = document.getElementById('settings-button');
 const settingsClose = document.getElementById('settings-close');
-const settingsSave = document.getElementById('settings-save');
 const settingsSaveStatus = document.getElementById('settings-save-status');
 const settingsPaneTitle = document.getElementById('settings-pane-title');
 const settingsNavItems = document.querySelectorAll('.settings-nav-item');
@@ -91,6 +90,7 @@ document.querySelectorAll('.ai-assist-button').forEach((button) => {
         return;
       }
       target.value = data.suggestion;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
       promptInput.value = '';
     } catch (err) {
       settingsSaveStatus.textContent = err.message;
@@ -112,9 +112,11 @@ function renderNogoList() {
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '✕';
     removeBtn.title = 'Quitar';
+    removeBtn.setAttribute('aria-label', `Quitar ${pattern}`);
     removeBtn.addEventListener('click', () => {
       currentSettings.preferences.noGo.splice(idx, 1);
       renderNogoList();
+      scheduleSave(0);
     });
     row.appendChild(removeBtn);
     nogoList.appendChild(row);
@@ -127,6 +129,7 @@ nogoAddButton.addEventListener('click', () => {
   currentSettings.preferences.noGo.push(pattern);
   nogoInput.value = '';
   renderNogoList();
+  scheduleSave(0);
 });
 nogoInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') nogoAddButton.click();
@@ -140,7 +143,7 @@ function renderMigrationBanner(el, field, preview, label) {
   el.hidden = false;
   el.innerHTML = '';
   const text = document.createElement('div');
-  text.textContent = `Se encontro una configuracion antigua para "${label}" distinta de la actual. ¿Importarla?`;
+  text.textContent = `Se encontró una configuración antigua para "${label}" distinta de la actual. ¿Importarla?`;
   el.appendChild(text);
   const applyBtn = document.createElement('button');
   applyBtn.className = 'send-button';
@@ -150,7 +153,7 @@ function renderMigrationBanner(el, field, preview, label) {
     currentSettings = next;
     populateSettingsForm();
     el.hidden = true;
-    settingsSaveStatus.textContent = 'Configuracion antigua importada.';
+    settingsSaveStatus.textContent = 'Configuración antigua importada.';
   });
   el.appendChild(applyBtn);
 }
@@ -174,7 +177,7 @@ async function renderSkillsList() {
   if (skills.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'muted';
-    empty.textContent = 'No hay skills todavia.';
+    empty.textContent = 'No hay skills todavía.';
     skillsList.appendChild(empty);
   }
 }
@@ -219,17 +222,17 @@ function renderAccountInfo(auth) {
   if (auth.loggedIn === false) {
     claudeAccountInfo.textContent = auth.error
       ? `No se pudo leer la cuenta: ${auth.error}`
-      : 'No hay sesion de Claude Code iniciada.';
+      : 'No hay sesión de Claude Code iniciada.';
   } else {
     claudeAccountInfo.textContent =
       [
         auth.email ? `Cuenta: ${auth.email}` : null,
-        auth.orgName ? `Organizacion: ${auth.orgName}` : null,
+        auth.orgName ? `Organización: ${auth.orgName}` : null,
         auth.subscriptionType ? `Plan: ${auth.subscriptionType}` : null,
-        auth.authMethod ? `Metodo: ${auth.authMethod}` : null
+        auth.authMethod ? `Método: ${auth.authMethod}` : null
       ]
         .filter(Boolean)
-        .join(' · ') || 'Sesion activa.';
+        .join(' · ') || 'Sesión activa.';
   }
 }
 
@@ -240,23 +243,48 @@ async function refreshAccountInfo() {
 }
 
 async function openSettings() {
+  // Se abre en el último apartado visitado (HIG: "Restore the most recently viewed pane").
+  if (!settingsOverlay.dataset.opened) {
+    settingsOverlay.dataset.opened = '1';
+    let last = null;
+    try {
+      last = localStorage.getItem('optimia:settings-pane');
+    } catch {
+      /* sin persistencia */
+    }
+    if (last) showSettingsPane(last);
+  }
   settingsOverlay.hidden = false;
   settingsSaveStatus.textContent = '';
   claudeAccountInfo.textContent = 'Comprobando...';
   claudeAccountSwitchNote.hidden = true;
 
-  const [settings, memory, auth, migrationPreview] = await Promise.all([
-    fetch(apiPath('/api/settings')).then((r) => r.json()),
-    fetch(apiPath('/api/memory')).then((r) => r.json()),
-    fetch(apiPath('/api/claude-auth')).then((r) => r.json()),
-    fetch(apiPath('/api/settings/migration-preview')).then((r) => r.json())
-  ]);
+  // La cuenta (claude auth status) tarda: va aparte para que no retrase el
+  // formulario. Mientras carga, los campos no se pueden editar, asi lo que
+  // escribas no lo pisa la carga.
+  fetch(apiPath('/api/claude-auth'))
+    .then((r) => r.json())
+    .then(renderAccountInfo)
+    .catch(() => {});
+  const editable = [instructionsTextarea, memoryTextarea];
+  settingsLoading = true;
+  for (const el of editable) el.disabled = true;
+  let settings, memory, migrationPreview;
+  try {
+    [settings, memory, migrationPreview] = await Promise.all([
+      fetch(apiPath('/api/settings')).then((r) => r.json()),
+      fetch(apiPath('/api/memory')).then((r) => r.json()),
+      fetch(apiPath('/api/settings/migration-preview')).then((r) => r.json())
+    ]);
+  } finally {
+    for (const el of editable) el.disabled = false;
+  }
+  settingsLoading = false;
 
   currentSettings = settings;
   populateSettingsForm();
   memoryTextarea.value = memory.content || '';
   renderSkillsList();
-  renderAccountInfo(auth);
 
   renderMigrationBanner(instructionsMigrationBanner, 'instructions', migrationPreview, 'Instructions');
   renderMigrationBanner(nogoMigrationBanner, 'noGo', migrationPreview, 'No-go');
@@ -276,7 +304,22 @@ claudeAccountSwitch.addEventListener('click', async () => {
 claudeAccountRefresh.addEventListener('click', refreshAccountInfo);
 
 function closeSettings() {
+  flushSettingsSave();
   settingsOverlay.hidden = true;
+  // Los agentes se editan en Ajustes: el compositor y las tarjetas se ponen al dia.
+  loadTaskKinds().catch(() => {});
+}
+
+function showSettingsPane(pane) {
+  const item = [...settingsNavItems].find((i) => i.dataset.pane === pane);
+  item?.click();
+}
+
+// Abre Ajustes directamente en un apartado (por ejemplo "agents" desde el compositor).
+function openSettingsPane(pane) {
+  settingsOverlay.dataset.opened = '1';
+  showSettingsPane(pane);
+  openSettings();
 }
 
 settingsButton.addEventListener('click', openSettings);
@@ -294,6 +337,11 @@ settingsNavItems.forEach((item) => {
       p.hidden = p.dataset.pane !== pane;
     });
     settingsPaneTitle.textContent = item.textContent;
+    try {
+      localStorage.setItem('optimia:settings-pane', pane);
+    } catch {
+      /* sin persistencia */
+    }
     if (pane === 'registro') loadLogPane();
   });
 });
@@ -367,7 +415,36 @@ document.querySelectorAll('#log-chips .log-chip').forEach((chip) => {
 });
 logRefresh.addEventListener('click', loadLogPane);
 
-settingsSave.addEventListener('click', async () => {
+// Como en los Ajustes de macOS, los cambios se aplican al momento: no hay botón
+// Guardar. Los menús guardan al cambiar; los campos de texto, al dejar de escribir
+// o al salir del campo.
+let settingsLoading = false;
+let saveTimer = null;
+let saveChain = Promise.resolve();
+
+function scheduleSave(delay = 700) {
+  if (settingsLoading || !currentSettings) return;
+  clearTimeout(saveTimer);
+  settingsSaveStatus.textContent = delay ? 'Cambios sin guardar…' : '';
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    saveChain = saveChain.then(saveSettingsNow).catch((err) => {
+      settingsSaveStatus.textContent = `No se pudo guardar: ${err.message}`;
+    });
+  }, delay);
+}
+
+function flushSettingsSave() {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    saveChain = saveChain.then(saveSettingsNow).catch(() => {});
+  }
+  return saveChain;
+}
+
+async function saveSettingsNow() {
+  if (!currentSettings) return;
   currentSettings.ai.claude.model = claudeModelSelect.value;
   currentSettings.ai.claude.effort = claudeEffortSelect.value;
   currentSettings.ai.localAi.url = localUrlInput.value.trim();
@@ -376,21 +453,35 @@ settingsSave.addEventListener('click', async () => {
   currentSettings.preferences.instructions = instructionsTextarea.value;
   currentSettings.ui = currentUiDraft();
 
-  const saved = await fetch(apiPath('/api/settings'), {
+  const res = await fetch(apiPath('/api/settings'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(currentSettings)
-  }).then((r) => r.json());
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const saved = await res.json();
   await fetch(apiPath('/api/memory'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: memoryTextarea.value })
   });
 
-  currentSettings = saved;
+  // Lo que se haya escrito mientras se guardaba no se pisa: solo se copian los
+  // campos que no son de texto libre.
+  currentSettings.preferences.noGo = saved.preferences.noGo;
   applyUi(saved.ui);
   effortSelect.value = saved.ai.claude.effort || 'default';
   modeLabel.textContent = saved.ai.mode === 'local' ? 'IA local' : 'Claude Code';
   await populateChatModelSelect(saved);
-  settingsSaveStatus.textContent = 'Guardado. Se aplicara en la proxima sesion de Claude.';
-});
+  if (!saveTimer) settingsSaveStatus.textContent = 'Guardado · se aplica a las próximas sesiones';
+}
+
+for (const el of [claudeModelSelect, claudeEffortSelect, uiThemeSelect, uiClockSelect]) {
+  el.addEventListener('change', () => scheduleSave(0));
+}
+for (const el of [localUrlInput, localModelInput, localAuthInput, instructionsTextarea, memoryTextarea]) {
+  el.addEventListener('input', () => scheduleSave());
+  el.addEventListener('blur', () => {
+    if (saveTimer) scheduleSave(0);
+  });
+}

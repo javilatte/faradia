@@ -81,47 +81,75 @@ function renderSwitcher() {
       h('option', { value: w.id, selected: w.id === state.activeWorkbenchId }, `${w.name} (${w.repos.length})`)
     )
   );
-  const current = currentProjectId();
-  const repos = wb ? wb.repos.filter((r) => r.exists && r.projectId) : [];
-  const repoSelect = h(
-    'select',
-    {
-      id: 'repo-select',
-      'aria-label': 'Repositorio',
-      title: 'Repositorio del chat y los agentes',
-      onchange: (e) => openProject(e.target.value)
-    },
-    repos.length === 0 ? h('option', { value: '' }, 'Sin repos') : null,
-    repos.map((r) => h('option', { value: r.projectId, selected: r.projectId === current }, r.name))
-  );
-  // El proyecto abierto puede no estar en el workbench activo: se muestra igualmente.
-  if (current && !repos.some((r) => r.projectId === current)) {
-    const repo = repoByProject(current);
-    repoSelect.prepend(
-      h('option', { value: current, selected: true }, repo ? `${repo.name} (otro workbench)` : 'proyecto actual')
-    );
-  }
   host.append(
     wbSelect,
-    repoSelect,
     h(
       'button',
-      { class: 'icon-button', id: 'wb-manage', title: 'Gestionar workbenches', onclick: openManager },
+      {
+        class: 'icon-button',
+        id: 'wb-manage',
+        title: 'Gestionar workbenches…',
+        'aria-label': 'Gestionar workbenches',
+        onclick: openManager
+      },
       svgIcon('M4 6h16M4 12h16M4 18h10')
     )
   );
+  renderRepoList(wb);
+}
+
+// Repos del workbench activo, como los buzones de Mail: el seleccionado es el
+// proyecto abierto (chat, agentes, ajustes).
+function renderRepoList(wb) {
+  const list = document.getElementById('repo-list');
+  if (!list) return;
+  clear(list);
+  const current = currentProjectId();
+  const repos = wb ? wb.repos.filter((r) => r.exists && r.projectId) : [];
+  const items = repos.map((r) => ({ id: r.projectId, name: r.name, path: r.path }));
+  // El proyecto abierto puede no estar en el workbench activo: se muestra igualmente.
+  if (current && !items.some((r) => r.id === current)) {
+    const repo = repoByProject(current);
+    items.unshift({ id: current, name: repo ? repo.name : 'proyecto actual', path: repo?.path, other: true });
+  }
+  if (!items.length) {
+    list.append(h('div', { class: 'sidebar-empty' }, 'Sin repos. Añádelos desde Gestionar workbenches…'));
+    return;
+  }
+  for (const r of items) {
+    const selected = r.id === current;
+    list.append(
+      h(
+        'button',
+        {
+          class: `sidebar-item repo-item${selected ? ' active' : ''}`,
+          role: 'option',
+          'aria-selected': String(selected),
+          dataset: { projectId: r.id },
+          title: r.other ? `${r.path || r.name} (de otro workbench)` : r.path || r.name,
+          onclick: () => {
+            if (!selected) openProject(r.id);
+          }
+        },
+        svgIcon('M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9'),
+        h('span', { class: 'sidebar-item-label' }, r.name)
+      )
+    );
+  }
 }
 
 function svgIcon(d) {
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', '18');
-  svg.setAttribute('height', '18');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
   svg.setAttribute('fill', 'none');
   svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.8');
+  svg.setAttribute('stroke-width', '1.7');
   svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
   const path = document.createElementNS(ns, 'path');
   path.setAttribute('d', d);
   svg.append(path);

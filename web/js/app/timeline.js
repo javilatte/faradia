@@ -29,6 +29,19 @@ const KIND_ONE = {
   orphan: 'Huérfano'
 };
 const CHANGE_LABEL = { created: 'creado', modified: 'modificado', deleted: 'borrado' };
+const STAGE_LABEL = {
+  plan: 'planificación',
+  research: 'investigación',
+  diagnose: 'diagnóstico',
+  implement: 'implementación',
+  'write-tests': 'tests',
+  write: 'redacción',
+  verify: 'verificación',
+  audit: 'auditoría',
+  review: 'revisión',
+  commit: 'mensaje de commit',
+  custom: 'agente propio'
+};
 const STATUS_LABEL = {
   in_progress: 'en curso',
   pending: 'pendiente',
@@ -131,7 +144,7 @@ function entryBody(e) {
       return h(
         'span',
         {},
-        `Tarea «${e.title}»${e.stage ? ` · ${e.stage}` : ''}: ${STATUS_LABEL[e.status] || e.status}${e.error ? ` — ${e.error}` : ''}`
+        `Tarea «${e.title}»${e.stage ? ` · ${STAGE_LABEL[e.stage] || e.stage}` : ''}: ${STATUS_LABEL[e.status] || e.status}${e.error ? ` — ${e.error}` : ''}`
       );
     case 'signal':
       return [
@@ -224,7 +237,7 @@ function renderFilters() {
     h('input', {
       type: 'text',
       placeholder: 'Extensiones: js, css',
-      'aria-label': 'Filtrar por extension',
+      'aria-label': 'Filtrar por extensión',
       value: filters.ext,
       onchange: (e) => {
         filters.ext = e.target.value.trim();

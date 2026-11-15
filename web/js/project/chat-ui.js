@@ -127,8 +127,10 @@ function appendMessage(role, text, images = []) {
     el.appendChild(imgRow);
   }
   if (text) {
-    const textEl = document.createElement('span');
-    textEl.textContent = text;
+    const textEl = document.createElement(role === 'assistant' ? 'div' : 'span');
+    textEl.className = 'msg-text';
+    if (role === 'assistant') paintMarkdown(textEl, text);
+    else textEl.textContent = text;
     el.appendChild(textEl);
   }
   chatLog.appendChild(el);
@@ -221,7 +223,11 @@ function renderAssistantEvent(event) {
   for (const block of blocks) {
     if (block.type === 'text' && block.text) {
       if (!currentAssistantBubble) currentAssistantBubble = appendMessage('assistant', block.text);
-      else currentAssistantBubble.textContent += block.text;
+      else {
+        const textEl = currentAssistantBubble.querySelector('.msg-text');
+        if (textEl) paintMarkdown(textEl, `${textEl._raw || ''}\n\n${block.text}`);
+        else currentAssistantBubble.textContent += block.text;
+      }
     } else if (block.type === 'tool_use' && block.name === 'Agent' && !event.parent_tool_use_id) {
       // A top-level Agent call (no parent) is a new subagent the user asked
       // for. Its own tool_result arrives almost immediately as just an

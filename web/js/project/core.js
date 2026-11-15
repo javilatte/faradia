@@ -36,10 +36,11 @@ const thinkingOrb = document.getElementById('thinking-orb');
 // guess. Local mode instead lists whatever Ollama actually has pulled (see
 // GET /api/local-models), since there's no fixed list to hardcode there.
 const CLAUDE_MODEL_OPTIONS = [
-  ['default', 'Default'],
+  ['default', 'Por defecto'],
   ['fable', 'fable'],
   ['opus', 'opus'],
-  ['sonnet', 'sonnet']
+  ['sonnet', 'sonnet'],
+  ['haiku', 'haiku']
 ];
 
 async function populateChatModelSelect(settings) {
@@ -85,7 +86,7 @@ chatModelSelect.addEventListener('change', async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings)
   });
-  appendMessage('system', `Modelo actualizado a "${chatModelSelect.value}" para la proxima sesion.`);
+  appendMessage('system', `Modelo actualizado a "${chatModelSelect.value}" para la próxima sesión.`);
 });
 const connectionStatus = document.getElementById('connection-status');
 const modeLabel = document.getElementById('mode-label');
@@ -141,3 +142,17 @@ const tasks = new Map();
 // until the user dismisses them with the card's ✕ (tracked in localStorage
 // per chat so a reload doesn't resurrect a dismissed card via replay).
 const chatAgents = new Map();
+
+// Pinta markdown saneado si el modulo ya cargo (web/js/app/markdown.js); si no,
+// texto plano. Guarda el texto original para poder anadir trozos despues.
+const pendingMarkdown = new Set();
+function paintMarkdown(el, text) {
+  el._raw = text;
+  if (window.optimiaMarkdown) return window.optimiaMarkdown(el, text);
+  el.textContent = text;
+  pendingMarkdown.add(el);
+}
+window.addEventListener('optimia:markdown-ready', () => {
+  for (const el of pendingMarkdown) if (el.isConnected) window.optimiaMarkdown(el, el._raw);
+  pendingMarkdown.clear();
+});

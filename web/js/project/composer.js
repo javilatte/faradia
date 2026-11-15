@@ -18,6 +18,7 @@ chatKindSelect.value = localStorage.getItem('optimia:chat-kind') || 'chat';
 // Rellena el selector de modo con los tipos de tarea y los agentes propios activos.
 async function loadTaskKinds() {
   const data = await fetch(apiPath('/api/agents')).then((r) => r.json());
+  setAgentCatalog(data);
   const saved = localStorage.getItem('optimia:chat-kind') || 'chat';
   chatKindSelect.innerHTML = '';
   const add = (parent, value, label) => {
@@ -63,9 +64,48 @@ async function loadTaskBranches() {
   taskBaseSelect.value = branches.includes(saved) ? saved : current;
 }
 
+// Antes de enviar: que etapas tendra la tarea y que agente y modelo hara cada una.
+const taskPlanRow = document.getElementById('task-plan-row');
+function renderTaskPlan() {
+  taskPlanRow.replaceChildren();
+  const kind = chatKindSelect.value;
+  if (kind === 'chat' || !agentCatalog) return;
+  const type = kind.startsWith('custom:') ? 'custom' : kind;
+  const fake = { type, agentId: kind.startsWith('custom:') ? kind.slice('custom:'.length) : null };
+  const pipeline = agentCatalog.taskTypes?.[type]?.pipeline || [];
+  pipeline.forEach((stage, i) => {
+    if (i) {
+      const arrow = document.createElement('span');
+      arrow.className = 'plan-arrow';
+      arrow.textContent = '→';
+      taskPlanRow.appendChild(arrow);
+    }
+    const agent = plannedAgent(fake, stage);
+    const step = document.createElement('span');
+    step.className = 'plan-step' + (agent && agent.enabled === false ? ' skipped' : '');
+    const b = document.createElement('b');
+    b.textContent = stageLabel(stage);
+    step.appendChild(b);
+    if (agent) step.append(` ${agent.name} · ${modelText(agent.engine, agent.model)}`);
+    step.title = agent?.enabled === false ? 'Agente desactivado: la etapa se salta' : agent?.description || '';
+    taskPlanRow.appendChild(step);
+  });
+  const change = document.createElement('button');
+  change.type = 'button';
+  change.className = 'link';
+  change.textContent = 'Cambiar agentes';
+  change.addEventListener('click', () => openSettingsPane('agents'));
+  taskPlanRow.appendChild(change);
+}
+
 function syncTaskControls() {
   const isTask = chatKindSelect.value !== 'chat';
   for (const el of document.querySelectorAll('.task-only')) el.hidden = !isTask;
+  for (const el of document.querySelectorAll('.chat-only')) el.hidden = isTask;
+  input.placeholder = isTask
+    ? 'Describe la tarea: qué quieres, criterios de aceptación, ficheros relevantes…'
+    : 'Envía un mensaje o arrastra una imagen';
+  renderTaskPlan();
   if (isTask) loadTaskBranches().catch(() => {});
 }
 

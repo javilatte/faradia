@@ -37,6 +37,9 @@ export function openChanges({ projectId, taskId = null, path = null, ref = null,
   showView('changes', {});
 }
 
+// Para los scripts clasicos del proyecto (tarjetas de tarea): abrir un commit.
+window.optimiaOpenCommit = (projectId, ref) => openChanges({ projectId, ref });
+
 function leaveCommit() {
   sel.ref = null;
   sel.commit = null;

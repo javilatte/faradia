@@ -68,19 +68,83 @@ function logTaskEvent(taskId, event) {
   taskLogs.set(taskId, log);
 }
 
-const PHASE_LABELS = { plan: 'Plan', implement: 'Implementacion', test: 'Tests & review' };
+// Catalogo de agentes del proyecto (GET /api/agents): etapas, pipelines y que
+// agente hace cada etapa. Lo carga composer.js; hasta entonces las tarjetas
+// muestran solo lo que ya se ha ejecutado.
+let agentCatalog = null;
 
-function renderPhaseChips(task) {
-  const wrap = document.createElement('div');
-  wrap.className = 'task-phases';
-  for (const phase of task.phases || []) {
-    const chip = document.createElement('span');
-    chip.className = `phase-chip phase-${phase.status}`;
-    chip.textContent = PHASE_LABELS[phase.key] || phase.key;
-    wrap.appendChild(chip);
-  }
-  return wrap;
+function setAgentCatalog(data) {
+  agentCatalog = data;
+  renderTasks();
 }
+
+function stageLabel(stage) {
+  return agentCatalog?.stages?.[stage]?.label || STAGE_LABELS[stage] || stage;
+}
+
+function modelText(engine, model) {
+  if (engine === 'local') return `local · ${model}`;
+  return !model || model === 'default' ? 'modelo por defecto' : model;
+}
+
+// Agente que hara una etapa que aun no ha empezado (segun el mapa etapa -> agente).
+function plannedAgent(task, stage) {
+  if (!agentCatalog) return null;
+  const id = stage === 'custom' ? task.agentId : agentCatalog.stageMap?.[stage];
+  return agentCatalog.agents.find((a) => a.id === id) || null;
+}
+
+// Una fila con el pipeline de la tarea: cada etapa con su estado y el agente y
+// modelo que la hizo (o que la hara). Sustituye a las fases autoinformadas y al
+// rastro de agentes, que contaban lo mismo por separado.
+function renderPipeline(task) {
+  const runs = task.stageRuns || [];
+  const pipeline = agentCatalog?.taskTypes?.[task.type]?.pipeline || [];
+  const stages = [...pipeline];
+  for (const run of runs) if (!stages.includes(run.stage)) stages.push(run.stage);
+  if (!stages.length) return null;
+  const row = document.createElement('div');
+  row.className = 'pipeline-row';
+  for (const stage of stages) {
+    const run = [...runs].reverse().find((r) => r.stage === stage);
+    const current = task.stage === stage && task.status !== 'ready_to_test';
+    let state = 'todo';
+    if (run) state = run.status || 'running';
+    // Una etapa que preguntó y tras la que ya corrió otra quedó respondida y hecha.
+    const later = run && runs.indexOf(run) < runs.length - 1;
+    if (later && (state === 'asked' || state === 'running')) state = 'done';
+    if (current && task.status === 'in_progress') state = 'running';
+    if (current && task.status === 'awaiting_input') state = 'asked';
+    const agent = run ? { name: run.agentName, engine: run.engine, model: run.model } : plannedAgent(task, stage);
+    const disabled = !run && agent && agent.enabled === false;
+    if (disabled) state = 'skipped';
+    const chip = document.createElement('span');
+    chip.className = `pipeline-step ${state}`;
+    const name = document.createElement('strong');
+    name.textContent = stageLabel(stage);
+    chip.appendChild(name);
+    if (agent) {
+      const who = document.createElement('small');
+      who.textContent = disabled ? 'se salta' : `${agent.name} · ${modelText(agent.engine, agent.model)}`;
+      chip.appendChild(who);
+    }
+    const files = Number.isFinite(run?.filesTouched) ? ` · ${run.filesTouched} ficheros` : '';
+    const cost = Number.isFinite(run?.costUsd) && run.costUsd > 0 ? ` · ${run.costUsd.toFixed(3)} $` : '';
+    chip.title = `${PIPELINE_STATE[state] || state}${files}${cost}`;
+    row.appendChild(chip);
+  }
+  return row;
+}
+
+const PIPELINE_STATE = {
+  todo: 'Pendiente',
+  running: 'En curso',
+  done: 'Hecha',
+  asked: 'Esperando tu respuesta',
+  error: 'Falló',
+  blocked: 'Detenida por acciones prohibidas',
+  skipped: 'Desactivada: se salta'
+};
 
 function renderDeleteButton(onClick) {
   const btn = document.createElement('button');
@@ -119,13 +183,19 @@ function dismissChatAgent(taskId) {
   renderTasks();
 }
 
+// Respaldo hasta que llega el catalogo (las etiquetas buenas vienen del servidor).
 const STAGE_LABELS = {
-  plan: 'Plan',
-  research: 'Investigacion',
-  implement: 'Implementacion',
-  write: 'Redaccion',
-  review: 'Revision final',
-  commit: 'Preparar commit'
+  plan: 'Planificación',
+  research: 'Investigación',
+  diagnose: 'Diagnóstico',
+  implement: 'Implementación',
+  'write-tests': 'Tests',
+  write: 'Redacción',
+  verify: 'Verificación',
+  audit: 'Auditoría',
+  review: 'Revisión',
+  commit: 'Preparar commit',
+  custom: 'Agente propio'
 };
 
 // Valores de los formularios de las tarjetas, por `${taskId}:${campo}`. El
@@ -215,13 +285,13 @@ function applyTaskFromServer(task) {
 }
 
 function taskStepText(task, lastStep) {
-  const stage = STAGE_LABELS[task.stage] || 'Agente';
+  const stage = task.stage ? stageLabel(task.stage) : 'Agente';
   switch (task.status) {
     case 'in_progress':
       return `${stage} · ${lastStep || 'iniciando...'}`;
     case 'awaiting_input':
       return task.pendingQuestion?.kind === 'doc-options'
-        ? 'investigacion lista · elige modo, formato y destino'
+        ? 'investigación lista · elige modo, formato y destino'
         : `${stage} · necesita tu respuesta para continuar`;
     case 'ready_to_test':
       return `${stage} · lista para revisar (cambios en stage, sin commitear)`;
@@ -249,30 +319,47 @@ const TASK_TYPE_LABEL = {
   custom: 'Agente propio'
 };
 
-// Rastro de agentes: que agente (y con que modelo) hizo cada etapa de la tarea.
-function renderAgentTrail(task) {
-  const runs = task.stageRuns || [];
-  if (!runs.length) return null;
-  const row = document.createElement('div');
-  row.className = 'agent-trail';
-  for (const run of runs) {
-    const chip = document.createElement('span');
-    chip.className = `agent-chip ${run.status || 'running'}`;
-    const model = run.engine === 'local' ? `local · ${run.model}` : run.model;
-    chip.textContent = `${run.agentName} · ${model}`;
-    const files = Number.isFinite(run.filesTouched) ? ` · ${run.filesTouched} ficheros` : '';
-    const cost = Number.isFinite(run.costUsd) && run.costUsd > 0 ? ` · ${run.costUsd.toFixed(3)} $` : '';
-    chip.title = `Etapa ${run.stage}${files}${cost}`;
-    row.appendChild(chip);
+// Acciones que la politica de agentes denego en la etapa actual: el agente siguio
+// por otro camino, pero conviene saberlo (y verlo si se repite).
+function renderBlockedCommands(task) {
+  const list = (task.blockedCommands || []).filter((b) => b.stage === task.stage);
+  if (!list.length || task.status !== 'in_progress') return null;
+  const box = document.createElement('details');
+  box.className = 'blocked-commands';
+  const summary = document.createElement('summary');
+  summary.textContent = `${list.length} ${list.length === 1 ? 'acción denegada' : 'acciones denegadas'} al agente (sigue por otro camino)`;
+  box.appendChild(summary);
+  for (const b of list) {
+    const row = document.createElement('code');
+    row.textContent = b.command || b.tool;
+    box.appendChild(row);
   }
-  return row;
+  return box;
 }
 
+function stripVerdict(text) {
+  return text.replace(/^\s*VEREDICTO:.*$/gim, '').trim();
+}
+
+// Veredicto del verificador: una linea corta; el motivo, al desplegar.
 function renderVerification(task) {
   if (!task.verification) return null;
   const el = document.createElement('div');
   el.className = `verification ${task.verification.ok ? 'ok' : 'fail'}`;
-  el.textContent = task.verification.ok ? 'Verificación superada' : task.verification.line;
+  if (task.verification.ok) {
+    el.textContent = '✓ Verificación superada';
+    return el;
+  }
+  const reason = task.verification.line.replace(/^\s*VEREDICTO:\s*FALLA\s*(motivo:)?\s*/i, '').trim();
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = '✗ La verificación encontró problemas';
+  details.appendChild(summary);
+  const body = document.createElement('div');
+  body.className = 'verification-reason';
+  paintMarkdown(body, reason || task.verification.line);
+  details.appendChild(body);
+  el.appendChild(details);
   return el;
 }
 
@@ -320,14 +407,55 @@ function renderPathPicker(input) {
   return row;
 }
 
+// "Documenta la API REST" -> "documenta-la-api-rest"
+function slugify(text) {
+  return (
+    String(text || 'documento')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'documento'
+  );
+}
+
+function labeledField(text, control) {
+  const wrap = document.createElement('label');
+  wrap.className = 'form-field';
+  const span = document.createElement('span');
+  span.textContent = text;
+  wrap.append(span, control);
+  return wrap;
+}
+
+const DOC_FORMATS = [
+  ['md', 'Markdown (.md)'],
+  ['html', 'HTML (.html)'],
+  ['docx', 'Word (.docx)']
+];
+
 function renderDocOptions(taskId, task) {
   const form = document.createElement('div');
   form.className = 'task-form';
+  // Lo que encontro la investigacion, a mano para decidir formato y destino.
+  const research = task.stageOutputs?.research;
+  if (research) {
+    const notes = document.createElement('details');
+    notes.className = 'research-notes';
+    const summary = document.createElement('summary');
+    summary.textContent = 'Notas de la investigación';
+    const body = document.createElement('div');
+    body.className = 'task-output';
+    paintMarkdown(body, research);
+    notes.append(summary, body);
+    form.appendChild(notes);
+  }
   const modeKey = `${taskId}:mode`;
   const modes = [
     ['new', 'Documento nuevo'],
     ['edit', 'Editar un documento existente'],
-    ['fragments', 'Trozos para anadir a un documento existente']
+    ['fragments', 'Trozos para añadir a un documento existente']
   ];
   const selectedMode = cardDrafts.get(modeKey) || task.docOptions?.mode || 'new';
   for (const [value, label] of modes) {
@@ -342,25 +470,38 @@ function renderDocOptions(taskId, task) {
     row.appendChild(document.createTextNode(label));
     form.appendChild(row);
   }
-  const target = keepDraft(document.createElement('input'), `${taskId}:target`, task.docOptions?.targetPath || '');
-  target.type = 'text';
-  target.placeholder = 'Ruta relativa del documento (obligatoria para editar o anadir trozos)';
-  form.appendChild(renderPathPicker(target));
-
   const format = keepDraft(document.createElement('select'), `${taskId}:format`, task.docOptions?.format || 'md');
-  for (const f of ['md', 'html', 'docx']) {
+  for (const [value, label] of DOC_FORMATS) {
     const opt = document.createElement('option');
-    opt.value = f;
-    opt.textContent = f;
+    opt.value = value;
+    opt.textContent = label;
     format.appendChild(opt);
   }
   format.value = cardDrafts.get(`${taskId}:format`) || task.docOptions?.format || 'md';
-  form.appendChild(format);
+  form.appendChild(labeledField('Formato', format));
+
+  // Documento nuevo: se propone docs/<titulo>.<formato>, que sigue al formato
+  // mientras no escribas otra ruta.
+  const suggested = () => `docs/${slugify(task.title)}.${format.value}`;
+  const targetKey = `${taskId}:target`;
+  const target = keepDraft(document.createElement('input'), targetKey, task.docOptions?.targetPath || suggested());
+  target.type = 'text';
+  target.placeholder = 'Ruta relativa, p. ej. docs/api.md';
+  target.setAttribute('aria-label', 'Ruta del documento');
+  let lastSuggestion = target.value;
+  format.addEventListener('change', () => {
+    if (target.value === lastSuggestion) {
+      target.value = lastSuggestion = suggested();
+      cardDrafts.set(targetKey, target.value);
+    }
+  });
+  form.appendChild(labeledField('Documento', renderPathPicker(target)));
 
   const template = keepDraft(document.createElement('input'), `${taskId}:template`, task.docOptions?.template || '');
   template.type = 'text';
-  template.placeholder = 'Plantilla opcional (ruta relativa)';
-  form.appendChild(renderPathPicker(template));
+  template.placeholder = 'Ninguna';
+  template.setAttribute('aria-label', 'Plantilla');
+  form.appendChild(labeledField('Plantilla (opcional)', renderPathPicker(template)));
 
   form.appendChild(
     actionButton('Generar', {
@@ -388,12 +529,51 @@ function renderCommitAndMerge(taskId, task) {
   if (!task.lastCommit) {
     const row = document.createElement('div');
     row.className = 'task-file';
-    const msg = keepDraft(document.createElement('input'), `${taskId}:commit`, `feat: ${task.title}`.slice(0, 72));
+    // La propuesta de "Preparar commit" sustituye al borrador mientras no lo edites.
+    const suggestion = task.suggestedCommit || `feat: ${task.title}`.slice(0, 72);
+    const draftKey = `${taskId}:commit`;
+    if (cardDrafts.get(`${draftKey}:from`) !== suggestion) {
+      cardDrafts.delete(draftKey);
+      cardDrafts.set(`${draftKey}:from`, suggestion);
+    }
+    const msg = keepDraft(document.createElement('input'), draftKey, suggestion);
     msg.type = 'text';
     msg.className = 'task-commit-msg';
+    msg.setAttribute('aria-label', 'Mensaje de commit');
     row.appendChild(msg);
-    row.appendChild(actionButton('Commit', { primary: true, onClick: () => commitTask(taskId, msg.value) }));
+    const ignored = task.ignoredOutputs || [];
+    const picks = [];
+    row.appendChild(
+      actionButton('Commit', {
+        primary: true,
+        onClick: () =>
+          commitTask(
+            taskId,
+            msg.value,
+            picks.filter((p) => p.checked).map((p) => p.value)
+          )
+      })
+    );
     box.appendChild(row);
+    if (ignored.length) {
+      // Git los ignora: no entran en el commit salvo que los marques.
+      const list = document.createElement('div');
+      list.className = 'ignored-outputs';
+      const note = document.createElement('div');
+      note.className = 'task-meta';
+      note.textContent = 'Git ignora estos ficheros generados; márcalos solo si deben ir en el commit:';
+      list.appendChild(note);
+      for (const f of ignored) {
+        const label = document.createElement('label');
+        const box2 = document.createElement('input');
+        box2.type = 'checkbox';
+        box2.value = f;
+        picks.push(box2);
+        label.append(box2, ` ${f}`);
+        list.appendChild(label);
+      }
+      box.appendChild(list);
+    }
     return box;
   }
   const meta = document.createElement('div');
@@ -416,11 +596,11 @@ function renderCommitAndMerge(taskId, task) {
   return box;
 }
 
-async function commitTask(taskId, message) {
+async function commitTask(taskId, message, includeIgnored = []) {
   const res = await fetch(apiPath(`/api/tasks/${taskId}/commit`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message })
+    body: JSON.stringify({ message, includeIgnored })
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -435,7 +615,7 @@ async function mergeTask(taskId) {
   const res = await fetch(apiPath(`/api/tasks/${taskId}/merge`), { method: 'POST' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    appendMessage('system', `Fusion no realizada: ${data.error || res.status}`);
+    appendMessage('system', `Fusión no realizada: ${data.error || res.status}`);
     return;
   }
   applyTaskFromServer(data);
@@ -448,10 +628,12 @@ function renderReadyActions(taskId, task) {
   if (task && ['coding', 'bugfix', 'tests'].includes(task.type)) {
     row.appendChild(actionButton('Verificar otra vez', { onClick: () => runTaskStage(taskId, { stage: 'verify' }) }));
   }
-  row.appendChild(actionButton('Revision final', { onClick: () => runTaskStage(taskId, { stage: 'review' }) }));
-  row.appendChild(
-    actionButton('Preparar git add y commit', { onClick: () => runTaskStage(taskId, { stage: 'commit' }) })
-  );
+  row.appendChild(actionButton('Revisión final', { onClick: () => runTaskStage(taskId, { stage: 'review' }) }));
+  if (!task?.lastCommit) {
+    row.appendChild(
+      actionButton('Proponer mensaje de commit', { onClick: () => runTaskStage(taskId, { stage: 'commit' }) })
+    );
+  }
   return row;
 }
 
@@ -575,11 +757,11 @@ function openFilePreview(taskId, rel) {
         frame.srcdoc = data.content;
         body.appendChild(frame);
       } else {
-        body.textContent = data.reason || 'Sin previsualizacion. Usa "Abrir con el sistema".';
+        body.textContent = data.reason || 'Sin previsualización. Usa "Abrir con el sistema".';
       }
     })
     .catch(() => {
-      body.textContent = 'No se pudo cargar la previsualizacion.';
+      body.textContent = 'No se pudo cargar la previsualización.';
     });
 }
 
@@ -600,11 +782,12 @@ function buildTaskCard(taskId, task, lastStep) {
     badge.textContent = TASK_TYPE_LABEL[task.type];
     card.appendChild(badge);
   }
-  const trail = renderAgentTrail(task);
-  if (trail) card.appendChild(trail);
+  const pipeline = renderPipeline(task);
+  if (pipeline) card.appendChild(pipeline);
+  const blocked = renderBlockedCommands(task);
+  if (blocked) card.appendChild(blocked);
   const verification = renderVerification(task);
   if (verification) card.appendChild(verification);
-  if (task.phases?.length) card.appendChild(renderPhaseChips(task));
 
   const step = document.createElement('div');
   step.className = 'task-step marquee-text';
@@ -621,7 +804,8 @@ function buildTaskCard(taskId, task, lastStep) {
   if (text) {
     const output = document.createElement('div');
     output.className = 'task-output';
-    output.textContent = text;
+    // El veredicto ya sale arriba (renderVerification): no se repite en el informe.
+    paintMarkdown(output, task.verification ? stripVerdict(text) : text);
     card.appendChild(output);
   }
   if (task.error) {
@@ -657,13 +841,78 @@ function buildTaskCard(taskId, task, lastStep) {
   return card;
 }
 
+// Tarea ya fusionada: no queda nada que revisar. Tarjeta compacta con el
+// resultado, el commit y como verlo; el worktree y la rama ya se borraron.
+function buildDoneCard(taskId, task) {
+  const card = document.createElement('div');
+  card.className = 'task-card done-card';
+  const title = document.createElement('div');
+  title.className = 'task-title marquee-text';
+  title.textContent = task.title;
+  card.appendChild(title);
+  const pipeline = renderPipeline(task);
+  if (pipeline) card.appendChild(pipeline);
+  const meta = document.createElement('div');
+  meta.className = 'task-meta';
+  const how = task.fastForward === false ? 'con commit de merge' : 'en línea (fast-forward)';
+  meta.textContent = `✓ Fusionada en ${task.mergedInto} ${how} · ${task.lastCommitMessage || ''}`;
+  card.appendChild(meta);
+  if (task.mergedFiles?.length) {
+    const files = document.createElement('div');
+    files.className = 'task-meta';
+    const n = task.mergedFiles.length;
+    files.textContent = `${n} ${n === 1 ? 'fichero' : 'ficheros'}: ${task.mergedFiles.slice(0, 6).join(', ')}${n > 6 ? '…' : ''}`;
+    card.appendChild(files);
+  }
+  const row = document.createElement('div');
+  row.className = 'task-actions';
+  if (task.lastCommit && window.optimiaOpenCommit) {
+    row.appendChild(
+      actionButton('Ver cambios', {
+        onClick: () => window.optimiaOpenCommit(currentProjectId || defaultProjectId, task.lastCommit)
+      })
+    );
+  }
+  row.appendChild(actionButton('Archivar', { onClick: () => archiveTask(taskId) }));
+  card.appendChild(row);
+  return card;
+}
+
+// Quita del tablero una tarea ya fusionada (su worktree y su rama ya no existen).
+async function archiveTask(taskId) {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}`), { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    appendMessage('system', `No se pudo archivar la tarea: ${data.error || res.status}`);
+    return;
+  }
+  tasks.delete(taskId);
+  renderTasks();
+}
+
 function renderTasks() {
   colInProgress.innerHTML = '';
   colReadyToTest.innerHTML = '';
+  const done = [];
   for (const [taskId, { task, lastStep }] of tasks) {
+    if (task.mergedInto) {
+      done.push(buildDoneCard(taskId, task));
+      continue;
+    }
     const card = buildTaskCard(taskId, task, lastStep);
     if (task.status === 'ready_to_test') colReadyToTest.appendChild(card);
     else colInProgress.appendChild(card);
+  }
+  if (done.length) {
+    const group = document.createElement('details');
+    group.className = 'done-group';
+    group.open = localStorage.getItem('optimia:done-open') === '1';
+    group.addEventListener('toggle', () => localStorage.setItem('optimia:done-open', group.open ? '1' : '0'));
+    const summary = document.createElement('summary');
+    summary.textContent = `Hechas (${done.length})`;
+    group.appendChild(summary);
+    for (const card of done.reverse()) group.appendChild(card);
+    colReadyToTest.appendChild(group);
   }
   for (const [taskId, agent] of chatAgents) {
     if (agent.chatId !== currentChatId) continue;

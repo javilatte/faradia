@@ -14,7 +14,14 @@ const openPrompts = new Set();
 const url = (rest = '') => projectApi(currentProjectId(), `/agents${rest}`);
 const ENGINE_LABEL = { claude: 'Claude', local: 'IA local' };
 const ACCESS_LABEL = { read: 'Solo lectura', edit: 'Puede editar' };
-const EFFORT_LABEL = { low: 'Low', medium: 'Medium', high: 'High', default: 'Por defecto' };
+const EFFORT_LABEL = {
+  default: 'Por defecto',
+  low: 'Bajo',
+  medium: 'Medio',
+  high: 'Alto',
+  xhigh: 'Muy alto',
+  max: 'Máximo'
+};
 
 async function load() {
   const [catalog, models] = await Promise.all([
@@ -133,7 +140,8 @@ function modelControl(agent, draft) {
         placeholder: 'qwen2.5-coder:7b',
         'aria-label': `Modelo local de ${agent.name}`,
         spellcheck: 'false',
-        oninput: (e) => (draft.model = e.target.value.trim())
+        oninput: (e) => (draft.model = e.target.value.trim()),
+        onchange: () => draft.save({ model: draft.model })
       }),
       h(
         'datalist',
@@ -144,7 +152,13 @@ function modelControl(agent, draft) {
   }
   return h(
     'select',
-    { 'aria-label': `Modelo de ${agent.name}`, onchange: (e) => (draft.model = e.target.value) },
+    {
+      'aria-label': `Modelo de ${agent.name}`,
+      onchange: (e) => {
+        draft.model = e.target.value;
+        draft.save({ model: draft.model });
+      }
+    },
     data.claudeModels.map((m) =>
       h('option', { value: m, selected: m === draft.model }, m === 'default' ? 'Por defecto' : m)
     )
@@ -158,7 +172,9 @@ function renderAgent(agent) {
     effort: agent.effort,
     access: agent.access,
     prompt: agent.prompt,
-    description: agent.description
+    description: agent.description,
+    // Como en los Ajustes de macOS, cada cambio se aplica al momento.
+    save: (fields) => mutate(() => api.patch(url(`/${agent.id}`), { scope, ...fields }), `${agent.name}: guardado`)
   };
   const card = h('div', { class: `agent-card${agent.enabled ? '' : ' disabled'}`, dataset: { agent: agent.id } });
   const overridden = agent.overriddenIn.includes(scope);
@@ -178,7 +194,13 @@ function renderAgent(agent) {
       ),
       h('strong', {}, agent.name),
       h('span', { class: 'wb-badge' }, agent.builtin ? 'por defecto' : 'propio'),
-      agent.overriddenIn.length ? h('span', { class: 'wb-badge' }, `ajustado: ${agent.overriddenIn.join(', ')}`) : null
+      agent.overriddenIn.length
+        ? h(
+            'span',
+            { class: 'wb-badge' },
+            `cambiado en ${agent.overriddenIn.map((s) => (s === 'project' ? 'este proyecto' : 'todos los proyectos')).join(' y ')}`
+          )
+        : null
     ),
     h('p', { class: 'muted agent-desc' }, agent.description)
   );
@@ -190,8 +212,12 @@ function renderAgent(agent) {
       onchange: (e) => {
         draft.engine = e.target.value;
         draft.model = draft.engine === 'claude' ? 'default' : localModels[0]?.name || '';
-        modelSlot.replaceChildren(modelControl(agent, draft));
-        effortSelect.disabled = draft.engine !== 'claude';
+        // Sin modelo local no hay nada que guardar todavía: primero hay que elegirlo.
+        if (draft.engine === 'claude' || draft.model) draft.save({ engine: draft.engine, model: draft.model });
+        else {
+          modelSlot.replaceChildren(modelControl(agent, draft));
+          effortSelect.disabled = true;
+        }
       }
     },
     Object.entries(ENGINE_LABEL).map(([v, l]) => h('option', { value: v, selected: v === draft.engine }, l))
@@ -202,7 +228,10 @@ function renderAgent(agent) {
     {
       'aria-label': `Effort de ${agent.name}`,
       disabled: draft.engine !== 'claude',
-      onchange: (e) => (draft.effort = e.target.value)
+      onchange: (e) => {
+        draft.effort = e.target.value;
+        draft.save({ effort: draft.effort });
+      }
     },
     data.efforts.map((v) => h('option', { value: v, selected: v === draft.effort }, EFFORT_LABEL[v] || v))
   );
@@ -212,7 +241,10 @@ function renderAgent(agent) {
       'aria-label': `Acceso de ${agent.name}`,
       disabled: agent.builtin,
       title: agent.builtin ? 'El acceso de los agentes por defecto lo fija su etapa' : '',
-      onchange: (e) => (draft.access = e.target.value)
+      onchange: (e) => {
+        draft.access = e.target.value;
+        draft.save({ access: draft.access });
+      }
     },
     Object.entries(ACCESS_LABEL).map(([v, l]) => h('option', { value: v, selected: v === draft.access }, l))
   );
@@ -236,7 +268,9 @@ function renderAgent(agent) {
           class: 'agent-prompt',
           rows: 6,
           'aria-label': `Prompt de rol de ${agent.name}`,
-          oninput: (e) => (draft.prompt = e.target.value)
+          oninput: (e) => (draft.prompt = e.target.value),
+          // El prompt se guarda al salir del campo (no en cada tecla).
+          onchange: () => draft.save({ prompt: draft.prompt })
         },
         draft.prompt
       )
@@ -247,19 +281,7 @@ function renderAgent(agent) {
     h(
       'div',
       { class: 'agent-actions' },
-      h(
-        'button',
-        {
-          class: 'primary',
-          onclick: () => {
-            const body = { scope, engine: draft.engine, model: draft.model, effort: draft.effort };
-            if (!agent.builtin) body.access = draft.access;
-            if (promptOpen) body.prompt = draft.prompt;
-            mutate(() => api.patch(url(`/${agent.id}`), body), `${agent.name} guardado`);
-          }
-        },
-        'Guardar'
-      ),
+
       h(
         'button',
         {
@@ -269,7 +291,7 @@ function renderAgent(agent) {
             render();
           }
         },
-        promptOpen ? 'Ocultar prompt' : 'Editar prompt'
+        promptOpen ? 'Ocultar prompt' : 'Editar prompt…'
       ),
       h(
         'button',

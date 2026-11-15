@@ -37,7 +37,7 @@ function connect() {
         currentAssistantBubble = null;
         appendMessage(
           'system',
-          'Consulta parada. La conversacion se conserva; el siguiente mensaje continua desde aqui.'
+          'Consulta parada. La conversación se conserva; el siguiente mensaje continúa desde aquí.'
         );
         setWaiting(false);
       }
@@ -45,7 +45,7 @@ function connect() {
       if (msg.chatId === currentChatId) {
         appendMessage(
           'system',
-          'La sesion de Claude Code para este chat termino. Se reanudara con el siguiente mensaje.'
+          'La sesión de Claude Code para este chat terminó. Se reanudará con el siguiente mensaje.'
         );
         setWaiting(false);
       }
@@ -65,7 +65,7 @@ function connect() {
       if (msg.scope === 'chat' ? msg.id === currentChatId : true) {
         appendMessage(
           'system',
-          `Abriendo la terminal (${msg.toolName} necesitaba permiso). Al cerrarla, esta conversacion sigue aqui.`
+          `Abriendo la terminal (${msg.toolName} necesitaba permiso). Al cerrarla, esta conversación sigue aquí.`
         );
         setWaiting(false);
       }
@@ -91,7 +91,7 @@ function connect() {
       if (window.TerminalView) window.TerminalView.open();
     } else if (msg.type === 'chat_resumed') {
       if (msg.chatId === currentChatId) {
-        appendMessage('system', 'Terminal cerrada. La conversacion sigue aqui, puedes continuar.');
+        appendMessage('system', 'Terminal cerrada. La conversación sigue aquí, puedes continuar.');
         setWaiting(false);
       }
     } else if (msg.type === 'task_updated') {

@@ -1,121 +1,200 @@
-/* Tokens: por defecto siguen al sistema; el ajuste de Apariencia fija data-theme. */
+/* Sistema de diseño según las Human Interface Guidelines de Apple (macOS):
+   colores semánticos (label, secondaryLabel, separator, controlAccent...) con
+   variante clara y oscura, más contraste con "Aumentar contraste" y sin
+   translucidez con "Reducir transparencia". Por defecto se sigue al sistema;
+   Ajustes > Apariencia fija data-theme. Contraste mínimo 4,5:1 en el texto. */
 :root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --panel: #f2f2f7;
-  --panel-border: #d1d1d6;
-  --text: #000000;
-  --text-dim: #8e8e93;
+  color-scheme: light;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', system-ui, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'JetBrains Mono', Consolas, 'Liberation Mono', monospace;
+
+  /* Escala tipográfica de macOS (pt = px CSS) */
+  --text-large-title: 26px;
+  --text-title1: 22px;
+  --text-title2: 17px;
+  --text-title3: 15px;
+  --text-body: 13px;
+  --text-callout: 12px;
+  --text-subheadline: 11px;
+  --text-footnote: 10px;
+
+  /* Fondos */
+  --window-bg: #ececec; /* windowBackgroundColor: el marco de la ventana */
+  --content-bg: #ffffff; /* controlBackgroundColor: listas, tablas, texto */
+  --sidebar-bg: rgba(232, 232, 232, 0.78); /* material de barra lateral */
+  --toolbar-bg: rgba(246, 246, 246, 0.85);
+  --group-bg: rgba(0, 0, 0, 0.035); /* agrupaciones dentro del contenido */
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --pressed-bg: rgba(0, 0, 0, 0.1);
+
+  /* Texto */
+  --label: rgba(0, 0, 0, 0.85);
+  --secondary-label: rgba(0, 0, 0, 0.6);
+  --tertiary-label: rgba(0, 0, 0, 0.4);
+  --quaternary-label: rgba(0, 0, 0, 0.18);
+  --placeholder: rgba(0, 0, 0, 0.4);
+
+  /* Líneas y controles */
+  --separator: rgba(0, 0, 0, 0.1);
+  --control-bg: #ffffff;
+  --control-border: rgba(0, 0, 0, 0.16);
+  --control-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.12);
+  --track-bg: rgba(0, 0, 0, 0.06); /* fondo de los controles segmentados */
+
+  /* Acento y estados (system colors) */
   --accent: #007aff;
+  --accent-hover: #0068d9;
   --accent-text: #ffffff;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 1px rgba(0, 0, 0, 0.08);
-  --bubble-user: #007aff;
+  --link: #0068da;
+  --focus-ring: rgba(0, 122, 255, 0.5);
+  --selection-bg: #0064e1; /* selectedContentBackgroundColor */
+  --selection-inactive-bg: #dcdcdc;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --yellow: #ffcc00;
+  --green: #28cd41;
+  --purple: #af52de;
+  --gray: #8e8e93;
+  /* Para texto sobre fondo claro: variantes que cumplen 4,5:1 */
+  --red-text: #d70015;
+  --orange-text: #b25000;
+  --green-text: #1e7d32;
+  --purple-text: #8944ab;
+
+  --radius-window: 10px;
+  --radius-group: 8px;
+  --radius-control: 6px;
+  --shadow-popover: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 10px 30px rgba(0, 0, 0, 0.18);
+
+  /* Nombres heredados que usan las reglas existentes */
+  --bg: var(--content-bg);
+  --panel: var(--window-bg);
+  --panel-border: var(--separator);
+  --text: var(--label);
+  --text-dim: var(--secondary-label);
+  --danger: var(--red-text);
+  --shadow: var(--control-shadow);
+  --bubble-user: var(--accent);
   --bubble-user-text: #ffffff;
   --bubble-assistant: #e9e9eb;
-  --bubble-assistant-text: #000000;
-  --danger: #ff3b30;
+  --bubble-assistant-text: var(--label);
   --glass-blur: none;
 }
 
+/* Modo oscuro (variante "dark" de los mismos colores semánticos) */
 :root[data-theme='dark'] {
-  --bg: #000000;
-  --panel: #1c1c1e;
-  --panel-border: #38383a;
-  --text: #ffffff;
-  --text-dim: #8e8e93;
+  color-scheme: dark;
+  --window-bg: #2a2a2c;
+  --content-bg: #1e1e1e;
+  --sidebar-bg: rgba(40, 40, 42, 0.8);
+  --toolbar-bg: rgba(42, 42, 44, 0.86);
+  --group-bg: rgba(255, 255, 255, 0.045);
+  --hover-bg: rgba(255, 255, 255, 0.07);
+  --pressed-bg: rgba(255, 255, 255, 0.13);
+  --label: rgba(255, 255, 255, 0.86);
+  --secondary-label: rgba(255, 255, 255, 0.62);
+  --tertiary-label: rgba(255, 255, 255, 0.4);
+  --quaternary-label: rgba(255, 255, 255, 0.18);
+  --placeholder: rgba(255, 255, 255, 0.38);
+  --separator: rgba(255, 255, 255, 0.1);
+  --control-bg: rgba(255, 255, 255, 0.1);
+  --control-border: rgba(255, 255, 255, 0.12);
+  --control-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.06) inset, 0 0.5px 1px rgba(0, 0, 0, 0.3);
+  --track-bg: rgba(255, 255, 255, 0.08);
   --accent: #0a84ff;
-  --accent-text: #ffffff;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
-  --bubble-user: #0a84ff;
-  --bubble-user-text: #ffffff;
+  --accent-hover: #3396ff;
+  --link: #419cff;
+  --focus-ring: rgba(10, 132, 255, 0.55);
+  --selection-bg: #0058d0;
+  --selection-inactive-bg: #464646;
+  --red: #ff453a;
+  --orange: #ff9f0a;
+  --yellow: #ffd60a;
+  --green: #32d74b;
+  --purple: #bf5af2;
+  --red-text: #ff6961;
+  --orange-text: #ffb340;
+  --green-text: #4ee06a;
+  --purple-text: #da8fff;
+  --shadow-popover: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 10px 30px rgba(0, 0, 0, 0.5);
   --bubble-assistant: #2c2c2e;
-  --bubble-assistant-text: #ffffff;
-  --danger: #ff453a;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --bg: #000000;
-    --panel: #1c1c1e;
-    --panel-border: #38383a;
-    --text: #ffffff;
-    --text-dim: #8e8e93;
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --window-bg: #2a2a2c;
+    --content-bg: #1e1e1e;
+    --sidebar-bg: rgba(40, 40, 42, 0.8);
+    --toolbar-bg: rgba(42, 42, 44, 0.86);
+    --group-bg: rgba(255, 255, 255, 0.045);
+    --hover-bg: rgba(255, 255, 255, 0.07);
+    --pressed-bg: rgba(255, 255, 255, 0.13);
+    --label: rgba(255, 255, 255, 0.86);
+    --secondary-label: rgba(255, 255, 255, 0.62);
+    --tertiary-label: rgba(255, 255, 255, 0.4);
+    --quaternary-label: rgba(255, 255, 255, 0.18);
+    --placeholder: rgba(255, 255, 255, 0.38);
+    --separator: rgba(255, 255, 255, 0.1);
+    --control-bg: rgba(255, 255, 255, 0.1);
+    --control-border: rgba(255, 255, 255, 0.12);
+    --control-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.06) inset, 0 0.5px 1px rgba(0, 0, 0, 0.3);
+    --track-bg: rgba(255, 255, 255, 0.08);
     --accent: #0a84ff;
-    --accent-text: #ffffff;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
-    --bubble-user: #0a84ff;
-    --bubble-user-text: #ffffff;
+    --accent-hover: #3396ff;
+    --link: #419cff;
+    --focus-ring: rgba(10, 132, 255, 0.55);
+    --selection-bg: #0058d0;
+    --selection-inactive-bg: #464646;
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --yellow: #ffd60a;
+    --green: #32d74b;
+    --purple: #bf5af2;
+    --red-text: #ff6961;
+    --orange-text: #ffb340;
+    --green-text: #4ee06a;
+    --purple-text: #da8fff;
+    --shadow-popover: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 10px 30px rgba(0, 0, 0, 0.5);
     --bubble-assistant: #2c2c2e;
-    --bubble-assistant-text: #ffffff;
-    --danger: #ff453a;
   }
 }
 
-:root[data-theme='light'] {
-  color-scheme: light;
-  --bg: #ffffff;
-  --panel: #f2f2f7;
-  --panel-border: #d1d1d6;
-  --text: #000000;
-  --text-dim: #8e8e93;
-  --accent: #007aff;
-  --accent-text: #ffffff;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 1px rgba(0, 0, 0, 0.08);
-  --bubble-user: #007aff;
-  --bubble-user-text: #ffffff;
-  --bubble-assistant: #e9e9eb;
-  --bubble-assistant-text: #000000;
-  --danger: #ff3b30;
+/* Aumentar contraste (Ajustes del sistema > Accesibilidad) */
+@media (prefers-contrast: more) {
+  :root {
+    --secondary-label: rgba(0, 0, 0, 0.78);
+    --tertiary-label: rgba(0, 0, 0, 0.62);
+    --separator: rgba(0, 0, 0, 0.32);
+    --control-border: rgba(0, 0, 0, 0.45);
+    --focus-ring: rgba(0, 90, 200, 0.85);
+  }
+  :root[data-theme='dark'] {
+    --secondary-label: rgba(255, 255, 255, 0.82);
+    --tertiary-label: rgba(255, 255, 255, 0.65);
+    --separator: rgba(255, 255, 255, 0.35);
+    --control-border: rgba(255, 255, 255, 0.45);
+  }
 }
-
-/* Cristal (glassmorphism): el fondo es gris oscuro o blanco, sin colores. Los
-   paneles y tarjetas son translucidos con desenfoque y un borde con brillo, sobre
-   el tema claro u oscuro. */
-:root[data-glass] {
-  --glass-blur: blur(22px) saturate(150%);
-  --glass-canvas: #ffffff;
-  --glass-panel: rgba(242, 242, 247, 0.62);
-  --glass-card: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.75);
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-glass]:not([data-theme='light']) {
-    --glass-canvas: #1c1c1e;
-    --glass-panel: rgba(58, 58, 60, 0.5);
-    --glass-card: rgba(255, 255, 255, 0.07);
-    --glass-border: rgba(255, 255, 255, 0.18);
-    --shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --secondary-label: rgba(255, 255, 255, 0.82);
+    --tertiary-label: rgba(255, 255, 255, 0.65);
+    --separator: rgba(255, 255, 255, 0.35);
+    --control-border: rgba(255, 255, 255, 0.45);
   }
 }
 
-:root[data-glass][data-theme='dark'] {
-  --glass-canvas: #1c1c1e;
-  --glass-panel: rgba(58, 58, 60, 0.5);
-  --glass-card: rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.18);
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-:root[data-glass] body {
-  background: var(--glass-canvas);
-}
-
-:root[data-glass] .panel,
-:root[data-glass] .modal,
-:root[data-glass] .file-preview {
-  background: var(--glass-panel);
-  border-color: var(--glass-border);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-}
-
-:root[data-glass] .task-card {
-  background: var(--glass-card);
-  border-color: var(--glass-border);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+/* Reducir transparencia: materiales opacos */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --sidebar-bg: #e3e3e3;
+    --toolbar-bg: #f3f3f3;
+  }
+  :root[data-theme='dark'] {
+    --sidebar-bg: #2b2b2d;
+    --toolbar-bg: #2d2d2f;
+  }
 }
 
 * {
@@ -126,7 +205,7 @@ body {
   margin: 0;
   height: 100vh;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   display: flex;
@@ -162,7 +241,7 @@ body {
 }
 
 .topbar-mode {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-dim);
 }
 
@@ -170,7 +249,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #30d158;
+  background: var(--green-text);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
@@ -243,8 +322,8 @@ body {
 .agents-panel-header .agents-title {
   font-weight: 500;
   font-size: 12px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-dim);
 }
 
@@ -295,7 +374,7 @@ body {
   padding: 12px 16px;
   border-bottom: 1px solid var(--panel-border);
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -326,7 +405,7 @@ body {
   color: var(--text);
   border-radius: 8px;
   padding: 5px 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: pointer;
   max-width: 160px;
 }
@@ -392,7 +471,7 @@ body {
   max-width: 80%;
   padding: 9px 13px;
   border-radius: 14px;
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
@@ -425,7 +504,7 @@ body {
   align-self: center;
   background: rgba(255, 59, 48, 0.1);
   color: var(--danger);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .chat-input-area {
@@ -519,7 +598,7 @@ body {
   border-radius: 10px;
   padding: 9px 12px;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   background: var(--bg);
   color: var(--text);
   max-height: 140px;
@@ -534,7 +613,7 @@ body {
 select,
 .send-button {
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   border-radius: 8px;
   border: 1px solid var(--panel-border);
   background: var(--bg);
@@ -571,10 +650,64 @@ select,
   min-width: 0;
 }
 
+.chat-meta-row .meta-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.chat-meta-row .meta-field[hidden] {
+  display: none;
+}
 .chat-meta-row .muted {
   color: var(--text-dim);
-  font-size: 11.5px;
-  margin-left: auto;
+  font-size: 11px;
+}
+.chat-meta-row #task-branch-input {
+  width: 9.5em;
+}
+.chat-hint {
+  font-size: 11px;
+  text-align: right;
+}
+
+/* Que hara la tarea antes de enviarla: etapas, agentes y modelos. */
+.task-plan-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.task-plan-row[hidden] {
+  display: none;
+}
+.task-plan-row .plan-step {
+  padding: 1px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  white-space: nowrap;
+}
+.task-plan-row .plan-step b {
+  font-weight: 600;
+  color: var(--text);
+}
+.task-plan-row .plan-step.skipped {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.task-plan-row .plan-arrow {
+  opacity: 0.6;
+}
+.task-plan-row button.link {
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0 4px;
 }
 
 .chat-attachments[hidden] {
@@ -672,8 +805,8 @@ select,
   font-size: 12px;
   font-weight: 600;
   color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  text-transform: none;
+  letter-spacing: 0;
   margin-bottom: 8px;
 }
 
@@ -838,7 +971,7 @@ select,
   flex: 1 1 160px;
   min-width: 0;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid var(--panel-border);
@@ -852,8 +985,8 @@ select,
   gap: 2px;
   max-height: 420px;
   overflow-y: auto;
-  font-family: 'SF Mono', Menlo, monospace;
-  font-size: 11.5px;
+  font-family: var(--mono);
+  font-size: 11px;
 }
 .log-row {
   display: grid;
@@ -887,7 +1020,7 @@ select,
   overflow-wrap: anywhere;
 }
 .log-row.warn .log-event {
-  color: #ff9f0a;
+  color: var(--orange-text);
 }
 .log-row.error .log-event {
   color: var(--danger);
@@ -907,7 +1040,7 @@ select,
   padding: 8px;
   border-radius: 8px;
   background: var(--panel-border);
-  font-size: 11.5px;
+  font-size: 11px;
   line-height: 1.4;
   white-space: pre-wrap;
   max-height: 140px;
@@ -938,12 +1071,12 @@ select,
 }
 
 .task-card .task-step {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-dim);
 }
 
 .task-card.ready .task-step {
-  color: #30a24a;
+  color: var(--green-text);
 }
 
 /* Subagent launched from a chat turn via the Agent tool — no worktree, no
@@ -965,38 +1098,6 @@ select,
 }
 .task-card.chat-agent-card.interrupted .task-step {
   color: var(--danger);
-}
-
-.task-phases {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-
-.phase-chip {
-  font-size: 10.5px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--panel-border);
-  color: var(--text-dim);
-  background: transparent;
-}
-
-.phase-chip.phase-active {
-  color: var(--accent-text);
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.phase-chip.phase-done {
-  color: #30a24a;
-  border-color: #30a24a;
-}
-
-.phase-chip.phase-blocked {
-  color: #c23b3b;
-  border-color: #c23b3b;
 }
 
 /* ---- settings modal ---- */
@@ -1041,8 +1142,8 @@ select,
 .settings-nav-group {
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--text-dim);
   padding: 10px 10px 4px;
 }
@@ -1148,7 +1249,7 @@ select,
   border-radius: 8px;
   padding: 10px 12px;
   background: var(--bg);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -1161,7 +1262,7 @@ select,
 .account-actions .icon-button {
   width: auto;
   padding: 0 12px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ai-assist-row {
@@ -1177,7 +1278,7 @@ select,
   padding: 8px 10px;
   background: var(--bg);
   color: var(--text);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ai-assist-button {
@@ -1220,7 +1321,7 @@ select,
   border: 1px solid rgba(0, 122, 255, 0.25);
   border-radius: 8px;
   padding: 10px 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1248,7 +1349,7 @@ select,
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 7px 10px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .nogo-item code,
@@ -1267,7 +1368,7 @@ select,
 
 .skill-item .skill-desc {
   color: var(--text-dim);
-  font-size: 11.5px;
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1510,7 +1611,7 @@ select,
 /* ---- agentes en las tarjetas de tareas ---- */
 .task-type-badge {
   display: inline-block;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   padding: 1px 7px;
   border-radius: 6px;
@@ -1523,30 +1624,71 @@ select,
   color: var(--danger);
 }
 .task-type-badge.type-audit {
-  color: #bf5af2;
+  color: var(--purple-text);
 }
-.agent-trail {
+/* Pipeline de una tarea: una pastilla por etapa con su agente y modelo. */
+.pipeline-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: stretch;
   gap: 4px;
-  margin: 4px 0;
+  margin: 6px 0;
 }
-.agent-chip {
-  font-size: 10.5px;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: var(--bg);
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px 8px;
+  border-radius: 8px;
   border: 1px solid var(--panel-border);
+  background: var(--bg);
   color: var(--text-dim);
-  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.25;
+  min-width: 0;
 }
-.agent-chip.running {
+.pipeline-step + .pipeline-step::before {
+  content: none;
+}
+.pipeline-step strong {
+  font-weight: 600;
+  color: var(--text);
+}
+.pipeline-step small {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pipeline-step.todo strong {
+  color: var(--text-dim);
+}
+.pipeline-step.running {
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.pipeline-step.running strong {
   color: var(--accent);
 }
-.agent-chip.error {
+.pipeline-step.done {
+  border-color: var(--green-text);
+}
+.pipeline-step.done strong::before {
+  content: '✓ ';
+  color: var(--green-text);
+}
+.pipeline-step.asked {
+  border-color: var(--orange-text);
+}
+.pipeline-step.error {
   border-color: var(--danger);
+}
+.pipeline-step.error strong {
   color: var(--danger);
+}
+.pipeline-step.skipped {
+  opacity: 0.55;
+  border-style: dashed;
 }
 .verification {
   font-size: 12px;
@@ -1554,8 +1696,151 @@ select,
   margin: 4px 0;
 }
 .verification.ok {
-  color: #30d158;
+  color: var(--green-text);
 }
 .verification.fail {
   color: var(--danger);
+}
+
+/* Markdown en el chat y en las tarjetas (web/js/app/markdown.js). */
+.md {
+  white-space: normal;
+}
+.md > :first-child {
+  margin-top: 0;
+}
+.md > :last-child {
+  margin-bottom: 0;
+}
+.md p,
+.md ul,
+.md ol,
+.md pre,
+.md blockquote,
+.md table {
+  margin: 0 0 0.6em;
+}
+.md ul,
+.md ol {
+  padding-left: 1.3em;
+}
+.md li + li {
+  margin-top: 0.15em;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  font-size: 1em;
+  margin: 0.8em 0 0.35em;
+}
+.md code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.16);
+}
+.md pre {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.12);
+  overflow-x: auto;
+}
+.md pre code {
+  padding: 0;
+  background: none;
+}
+.md blockquote {
+  padding-left: 0.8em;
+  border-left: 3px solid var(--panel-border);
+  color: var(--text-dim);
+}
+.md table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.md th,
+.md td {
+  border: 1px solid var(--panel-border);
+  padding: 3px 7px;
+}
+.md a {
+  color: var(--accent);
+}
+.msg.assistant .msg-text.md {
+  white-space: normal;
+}
+.task-output.md {
+  white-space: normal;
+  max-height: 220px;
+}
+.verification summary {
+  cursor: pointer;
+}
+.verification-reason {
+  margin-top: 4px;
+  font-weight: 400;
+  color: var(--text);
+  font-size: 11px;
+}
+
+/* Tareas ya fusionadas: grupo plegable al final de "Listas para revisar". */
+.done-group {
+  margin-top: 8px;
+}
+.done-group > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 4px 2px;
+}
+.done-card {
+  opacity: 0.92;
+}
+.done-card .task-meta:first-of-type {
+  color: var(--green-text);
+}
+.pipeline-step.blocked {
+  border-color: var(--orange-text);
+}
+.blocked-commands {
+  font-size: 11px;
+  color: var(--orange-text);
+  margin: 2px 0 4px;
+}
+.blocked-commands summary {
+  cursor: pointer;
+}
+.blocked-commands code {
+  display: block;
+  margin-top: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.12);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.form-field {
+  display: grid;
+  grid-template-columns: 7.5em minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.research-notes > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ignored-outputs label {
+  display: block;
+  font-size: 12px;
+  font-family: var(--mono);
 }

@@ -1,0 +1,810 @@
+/* Capa de diseño según las Human Interface Guidelines de Apple para macOS.
+   Se carga la última: unifica ventana, barra lateral, barra de herramientas y
+   controles (botones push, menús desplegables, campos, controles segmentados)
+   sobre los tokens semánticos de styles.css. Las reglas llevan :root delante
+   para ganar a los estilos antiguos de cada contexto sin !important. */
+
+/* ---------- Ventana ---------- */
+
+html,
+body {
+  font-family: var(--font);
+  font-size: var(--text-body);
+  line-height: 1.3;
+  color: var(--label);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+:root body {
+  background: var(--window-bg);
+}
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.app-window {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  transition: grid-template-columns 0.2s ease;
+}
+.app-window.sidebar-hidden {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+.main-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--content-bg);
+}
+
+/* ---------- Barra lateral (material translúcido) ---------- */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--sidebar-bg);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  border-right: 1px solid var(--separator);
+}
+.sidebar-hidden .sidebar {
+  visibility: hidden;
+  border-right: none;
+}
+.sidebar-top {
+  padding: 12px 10px 6px;
+}
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 10px 12px;
+}
+:root .wb-switcher {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+:root .wb-switcher select {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+.sidebar-group-title {
+  font-size: var(--text-subheadline);
+  font-weight: 600;
+  color: var(--secondary-label);
+  padding: 12px 8px 4px;
+}
+:root .sidebar-nav,
+.sidebar-repos {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+:root .sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: 400;
+  text-align: left;
+  cursor: default;
+}
+:root .sidebar-item svg {
+  flex-shrink: 0;
+  color: var(--accent); /* los iconos de la barra lateral siguen el color de acento */
+}
+.sidebar-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .sidebar-item:hover {
+  background: var(--hover-bg);
+}
+:root .sidebar-item.active {
+  background: var(--selection-bg);
+  color: #fff;
+  box-shadow: none;
+}
+:root .sidebar-item.active svg {
+  color: #fff;
+}
+:root .repo-item.active {
+  background: transparent;
+  color: var(--label);
+  font-weight: 600;
+}
+:root .repo-item.active svg {
+  color: var(--accent);
+}
+:root .repo-item.active::after {
+  content: '✓';
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 600;
+}
+:root .repo-item.active:hover {
+  background: var(--hover-bg);
+}
+.sidebar-empty {
+  padding: 4px 8px;
+  font-size: var(--text-callout);
+  color: var(--secondary-label);
+}
+
+/* ---------- Barra de herramientas ---------- */
+
+:root .toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 12px;
+  background: var(--toolbar-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--separator);
+}
+:root .toolbar-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.toolbar-heading {
+  margin: 0;
+  font-size: var(--text-title3);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--label);
+  white-space: nowrap;
+}
+.toolbar-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-subheadline);
+  color: var(--secondary-label);
+  white-space: nowrap;
+  min-width: 0;
+}
+:root .toolbar-subtitle .topbar-project,
+:root .toolbar-subtitle .topbar-mode {
+  font-size: var(--text-subheadline);
+  font-weight: 400;
+  color: var(--secondary-label);
+  letter-spacing: 0;
+}
+.toolbar-spacer {
+  flex: 1;
+}
+:root .status-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--green);
+}
+:root .status-dot.offline {
+  background: var(--red);
+}
+
+/* Botones sin borde de la barra de herramientas */
+:root .icon-button {
+  width: 30px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--secondary-label);
+  cursor: default;
+}
+:root .icon-button:hover {
+  background: var(--hover-bg);
+  color: var(--label);
+}
+:root .icon-button:active {
+  background: var(--pressed-bg);
+}
+
+/* ---------- Botones push ---------- */
+
+:root
+  :is(
+    button:not([class]),
+    button[class=''],
+    button.primary,
+    button.danger,
+    button.send-button,
+    .task-form button,
+    .agents-pane button,
+    .wb-modal button:not(.icon-button),
+    .fx-actions button,
+    .migration-banner button,
+    .toast button,
+    .nogo-item button,
+    .agent-new button,
+    .account-actions button:not(.icon-button),
+    .view-header button:not(.icon-button)
+  ):not(.segmented button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 2px 12px;
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--control-bg);
+  box-shadow: var(--control-shadow);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: 1.2;
+  cursor: default;
+  white-space: nowrap;
+}
+:root
+  :is(
+    button:not([class]),
+    button[class=''],
+    .task-form button,
+    .agents-pane button,
+    .wb-modal button:not(.icon-button),
+    .fx-actions button,
+    .agent-new button
+  ):not(.segmented button):not(.primary):not(:disabled):active {
+  background: var(--pressed-bg);
+}
+/* Botón por defecto: acento de fondo, uno por vista */
+:root
+  :is(
+    button.primary,
+    button.send-button,
+    .task-form button.primary,
+    .agents-pane button.primary,
+    .wb-modal button.primary:not(.icon-button),
+    .view-header button.primary:not(.icon-button)
+  ):not(.segmented button) {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-text);
+  font-weight: 500;
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.2);
+}
+:root
+  :is(button.primary, button.send-button, .task-form button.primary, .agents-pane button.primary):not(
+    .segmented button
+  ):not(:disabled):hover {
+  background: var(--accent-hover);
+}
+:root
+  :is(button.danger, .agents-pane button.danger, .wb-modal button.danger, .task-form button.danger):not(
+    .segmented button
+  ) {
+  color: var(--red-text);
+}
+:root :is(button.send-button.stop, .chat-input-row button.send-button.stop):not(.segmented button) {
+  background: var(--red);
+}
+:root :is(button:disabled, button[disabled], .task-form button:disabled):not(.segmented button) {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+/* Enlaces con forma de botón (acciones secundarias dentro del texto) */
+:root :is(.link-button, button.link) {
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 0 2px;
+  color: var(--link);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Campos de texto y menús desplegables ---------- */
+
+:root
+  :is(
+    input[type='text'],
+    input[type='search'],
+    input[type='number'],
+    input[type='date'],
+    input[type='url'],
+    input[type='password'],
+    input:not([type]),
+    textarea
+  ) {
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--content-bg);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--text-body);
+  padding: 4px 7px;
+  box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.06);
+}
+:root :is(input, textarea)::placeholder {
+  color: var(--placeholder);
+}
+:root select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 24px;
+  padding: 2px 26px 2px 9px;
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background-color: var(--control-bg);
+  /* Flechas de los menús desplegables de macOS */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23007aff'/%3E%3Cpath d='M5 6.5 8 4l3 2.5M5 9.5 8 12l3-2.5' fill='none' stroke='white' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 16px 16px;
+  box-shadow: var(--control-shadow);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--text-body);
+  cursor: default;
+}
+:root select:disabled {
+  opacity: 0.5;
+}
+
+/* Anillo de foco de macOS (teclado) */
+:root :is(button, select, a, [tabindex], summary):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 0;
+}
+:root :is(input, textarea):focus,
+:root #chat-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+:root input[type='checkbox'],
+:root input[type='radio'] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  margin: 0 6px 0 0;
+  vertical-align: -2px;
+}
+
+/* ---------- Controles segmentados ---------- */
+
+:root .segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: none;
+  border-radius: 7px;
+  background: var(--track-bg);
+}
+:root .segmented button,
+:root .view .segmented button,
+:root .agents-pane .segmented button {
+  min-height: 20px;
+  padding: 1px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--text-callout);
+  cursor: default;
+}
+:root .segmented button.active,
+:root .view .segmented button.active,
+:root .agents-pane .segmented button.active {
+  background: var(--content-bg);
+  color: var(--label);
+  box-shadow:
+    0 0.5px 1px rgba(0, 0, 0, 0.2),
+    0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+:root[data-theme='dark'] .segmented button.active {
+  background: rgba(255, 255, 255, 0.22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .segmented button.active {
+    background: rgba(255, 255, 255, 0.22);
+  }
+}
+
+/* ---------- Vista "Chat y agentes": vista dividida, sin tarjetas flotantes ---------- */
+
+:root .layout {
+  padding: 0;
+  grid-template-columns: var(--chat-w, minmax(320px, 1fr)) 1px minmax(320px, 1.3fr);
+  background: var(--content-bg);
+}
+:root .layout-splitter {
+  background: var(--separator);
+  position: relative;
+}
+/* Zona de arrastre más ancha que la línea visible */
+:root .layout-splitter::before {
+  left: -4px;
+  right: -4px;
+  width: auto;
+  transform: none;
+  background: transparent;
+  border-radius: 0;
+}
+:root .layout-splitter:hover,
+:root .layout-splitter.dragging {
+  background: var(--accent);
+}
+:root .layout-splitter:hover::before,
+:root .layout-splitter.dragging::before {
+  background: transparent;
+}
+:root .panel {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--content-bg);
+}
+:root #tasks-panel {
+  background: var(--window-bg);
+}
+:root .panel-header {
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: var(--text-body);
+  font-weight: 600;
+  border-bottom: 1px solid var(--separator);
+}
+:root .agents-panel-header {
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 8px 14px;
+  text-align: left;
+}
+:root .agents-panel-header .agents-title {
+  order: -1;
+  font-size: var(--text-body);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--label);
+}
+:root .agents-panel-header .clock {
+  font-size: var(--text-subheadline);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--secondary-label);
+}
+:root .kanban-col-header {
+  font-size: var(--text-subheadline);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--secondary-label);
+}
+
+/* Tarjetas de tarea: cajas agrupadas sobre el fondo de la columna */
+:root .task-card {
+  background: var(--content-bg);
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-window);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  padding: 10px 12px;
+  font-size: var(--text-body);
+}
+:root .task-card.ready {
+  border-color: color-mix(in srgb, var(--green) 55%, transparent);
+}
+:root .task-card.awaiting {
+  border-color: color-mix(in srgb, var(--orange) 70%, transparent);
+}
+:root .task-card .task-title {
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+:root .task-step,
+:root .task-meta {
+  font-size: var(--text-subheadline);
+  color: var(--secondary-label);
+}
+:root .task-output {
+  background: var(--group-bg);
+  border-radius: var(--radius-group);
+  font-size: var(--text-callout);
+  line-height: 1.45;
+  color: var(--label);
+}
+:root .task-error {
+  color: var(--red-text);
+  font-size: var(--text-callout);
+}
+:root .verification.ok {
+  color: var(--green-text);
+}
+:root .verification.fail {
+  color: var(--red-text);
+}
+:root .task-type-badge {
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  background: var(--group-bg);
+  border: none;
+  color: var(--secondary-label);
+}
+:root .task-type-badge.type-bugfix {
+  color: var(--red-text);
+}
+:root .task-type-badge.type-audit {
+  color: var(--purple-text);
+}
+:root .pipeline-step {
+  border: 0.5px solid var(--control-border);
+  background: var(--content-bg);
+  border-radius: 7px;
+  font-size: var(--text-subheadline);
+}
+:root .pipeline-step strong {
+  color: var(--label);
+}
+:root .pipeline-step small {
+  color: var(--secondary-label);
+  font-size: var(--text-footnote);
+}
+:root .pipeline-step.todo strong {
+  color: var(--secondary-label);
+}
+:root .pipeline-step.running {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 0.5px var(--accent);
+}
+:root .pipeline-step.running strong {
+  color: var(--link);
+}
+:root .pipeline-step.done {
+  border-color: color-mix(in srgb, var(--green) 60%, transparent);
+}
+:root .pipeline-step.done strong::before {
+  color: var(--green-text);
+}
+:root .pipeline-step.asked,
+:root .pipeline-step.blocked {
+  border-color: var(--orange);
+}
+:root .pipeline-step.error {
+  border-color: var(--red);
+}
+:root .pipeline-step.error strong {
+  color: var(--red-text);
+}
+:root .blocked-commands {
+  color: var(--orange-text);
+}
+:root .done-card .task-meta:first-of-type {
+  color: var(--green-text);
+}
+:root .card-delete-btn {
+  color: var(--tertiary-label);
+}
+:root .card-delete-btn:hover {
+  color: var(--label);
+}
+
+/* ---------- Chat ---------- */
+
+:root .msg {
+  font-size: var(--text-body);
+  line-height: 1.4;
+  border-radius: 16px;
+}
+:root .msg.system {
+  font-size: var(--text-subheadline);
+  color: var(--secondary-label);
+}
+:root .msg.error {
+  color: var(--red-text);
+}
+:root .chat-input-area {
+  border-top: 1px solid var(--separator);
+  background: var(--content-bg);
+}
+:root #chat-input {
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: var(--text-body);
+  background: var(--content-bg);
+  border: 0.5px solid var(--control-border);
+  color: var(--label);
+}
+:root .chat-tab {
+  border-radius: 6px;
+  font-size: var(--text-callout);
+}
+:root .chat-meta-row .muted,
+:root .chat-hint,
+:root .task-plan-row {
+  color: var(--secondary-label);
+}
+:root .task-plan-row .plan-step {
+  border: 0.5px solid var(--control-border);
+  border-radius: 6px;
+  font-size: var(--text-subheadline);
+}
+
+/* ---------- Ajustes: ventana de ajustes de macOS ---------- */
+
+:root .modal-overlay {
+  background: rgba(0, 0, 0, 0.22);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root .modal {
+  background: var(--content-bg);
+  border: 0.5px solid var(--control-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-popover);
+}
+:root .settings-nav {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--separator);
+}
+:root .settings-nav-group {
+  font-size: var(--text-subheadline);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--secondary-label);
+}
+:root .settings-nav-item {
+  border-radius: 6px;
+  font-size: var(--text-body);
+  color: var(--label);
+  min-height: 28px;
+}
+:root .settings-nav-item:hover {
+  background: var(--hover-bg);
+}
+:root .settings-nav-item.active {
+  background: var(--selection-bg);
+  color: #fff;
+}
+:root .settings-content-header {
+  font-size: var(--text-title3);
+  font-weight: 600;
+  border-bottom: 1px solid var(--separator);
+}
+/* Cada ajuste es una fila de un grupo, como en Ajustes del Sistema */
+:root .settings-pane > .settings-field {
+  background: var(--group-bg);
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-group);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+:root .settings-field > label {
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--label);
+}
+:root .settings-save-status,
+:root #settings-save-status {
+  font-size: var(--text-callout);
+  color: var(--secondary-label);
+}
+
+/* ---------- Vistas (dashboard, cambios, timeline, archivos) ---------- */
+
+:root .view {
+  background: var(--content-bg);
+}
+:root .view-header > h2:first-child {
+  /* La barra de herramientas ya muestra el título de la vista (HIG: un solo título) */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+:root .view-title {
+  font-size: var(--text-title2);
+  font-weight: 600;
+}
+:root .view :is(h3, h4) {
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+:root .muted {
+  color: var(--secondary-label);
+}
+:root .wb-badge {
+  font-size: var(--text-footnote);
+  background: var(--group-bg);
+  border: none;
+  color: var(--secondary-label);
+}
+
+/* Listas: la fila seleccionada usa el color de selección con texto blanco */
+:root :is(.ch-file.active, .ch-file.selected, .fx-row.selected, .fx-row.active, .tl-commit.active) {
+  background: var(--selection-bg);
+  color: #fff;
+}
+:root :is(.ch-file.active, .ch-file.selected, .fx-row.selected, .fx-row.active, .tl-commit.active) * {
+  color: inherit;
+}
+
+/* ---------- Barras de desplazamiento finas (estilo overlay) ---------- */
+
+:root ::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+:root ::-webkit-scrollbar-thumb {
+  background: var(--quaternary-label);
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+:root ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--tertiary-label);
+}
+:root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- Accesibilidad ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-window {
+    transition: none;
+  }
+}
+
+/* Ventanas estrechas: la barra lateral flota sobre el contenido */
+@media (max-width: 760px) {
+  .app-window,
+  .app-window.sidebar-hidden {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+  .app-window:not(.sidebar-hidden) .sidebar {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 240px;
+    box-shadow: var(--shadow-popover);
+  }
+}
+
+/* Columnas del tablero: una sola cuando el panel es estrecho */
+#tasks-panel {
+  container-type: inline-size;
+}
+@container (max-width: 560px) {
+  :root .kanban {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

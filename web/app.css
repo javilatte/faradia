@@ -2,13 +2,12 @@
    Usa los mismos tokens que styles.css (--bg, --panel, --accent...). */
 
 :root {
-  --ok: #30d158;
-  --warn: #ff9f0a;
+  --ok: var(--green);
+  --warn: var(--orange);
   --add-bg: rgba(48, 209, 88, 0.14);
   --add-text: #1a7f37;
   --del-bg: rgba(255, 59, 48, 0.12);
   --del-text: #cf222e;
-  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 :root[data-theme='dark'] {
   --add-text: #56d364;
@@ -36,7 +35,7 @@
 }
 .wb-switcher select {
   max-width: 180px;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 4px 8px;
 }
 
@@ -45,7 +44,7 @@
   display: flex;
   gap: 2px;
   padding: 3px;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 10px;
   -webkit-app-region: no-drag;
@@ -55,7 +54,7 @@
   background: transparent;
   color: var(--text-dim);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   padding: 5px 12px;
   border-radius: 7px;
@@ -104,7 +103,7 @@
   color: var(--text-dim);
   text-align: center;
   padding: 48px 16px;
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 /* ---- botones genericos de las vistas nuevas ---- */
@@ -113,7 +112,7 @@
 .wb-modal button,
 .toast button {
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 5px 12px;
   border-radius: 7px;
   border: 1px solid var(--panel-border);
@@ -188,10 +187,10 @@
   gap: 6px;
 }
 .wb-badge {
-  font-size: 10.5px;
+  font-size: 11px;
   padding: 1px 6px;
   border-radius: 6px;
-  background: var(--panel);
+  background: var(--group-bg);
   color: var(--text-dim);
   border: 1px solid var(--panel-border);
 }
@@ -208,7 +207,7 @@
 .wb-new input,
 .wb-inline-form input {
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 6px 8px;
   border-radius: 7px;
   border: 1px solid var(--panel-border);
@@ -226,8 +225,8 @@
 }
 .wb-h {
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--text-dim);
   margin: 18px 0 8px;
 }
@@ -307,7 +306,7 @@
   gap: 12px;
   padding: 10px 14px;
   border-radius: 10px;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
   font-size: 13px;
@@ -347,14 +346,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .agents-pane button,
 .agents-pane select,
 .agents-pane input,
 .agents-pane textarea {
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .agents-pane button {
   padding: 5px 12px;
@@ -383,7 +382,7 @@
   color: var(--accent-text);
 }
 .agents-help {
-  font-size: 11.5px;
+  font-size: 11px;
   margin: 0 0 6px;
   line-height: 1.5;
 }
@@ -392,7 +391,7 @@
   grid-template-columns: max-content minmax(0, 260px);
   gap: 6px 12px;
   align-items: center;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .agent-card {
   border: 1px solid var(--panel-border);
@@ -439,7 +438,7 @@
   font-size: 12px !important;
   border-radius: 8px;
   border: 1px solid var(--panel-border);
-  background: var(--panel);
+  background: var(--group-bg);
   color: var(--text);
   padding: 8px;
   resize: vertical;
@@ -478,7 +477,7 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 .dash-card {
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   box-shadow: var(--shadow);
@@ -506,7 +505,7 @@
 }
 .dash-branch {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-dim);
   background: var(--bg);
   border: 1px solid var(--panel-border);
@@ -518,7 +517,7 @@
   max-width: 45%;
 }
 .dash-ab {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-dim);
   margin-left: auto;
   white-space: nowrap;
@@ -554,7 +553,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   align-items: baseline;
 }
 .dash-stat.danger {
@@ -563,7 +562,7 @@
 .dash-lines,
 .changes-file-lines {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 11px;
   display: inline-flex;
   gap: 6px;
 }
@@ -597,7 +596,7 @@
 }
 .dash-file {
   font-family: var(--mono);
-  font-size: 11.5px !important;
+  font-size: 11px !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -653,7 +652,7 @@
   align-items: center;
   gap: 6px;
   margin-top: auto;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 .dash-card-foot .muted {
   margin-right: auto;
@@ -668,14 +667,14 @@
 .live-badge {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--ok);
   border: 1px solid var(--ok);
   border-radius: 6px;
   padding: 1px 6px;
 }
 .view-header select {
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 4px 8px;
   max-width: 240px;
 }
@@ -688,7 +687,7 @@
 }
 .changes-files {
   overflow-y: auto;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 6px;
@@ -738,7 +737,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   overflow: hidden;
@@ -749,7 +748,7 @@
   gap: 10px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--panel-border);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .diff-wrap {
   flex: 1;
@@ -804,7 +803,7 @@
 }
 .dl-hunk {
   color: var(--accent);
-  background: var(--panel);
+  background: var(--group-bg);
   padding: 2px 12px;
   border-block: 1px solid var(--panel-border);
 }
@@ -839,7 +838,7 @@
   flex-shrink: 0;
   position: relative;
   border-left: 1px solid var(--panel-border);
-  background: var(--panel);
+  background: var(--group-bg);
   cursor: pointer;
 }
 .ruler-mark {
@@ -883,12 +882,12 @@
   gap: 8px;
   align-items: center;
   margin-bottom: 12px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .tl-filters select,
 .tl-filters input {
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 4px 8px;
   border-radius: 7px;
   border: 1px solid var(--panel-border);
@@ -928,7 +927,7 @@
 }
 .tl-feed {
   overflow-y: auto;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 6px 12px;
@@ -936,8 +935,8 @@
 .tl-day {
   position: sticky;
   top: -6px;
-  background: var(--panel);
-  font-size: 11.5px;
+  background: var(--group-bg);
+  font-size: 11px;
   font-weight: 600;
   text-transform: capitalize;
   color: var(--text-dim);
@@ -952,18 +951,18 @@
   align-items: baseline;
   padding: 6px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 60%, transparent);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .tl-entry time {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-dim);
 }
 .tl-kind {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--text-dim);
 }
 .kind-commit .tl-kind {
@@ -974,7 +973,7 @@
   color: var(--warn);
 }
 .kind-agent .tl-kind {
-  color: #bf5af2;
+  color: var(--purple-text);
 }
 .tl-repo {
   font-weight: 600;
@@ -993,13 +992,13 @@
 }
 .tl-path {
   font-family: var(--mono);
-  font-size: 11.5px !important;
+  font-size: 11px !important;
 }
 .tl-commit code {
-  font-size: 11.5px;
+  font-size: 11px;
 }
 .tl-sev {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   padding: 0 6px;
   border-radius: 5px;
@@ -1016,7 +1015,7 @@
 }
 .tl-history {
   overflow-y: auto;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 8px 10px;
@@ -1057,7 +1056,7 @@
   background: var(--bg);
 }
 .tl-commit-subject {
-  font-size: 12.5px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1069,10 +1068,10 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 3px 8px;
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   max-width: 50%;
   overflow: hidden;
@@ -1095,7 +1094,7 @@
 /* ---- Avisos, actividad y modo compacto ---- */
 
 .dash-signals {
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 8px 14px;
@@ -1104,8 +1103,8 @@
 .dash-signals h3 {
   margin: 0 0 6px;
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--text-dim);
 }
 .dash-signals ul {
@@ -1115,7 +1114,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .dash-signal {
   margin: 0;
@@ -1150,11 +1149,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .sig-table {
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .sig-table th,
 .sig-table td {
@@ -1164,13 +1163,13 @@
 .sig-table th {
   color: var(--text-dim);
   font-weight: 500;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 .sig-thresholds {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: 13px;
   align-items: flex-start;
 }
 .sig-thresholds input {
@@ -1194,7 +1193,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .glance-line {
   display: flex;
@@ -1206,14 +1205,14 @@
   background: var(--ok);
 }
 .glance-agent {
-  font-size: 10.5px;
-  color: #bf5af2;
+  font-size: 11px;
+  color: var(--purple-text);
   border: 1px solid currentColor;
   border-radius: 5px;
   padding: 0 5px;
 }
 .glance-signal {
-  font-size: 11.5px;
+  font-size: 11px;
   margin: 8px 0 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1235,7 +1234,7 @@
 }
 .fx-tree {
   overflow: auto;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 6px 0;
@@ -1250,7 +1249,7 @@
   border-radius: 0;
   background: transparent;
   padding: 3px 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .view .fx-node:hover {
@@ -1276,7 +1275,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--panel);
+  background: var(--group-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   overflow: hidden;
@@ -1288,7 +1287,7 @@
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--panel-border);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .fx-preview-head > code {
   font-weight: 600;
@@ -1309,7 +1308,7 @@
 }
 .fx-meta {
   margin: 6px 12px;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 .fx-body {
   flex: 1;
@@ -1383,8 +1382,8 @@
   margin-bottom: 10px;
   border-radius: 10px;
   border: 1px dashed var(--accent);
-  background: var(--panel);
-  font-size: 12.5px;
+  background: var(--group-bg);
+  font-size: 13px;
 }
 .fx-trash-modal {
   width: min(620px, 94vw);
