@@ -21,7 +21,7 @@ const {
 } = require('../../server/bridge/worktree');
 
 function initGitRepo(dir) {
-  execFileSync('git', ['init', '-q'], { cwd: dir });
+  execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: dir });
   execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: dir });
   execFileSync('git', ['config', 'user.name', 'test'], { cwd: dir });
   fs.writeFileSync(path.join(dir, 'README.md'), 'hola\n');

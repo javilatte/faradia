@@ -1,0 +1,3 @@
+# False positives reviewed by hand. Each line is a gitleaks fingerprint.
+# test/integration.bats sends the fake per-run token of the bats tests ("bats-token").
+311f11d1583129fe674a8ba4e69cb10ea879e7c0:test/integration.bats:curl-auth-header:79
