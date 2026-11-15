@@ -171,13 +171,23 @@ class TreeWatcher extends EventEmitter {
     this.schedule();
   }
 
-  // Drops paths inside folders git ignores (node_modules, build output...),
-  // except the plane 2 extraDirs. Answers are cached per folder.
+  // Drops paths inside folders git ignores (node_modules, build output...) and
+  // those folders themselves (FSEvents also reports the folder when something
+  // inside changes), except the plane 2 extraDirs. Ignored files such as .env
+  // are kept: the plane 2 watchlist needs them. Answers are cached per folder.
   async filterIgnored(paths) {
     const isExtra = (d) => this.extraDirs.some((x) => d === x || d.startsWith(`${x}/`));
+    const isDir = (p) => {
+      try {
+        return fs.statSync(path.join(this.root, p)).isDirectory();
+      } catch {
+        return false;
+      }
+    };
     const ancestors = (p) => {
       const out = [];
       for (let d = path.posix.dirname(p); d && d !== '.'; d = path.posix.dirname(d)) out.unshift(d);
+      if (isDir(p)) out.push(p);
       return out;
     };
     const unknown = new Set();
