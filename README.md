@@ -127,6 +127,29 @@ fast-forwards when it can, then removes the task's worktree and branch.
 
 ---
 
+## One workflow, every repo
+
+Configuration has two layers, so every repo works the same way and each one can
+still have what is its own. Settings has a **Todos los repos / Solo este repo**
+switch:
+
+| | All repos (global) | This repo |
+|---|---|---|
+| Model, effort, local AI | the default for every repo | only what this repo changes; each field says whether it is inherited, with **Restablecer** and **Usar en todos los repos** |
+| Instructions | the common workflow (commit style, how to verify, language…) | extra instructions, added after the global ones and winning on conflict |
+| Prohibido (no-go) | denied for every repo | added on top of the global list |
+| Agents and pipelines | which agent and model runs each stage | per-repo overrides |
+| Memory | — | the repo's own knowledge: commands, structure, conventions, pitfalls |
+| Appearance, signals | global | — |
+
+**Conocer este repo** (Ajustes → Memoria, or the empty board of a new repo) runs a
+read-only agent that studies the repo and proposes its memory; you save it with one
+click and can edit it later. Quick changes from the composer (model, effort) are
+stored where the value lives: in the repo if it overrides it, otherwise for all repos.
+
+Settings saved by older versions (a full copy in every repo) are migrated on first
+read: only what differs from the defaults stays as a repo override.
+
 ## Supervision
 
 Supervision is **read-only**: optimia never writes to a repo to monitor it.
@@ -170,15 +193,16 @@ with a sandbox CSP.
 
 ```
 <project>/.optimia/              per project (excluded from git automatically)
-├── settings.json                AI mode, model/effort, local AI, instructions, no-go list
+├── settings.json                only what this repo changes, its own instructions and no-go list
 ├── claude-settings*.json        permissions for optimia's own claude sessions (--settings)
-├── memory.md                    project memory, included in every session's system prompt
+├── memory.md                    the repo's knowledge, included in every session's system prompt
 ├── tasks.json, chats.json       kanban and chat state
 ├── agents/                      project agents and stage map
 ├── worktrees/                   one git worktree per agent task
 └── logs/optimia.log             activity log (Ajustes → Registro)
 
 ~/.config/optimia/               global
+├── settings.json                appearance, model/effort, local AI, common instructions and no-go list
 ├── workbenches.json             workbenches and their repos
 ├── agents/                      agents for every project
 ├── watchlists.json              plane 2 patterns per repo

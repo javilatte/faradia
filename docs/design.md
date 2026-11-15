@@ -46,6 +46,32 @@ toca el `.gitignore`), y los permisos de Claude Code de sus propias sesiones van
 `.claude/` del proyecto, que es configuración compartida del equipo, no se modifica, y
 sus reglas `deny` siguen sumándose a las de optimia.
 
+## Configuración por capas
+
+Para que el flujo de trabajo sea el mismo en todos los repos y cada uno conserve lo
+suyo, los ajustes tienen dos capas (`server/store/settingsStore.js`):
+
+- **Global**, en `~/.config/optimia/settings.json`: apariencia, modelo y effort, IA
+  local, instrucciones comunes y lista "Prohibido".
+- **Repo**, en `.optimia/settings.json` (versión 2): solo los campos de IA que el repo
+  cambia, sus instrucciones y prohibiciones propias (se suman a las globales) y los
+  permisos aprobados en sus tareas.
+
+`loadSettings()` devuelve los ajustes efectivos, que son los que usan las sesiones: las
+instrucciones van en dos apartados (todos los repos y este repo, que manda) y la lista
+"Prohibido" es la unión de las dos. `PATCH /api/settings {scope}` cambia una capa; en
+la del repo, un valor igual al global deja de ser un cambio, `reset` vuelve a heredar
+y `promote` lo pasa a todos. Los agentes y el mapa de etapas ya tenían las mismas
+capas (por defecto → global → repo), y en Ajustes comparten el mismo selector de
+ámbito.
+
+El conocimiento propio de cada repo es su memoria (`.optimia/memory.md`). La tarea
+interna `onboard` ("Conocer este repo") la propone con un agente de solo lectura, y
+`POST /api/tasks/:id/apply-memory` la guarda (la anterior queda en `memory.prev.md`).
+
+Un `settings.json` antiguo (copia completa por repo) se migra al leerlo: solo queda
+como cambio del repo lo que difiere de los valores por defecto.
+
 ## Agentes
 
 - `server/agents/catalog.js`: diez agentes por defecto más ficheros `.md` con
