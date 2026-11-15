@@ -16,7 +16,8 @@ const { configDir } = require('../store/globalPaths');
 
 const ENGINES = ['claude', 'local'];
 const ACCESS = ['read', 'edit'];
-const EFFORTS = ['low', 'medium', 'high', 'default'];
+// Niveles de --effort del CLI de claude (2.1.x: low, medium, high, xhigh, max).
+const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
 // Alias de modelo que entiende el CLI de claude; 'default' = el modelo por defecto de la cuenta.
 const CLAUDE_MODELS = ['default', 'opus', 'sonnet', 'haiku', 'fable'];
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
@@ -32,7 +33,7 @@ const BUILTIN_AGENTS = [
     effort: 'high',
     access: 'read',
     prompt:
-      'Eres el Planificador. Tu trabajo es entender el encargo a fondo, leer el codigo relevante y producir un plan concreto: ficheros a tocar, cambios en cada uno, riesgos y como verificarlo. Prefiere reutilizar lo que ya existe antes que crear codigo nuevo.'
+      'Eres el Planificador. Tu trabajo es entender el encargo a fondo, leer el código relevante y producir un plan concreto: ficheros a tocar, cambios en cada uno, riesgos y cómo verificarlo. Prefiere reutilizar lo que ya existe antes que crear código nuevo.'
   },
   {
     id: 'implementer',
@@ -65,7 +66,7 @@ const BUILTIN_AGENTS = [
     effort: 'high',
     access: 'read',
     prompt:
-      'Eres el Revisor. Busca errores reales (logica, casos limite, seguridad, rendimiento) antes que cuestiones de estilo. Cada hallazgo con fichero:linea, gravedad y como arreglarlo.'
+      'Eres el Revisor. Busca errores reales (lógica, casos límite, seguridad, rendimiento) antes que cuestiones de estilo. Cada hallazgo con fichero:línea, gravedad y cómo arreglarlo.'
   },
   {
     id: 'committer',
@@ -98,7 +99,7 @@ const BUILTIN_AGENTS = [
     effort: 'medium',
     access: 'edit',
     prompt:
-      'Eres el Redactor de documentacion. Escribe claro y directo, para el lector que lo va a usar. Respeta el tono y la estructura de la documentacion existente.'
+      'Eres el Redactor de documentación. Escribe claro y directo, para el lector que lo va a usar. Respeta el tono y la estructura de la documentación existente.'
   },
   {
     id: 'debugger',
@@ -109,7 +110,7 @@ const BUILTIN_AGENTS = [
     effort: 'high',
     access: 'read',
     prompt:
-      'Eres el Depurador. Reproduce el fallo antes de teorizar, aisla la causa raiz con evidencias (trazas, comandos, lineas de codigo) y propone el arreglo minimo que lo corrige sin efectos secundarios.'
+      'Eres el Depurador. Reproduce el fallo antes de teorizar, aisla la causa raíz con evidencias (trazas, comandos, líneas de código) y propone el arreglo mínimo que lo corrige sin efectos secundarios.'
   },
   {
     id: 'test-writer',
@@ -120,7 +121,7 @@ const BUILTIN_AGENTS = [
     effort: 'medium',
     access: 'edit',
     prompt:
-      'Eres el Escritor de tests. Usa el framework y las convenciones de tests que ya tiene el proyecto. Prueba comportamiento observable, incluidos los casos limite y de error, no detalles de implementacion.'
+      'Eres el Escritor de tests. Usa el framework y las convenciones de tests que ya tiene el proyecto. Prueba comportamiento observable, incluidos los casos límite y de error, no detalles de implementación.'
   },
   {
     id: 'auditor',
@@ -131,7 +132,7 @@ const BUILTIN_AGENTS = [
     effort: 'high',
     access: 'read',
     prompt:
-      'Eres el Auditor. Analiza el alcance pedido buscando problemas de seguridad, rendimiento, fiabilidad y mantenibilidad. Ordena los hallazgos por gravedad, con evidencia (fichero:linea) y recomendacion concreta. No modifiques nada.'
+      'Eres el Auditor. Analiza el alcance pedido buscando problemas de seguridad, rendimiento, fiabilidad y mantenibilidad. Ordena los hallazgos por gravedad, con evidencia (fichero:línea) y recomendación concreta. No modifiques nada.'
   }
 ];
 
@@ -243,18 +244,18 @@ function getAgent(projectRoot, id) {
 }
 
 function validateAgentInput(input, { isNew }) {
-  if (input.engine !== undefined && !ENGINES.includes(input.engine)) return 'motor no valido (claude o local)';
-  if (input.access !== undefined && !ACCESS.includes(input.access)) return 'acceso no valido (read o edit)';
-  if (input.effort !== undefined && !EFFORTS.includes(input.effort)) return 'effort no valido';
+  if (input.engine !== undefined && !ENGINES.includes(input.engine)) return 'motor no válido (claude o local)';
+  if (input.access !== undefined && !ACCESS.includes(input.access)) return 'acceso no válido (read o edit)';
+  if (input.effort !== undefined && !EFFORTS.includes(input.effort)) return 'effort no válido';
   if (input.model !== undefined && (typeof input.model !== 'string' || input.model.length > 100))
-    return 'modelo no valido';
+    return 'modelo no válido';
   if (
     input.engine === 'claude' &&
     input.model &&
     !CLAUDE_MODELS.includes(input.model) &&
     !/^claude-[a-z0-9.-]+$/.test(input.model)
   ) {
-    return `modelo de Claude no valido: usa ${CLAUDE_MODELS.join(', ')} o un id claude-...`;
+    return `modelo de Claude no válido: usa ${CLAUDE_MODELS.join(', ')} o un id claude-...`;
   }
   if (isNew && (typeof input.name !== 'string' || !input.name.trim())) return 'el agente necesita un nombre';
   if (input.name !== undefined && String(input.name).length > 60) return 'nombre demasiado largo';
@@ -274,7 +275,7 @@ function slugify(name) {
 
 /** Guarda los campos dados del agente en un ambito (se combinan con lo que ya hubiera ahi). */
 function saveAgent(projectRoot, scope, id, input) {
-  if (!ID_RE.test(id)) throw new Error('id de agente no valido');
+  if (!ID_RE.test(id)) throw new Error('id de agente no válido');
   const exists = BUILTIN_AGENTS.some((a) => a.id === id) || loadAgents(projectRoot).some((a) => a.id === id);
   const problem = validateAgentInput(input, { isNew: !exists });
   if (problem) throw new Error(problem);
@@ -314,7 +315,7 @@ function createAgent(projectRoot, scope, input) {
 
 /** Borra los ajustes de un agente en un ambito: restaura el por defecto o elimina un agente propio. */
 function removeAgent(projectRoot, scope, id) {
-  if (!ID_RE.test(id)) throw new Error('id de agente no valido');
+  if (!ID_RE.test(id)) throw new Error('id de agente no válido');
   const file = path.join(dirFor(scope, projectRoot), `${id}.md`);
   if (!fs.existsSync(file)) return false;
   fs.unlinkSync(file);

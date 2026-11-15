@@ -46,7 +46,8 @@ test('bugfix: el diagnostico encadena la implementacion, que recibe el diagnosti
   const { patch, next } = decideAfterStage(task('bugfix'), 'diagnose', { text: 'causa: null en login.js:12' });
   assert.equal(next, 'implement');
   const prompt = buildStagePrompt({ ...task('bugfix'), stageOutputs: patch.stageOutputs }, 'implement');
-  assert.match(prompt, /Diagnostico:\ncausa: null en login\.js:12/);
+  assert.match(prompt, /Diagnóstico:\ncausa: null en login\.js:12/);
+  assert.match(prompt, /Encargo original del usuario[^\n]*\n/, 'el implementador ve también el encargo');
 });
 
 test('verify: guarda el veredicto y deja la tarea lista para revisar', () => {

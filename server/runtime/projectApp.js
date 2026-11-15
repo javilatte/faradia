@@ -123,12 +123,12 @@ function createApp(
       const body = await readJsonBody(req).catch(() => null);
       if (!body || !body.title) return sendJson(res, 400, { error: 'title is required' });
       if (!isKnownType(body.type)) {
-        return sendJson(res, 400, { error: `tipo de tarea no valido; usa: ${Object.keys(TASK_TYPES).join(', ')}` });
+        return sendJson(res, 400, { error: `tipo de tarea no válido; usa: ${Object.keys(TASK_TYPES).join(', ')}` });
       }
       if (body.type === 'custom') {
         const agent = typeof body.agentId === 'string' ? getAgent(projectRoot, body.agentId) : null;
         if (!agent) return sendJson(res, 400, { error: 'elige un agente existente para la tarea' });
-        if (!agent.enabled) return sendJson(res, 409, { error: `el agente "${agent.name}" esta desactivado` });
+        if (!agent.enabled) return sendJson(res, 409, { error: `el agente "${agent.name}" está desactivado` });
       }
       const git = listLocalBranches(projectRoot);
       if (body.baseBranch && !git.branches.includes(body.baseBranch)) {
@@ -239,12 +239,17 @@ function createApp(
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
       if (!task) return sendJson(res, 404, { error: 'task not found' });
       if (task.status !== 'ready_to_test' || !task.worktreePath)
-        return sendJson(res, 409, { error: 'la tarea no esta lista para revisar' });
+        return sendJson(res, 409, { error: 'la tarea no está lista para revisar' });
       const message = typeof body?.message === 'string' ? body.message.trim() : '';
-      if (!message) return sendJson(res, 400, { error: 'el mensaje de commit no puede estar vacio' });
+      if (!message) return sendJson(res, 400, { error: 'el mensaje de commit no puede estar vacío' });
       let sha;
       try {
-        sha = commitTaskWorktree(task.worktreePath, message, task.outputFiles || []);
+        // Solo los ficheros ignorados que el usuario marco, y solo si son de la tarea.
+        const outputs = new Set(task.outputFiles || []);
+        const includeIgnored = (Array.isArray(body?.includeIgnored) ? body.includeIgnored : []).filter((f) =>
+          outputs.has(f)
+        );
+        sha = commitTaskWorktree(task.worktreePath, message, includeIgnored);
       } catch (err) {
         log.warn('task.commit_failed', { taskId, error: err.message });
         return sendJson(res, 409, { error: `no se pudo hacer commit: ${err.message}` });
@@ -261,21 +266,34 @@ function createApp(
       if (!task.baseBranch || !task.branch) return sendJson(res, 409, { error: 'la tarea no tiene rama base' });
       if (!worktreeIsClean(task.worktreePath))
         return sendJson(res, 409, { error: 'quedan cambios sin commitear en la tarea' });
-      let sha;
+      let merge;
       try {
-        sha = mergeTaskBranch(projectRoot, task.branch, task.baseBranch, `Merge ${task.branch} en ${task.baseBranch}`);
+        merge = mergeTaskBranch(projectRoot, task.branch, task.baseBranch);
       } catch (err) {
         log.warn('task.merge_failed', { taskId, error: err.message });
         return sendJson(res, 409, { error: err.message });
       }
-      log.info('task.merge', { taskId, into: task.baseBranch, sha, files: filesChangedBy(projectRoot, sha) });
+      const files = filesChangedBy(projectRoot, merge.sha, merge.before);
+      log.info('task.merge', { taskId, into: task.baseBranch, sha: merge.sha, fastForward: merge.fastForward, files });
+      // Ya integrada: fuera el worktree y la rama, como "Delete branch" tras un PR.
+      onTaskDeleted?.(taskId);
+      let cleaned = true;
+      try {
+        removeTaskWorktree(projectRoot, task);
+      } catch (err) {
+        cleaned = false;
+        log.warn('task.cleanup_failed', { taskId, error: err.message });
+      }
       return sendJson(
         res,
         200,
         updateTask(projectRoot, taskId, {
           mergedInto: task.baseBranch,
-          mergeCommit: sha,
-          mergedAt: new Date().toISOString()
+          mergeCommit: merge.sha,
+          fastForward: merge.fastForward,
+          mergedFiles: files,
+          mergedAt: new Date().toISOString(),
+          ...(cleaned ? { worktreePath: null, branchDeleted: true } : {})
         })
       );
     }

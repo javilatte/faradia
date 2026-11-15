@@ -13,7 +13,7 @@ const { ClaudeSession } = require('../bridge/claudeProcess');
 const { PtySession } = require('../bridge/ptySession');
 const { buildSessionOptions } = require('../bridge/sessionOptions');
 const { resolveStageAgent, skippedStages } = require('../agents/stageMap');
-const { createTaskWorktree, stageForReview, changedFiles } = require('../bridge/worktree');
+const { createTaskWorktree, stageForReview, changedFiles, ignoredAmong } = require('../bridge/worktree');
 const logger = require('../bridge/logger');
 
 const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write']);
@@ -26,6 +26,7 @@ function relPath(base, p) {
   return path.isAbsolute(p) ? path.relative(base, p) : p;
 }
 const { ensureGitGuardHooks } = require('../bridge/gitGuard');
+const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
 const {
   STAGE_PHASE,
@@ -36,7 +37,8 @@ const {
   canRun,
   buildStagePrompt,
   answerPrompt,
-  decideAfterStage
+  decideAfterStage,
+  defaultCommitMessage
 } = require('../bridge/taskStages');
 const { createApp } = require('./projectApp');
 
@@ -52,7 +54,9 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
   const config = {
     mcpServers: {
       'optimia-tasks': {
-        command: 'node',
+        // El mismo node que ejecuta optimia: con nvm u otros gestores, "node" puede
+        // no estar en el PATH del proceso de claude y el MCP no arrancaria.
+        command: process.execPath,
         args: [path.join(__dirname, '..', 'mcp', 'tasksServer.js')],
         env
       }
@@ -81,8 +85,23 @@ function ensureOptimiaExcluded(projectRoot) {
   }
 }
 
+// Denegaciones por politica que se toleran en una etapa antes de pararla.
+const MAX_POLICY_DENIALS = 5;
+
+// Cierra la ultima ejecucion de `stage` en stageRuns con un estado.
+function closeLastRun(task, stage, status) {
+  const runs = [...(task?.stageRuns || [])];
+  const last = runs[runs.length - 1];
+  if (last && last.stage === stage && !last.finishedAt) {
+    runs[runs.length - 1] = { ...last, finishedAt: new Date().toISOString(), status };
+  }
+  return runs;
+}
+
 function createProjectRuntime({ projectId, projectRoot, port, token, sendToClients }) {
   ensureOptimiaExcluded(projectRoot);
+  // Permisos de las sesiones de optimia, pasados con --settings (nada en el repo).
+  syncClaudeSettings(projectRoot, loadSettings(projectRoot).preferences.noGo);
   const log = logger.createLogger(projectRoot);
   writeMcpConfig(projectRoot, { port, projectId, token });
   // Both task and chat sessions are project-wide (one ClaudeSession per
@@ -153,7 +172,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // Cada etapa la hace un agente del catalogo, con su motor, modelo y prompt de rol.
     const agent = resolveStageAgent(projectRoot, task, stage);
     if (!agent) return { error: `no hay ningun agente para la etapa "${stage}"`, code: 409 };
-    if (!agent.enabled && stage === 'custom') return { error: `el agente "${agent.name}" esta desactivado`, code: 409 };
+    if (!agent.enabled && stage === 'custom') return { error: `el agente "${agent.name}" está desactivado`, code: 409 };
 
     let opts;
     const settings = loadSettings(projectRoot);
@@ -175,7 +194,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
     opts.extraAllowedTools = [...stageTools(stage, agent), ...approved];
-    opts.disallowedTools = stageDisallowed();
+    opts.disallowedTools = stageDisallowed(stage, agent);
     opts.gitHooksPath = ensureGitGuardHooks(projectRoot);
     const session = new ClaudeSession(opts);
     taskSessions.set(taskId, session);
@@ -237,30 +256,41 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       // Una tarea no es interactiva: si la etapa necesita un permiso que no tiene,
       // se detiene y la tarjeta ofrece aprobarlo y reintentar. No se abre la terminal.
       if (event.type === 'system' && event.subtype === 'permission_denied' && !session._stageDone) {
-        session._stageDone = true;
-        session.kill();
-        if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
         const tool = event.tool_name || 'una herramienta';
         const use = toolUses.get(event.tool_use_id);
         const command = use?.name === 'Bash' ? use.input?.command : undefined;
         // Bash va libre en las etapas: lo que aun asi se deniega es politica
-        // (comandos destructivos, commits) o el aviso de /dev/null, y no se
-        // aprueba desde la tarjeta. Solo las demas herramientas se pueden aprobar.
+        // (comandos destructivos, commits...) y no se aprueba desde la tarjeta.
+        // Como en Claude Code normal, el agente recibe la denegacion y sigue por
+        // otro camino; solo si insiste demasiado se para la etapa.
         const rule = tool === 'Bash' ? null : approvalRule(tool);
         const approvedNow = loadSettings(projectRoot).preferences.approvedTools || [];
         const alreadyApproved = rule !== null && approvedNow.includes(rule);
-        log.warn('task.stage.denied', { taskId, stage, tool, alreadyApproved });
-        const current = updateTask(projectRoot, taskId, {
+        session._denials = (session._denials || 0) + 1;
+        log.warn('task.stage.denied', { taskId, stage, tool, command: cut(command), alreadyApproved });
+        const blocked = { stage, tool, command: command ? cut(command) : undefined, at: new Date().toISOString() };
+        const policyDenial = !rule || alreadyApproved;
+        if (policyDenial && session._denials < MAX_POLICY_DENIALS) {
+          const current = loadTasks(projectRoot).find((t) => t.id === taskId);
+          const updated = updateTask(projectRoot, taskId, {
+            blockedCommands: [...(current?.blockedCommands || []), blocked].slice(-20)
+          });
+          if (updated) broadcast({ type: 'task_updated', task: updated });
+          return;
+        }
+        session._stageDone = true;
+        session.kill();
+        if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
+        const current = loadTasks(projectRoot).find((t) => t.id === taskId);
+        const updated = updateTask(projectRoot, taskId, {
           status: 'pending',
-          error:
-            tool === 'Bash'
-              ? `la etapa "${stage}" se bloqueo en Bash${command ? `: ${command}` : ''}. Es una accion prohibida para agentes o un aviso de Claude Code; no se puede aprobar desde la tarjeta.`
-              : alreadyApproved
-                ? `la etapa "${stage}" fue bloqueada por ${tool} aunque ya estaba permitido. No se puede resolver desde la tarjeta.`
-                : `la etapa "${stage}" necesita permiso para ${tool}.`,
-          pendingPermission: rule && !alreadyApproved ? { tool } : null
+          stageRuns: closeLastRun(current, stage, 'blocked'),
+          error: policyDenial
+            ? `la etapa "${stage}" se detuvo: el agente insistió en acciones prohibidas para los agentes (la última: ${command ? cut(command) : tool}). Reinténtala con más indicaciones o cambia de agente.`
+            : `la etapa "${stage}" necesita permiso para ${tool}.`,
+          pendingPermission: policyDenial ? null : { tool }
         });
-        if (current) broadcast({ type: 'task_updated', task: current });
+        if (updated) broadcast({ type: 'task_updated', task: updated });
       }
     });
     session.on('error', (err) => {
@@ -272,9 +302,11 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       if (session._stageDone) return;
       // Salida sin `result` (fallo, kill o handoff a la terminal): la tarea no
       // puede quedarse en in_progress para siempre.
+      const before = loadTasks(projectRoot).find((t) => t.id === taskId);
       const current = updateTask(projectRoot, taskId, {
         status: 'pending',
-        error: `la etapa "${stage}" termino sin completarse`
+        stageRuns: closeLastRun(before, stage, 'error'),
+        error: `la etapa "${stage}" terminó sin completarse`
       });
       if (current) broadcast({ type: 'task_updated', task: current });
     });
@@ -293,7 +325,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     const rule = approvalRule(tool, command);
     if (!rule) return { error: 'esta herramienta no se puede aprobar desde la tarjeta', code: 400 };
     if (tool !== task.pendingPermission.tool || (tool === 'Bash' && command !== task.pendingPermission.command)) {
-      return { error: 'el permiso pendiente ya no coincide con la peticion', code: 409 };
+      return { error: 'el permiso pendiente ya no coincide con la petición', code: 409 };
     }
     const settings = loadSettings(projectRoot);
     const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
@@ -353,7 +385,18 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         costUsd: typeof event.total_cost_usd === 'number' ? event.total_cost_usd : null
       };
     }
-    const updated = updateTask(projectRoot, taskId, { ...patch, stageRuns: runs, outputFiles: [...knownFiles].sort() });
+    const commitDraft =
+      patch.status === 'ready_to_test' && !patch.suggestedCommit && !current.suggestedCommit
+        ? { suggestedCommit: defaultCommitMessage(current) }
+        : {};
+    const updated = updateTask(projectRoot, taskId, {
+      ...patch,
+      ...commitDraft,
+      stageRuns: runs,
+      outputFiles: [...knownFiles].sort(),
+      // Los que git ignora: no entran en el commit salvo que el usuario los marque.
+      ignoredOutputs: ignoredAmong(worktreeDir, [...knownFiles])
+    });
     log.info('task.stage.finish', {
       taskId,
       stage,
@@ -480,7 +523,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     if (terminalSession) return terminalSession;
 
     const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
-    const session = new PtySession({ cwd: projectRoot, mcpConfigPath, resumeSessionId });
+    const settingsPath = optimiaClaudeSettingsPath(projectRoot);
+    const session = new PtySession({ cwd: projectRoot, mcpConfigPath, settingsPath, resumeSessionId });
     terminalSession = session;
     terminalOwner = owner || null;
 
@@ -572,7 +616,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
           JSON.stringify({
             type: 'client_error',
             error:
-              'Esta conversacion esta abierta en la terminal ahora mismo. Cierra esa sesion de terminal para volver a usar el chat.'
+              'Esta conversación está abierta en la terminal ahora mismo. Cierra esa sesión de terminal para volver a usar el chat.'
           })
         );
       }

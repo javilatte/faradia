@@ -13,8 +13,7 @@ test('cada etapa usa el modelo de su agente, y el modelo se puede cambiar por pr
   const planner = page.locator('.agent-card[data-agent="planner"]');
   await expect(planner).toBeVisible();
   await planner.getByLabel('Modelo de Planificador').selectOption('haiku');
-  await planner.getByRole('button', { name: 'Guardar' }).click();
-  await expect(planner.locator('.wb-badge', { hasText: 'ajustado: project' })).toBeVisible();
+  await expect(planner.locator('.wb-badge', { hasText: 'cambiado en este proyecto' })).toBeVisible();
   await page.locator('#settings-close').click();
 
   // Tarea de codigo: plan (Planificador) -> implement (Implementador) -> verify (Verificador)
@@ -24,12 +23,14 @@ test('cada etapa usa el modelo de su agente, y el modelo se puede cambiar por pr
 
   const card = page.locator('.task-card', { hasText: 'Anadir un boton de exportar' });
   await expect(card).toHaveClass(/ready/, { timeout: 30_000 });
-  await expect(card.locator('.agent-chip')).toHaveText([
+  await expect(card.locator('.pipeline-step strong')).toHaveText(['Planificación', 'Implementación', 'Verificación']);
+  await expect(card.locator('.pipeline-step small')).toHaveText([
     'Planificador · haiku',
     'Implementador · sonnet',
     'Verificador · sonnet'
   ]);
-  await expect(card.locator('.verification')).toHaveText('Verificación superada');
+  await expect(card.locator('.pipeline-step.done')).toHaveCount(3);
+  await expect(card.locator('.verification')).toHaveText('✓ Verificación superada');
 
   const stageCalls = claudeCalls().filter((c) => c.cwd.includes('/.optimia/worktrees/'));
   const models = stageCalls.map((c) => argAfter(c.args, '--model'));
@@ -52,7 +53,6 @@ test('un agente propio aparece en el selector de modo y ejecuta su tarea de una 
   const card = page.locator('.agent-card[data-agent="revisor-de-accesibilidad"]');
   await expect(card).toBeVisible();
   await card.getByLabel('Modelo de Revisor de accesibilidad').selectOption('opus');
-  await card.getByRole('button', { name: 'Guardar' }).click();
   await page.locator('#settings-close').click();
 
   await page.reload();
@@ -62,10 +62,26 @@ test('un agente propio aparece en el selector de modo y ejecuta su tarea de una 
   await page.locator('#chat-input').press('Enter');
   const task = page.locator('.task-card', { hasText: 'Revisar el formulario de alta' });
   await expect(task).toHaveClass(/ready/, { timeout: 20_000 });
-  await expect(task.locator('.agent-chip')).toHaveText(['Revisor de accesibilidad · opus']);
+  await expect(task.locator('.pipeline-step small')).toHaveText(['Revisor de accesibilidad · opus']);
   await expect(task).toContainText('Informe entregado');
   const last = claudeCalls().pop();
   expect(argAfter(last.args, '--model')).toBe('opus');
   expect(argAfter(last.args, '--append-system-prompt')).toContain('Revisa la accesibilidad (WCAG).');
+  expect(errors).toEqual([]);
+});
+
+test('una acción prohibida no para la etapa: el agente sigue y la tarjeta lo registra', async ({ page, request }) => {
+  const errors = trackErrors(page);
+  await openProject(page);
+  await page.locator('#chat-kind-select').selectOption('coding');
+  await page.locator('#chat-input').fill('Limpiar temporales [e2e:denegar]');
+  await page.locator('#chat-input').press('Enter');
+  const card = page.locator('.task-card', { hasText: 'Limpiar temporales' });
+  await expect(card).toHaveClass(/ready/, { timeout: 30_000 });
+  await expect(card.locator('.pipeline-step.done')).toHaveCount(3);
+  const tasks = await (await request.get('/api/tasks', { headers: { 'X-Optimia-Token': 'e2e-token' } })).json();
+  const task = tasks.find((t) => t.title.startsWith('Limpiar temporales'));
+  expect(task.blockedCommands.map((b) => b.command)).toEqual(['rm -rf /tmp/e2e-basura']);
+  expect(task.error).toBeNull();
   expect(errors).toEqual([]);
 });

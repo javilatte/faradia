@@ -124,8 +124,13 @@ function stageTools(stage, agent) {
   return [];
 }
 
-function stageDisallowed() {
-  return [...STAGE_DISALLOWED];
+// Lo que una etapa nunca puede hacer. Las de solo lectura bloquean tambien las
+// herramientas de edicion: una deny gana a cualquier allow (tambien a un permiso
+// que el usuario aprobo en otra etapa o a un defaultMode acceptEdits heredado).
+function stageDisallowed(stage, agent) {
+  const deny = [...STAGE_DISALLOWED];
+  if (stage && stageAccess(stage, agent) !== 'edit') deny.push(...EDIT_TOOLS, 'NotebookEdit');
+  return deny;
 }
 
 // Regla de permiso exacta para una herramienta que una etapa tuvo que pedir.
@@ -172,8 +177,8 @@ function isSafeRelPath(p) {
 
 function validateDocOptions(o) {
   if (!o || typeof o !== 'object') return 'elige el modo de salida, el formato y el destino';
-  if (!DOC_MODES.includes(o.mode)) return 'modo de salida no valido';
-  if (!DOC_FORMATS.includes(o.format)) return 'formato no valido (md, html o docx)';
+  if (!DOC_MODES.includes(o.mode)) return 'modo de salida no válido';
+  if (!DOC_FORMATS.includes(o.format)) return 'formato no válido (md, html o docx)';
   if (o.mode !== 'new' && !isSafeRelPath(o.targetPath)) return 'indica la ruta relativa del documento existente';
   if (o.mode === 'new' && o.targetPath && !isSafeRelPath(o.targetPath)) return 'ruta de destino no valida';
   if (o.template && !isSafeRelPath(o.template)) return 'ruta de plantilla no valida';
@@ -188,11 +193,11 @@ function canRun(task, stage, { answer, docOptions } = {}) {
   if (stage === 'review' || stage === 'commit') {
     return status === 'ready_to_test'
       ? null
-      : 'la revision y el commit solo estan disponibles cuando la tarea esta lista para revisar';
+      : 'la revisión y el commit solo están disponibles cuando la tarea está lista para revisar';
   }
 
   if (answer !== undefined) {
-    if (typeof answer !== 'string' || !answer.trim()) return 'la respuesta no puede estar vacia';
+    if (typeof answer !== 'string' || !answer.trim()) return 'la respuesta no puede estar vacía';
     return status === 'awaiting_input' && QUESTION_STAGE[pendingQuestion?.kind] === stage
       ? null
       : 'no hay preguntas pendientes para esta etapa';
@@ -202,7 +207,7 @@ function canRun(task, stage, { answer, docOptions } = {}) {
     if (status === 'awaiting_input' && pendingQuestion?.kind === 'doc-options') return validateDocOptions(docOptions);
     // Reintento tras un fallo: reutiliza las opciones ya guardadas.
     if (status === 'pending' && task.docOptions) return validateDocOptions(task.docOptions);
-    return 'la redaccion requiere elegir antes el formato y el destino';
+    return 'la redacción requiere elegir antes el formato y el destino';
   }
 
   if (stage === 'custom' && !task.agentId) return 'la tarea no tiene agente asignado';
@@ -222,9 +227,9 @@ function buildWritePrompt(task, { mode, format, targetPath, template }, research
   const tpl = template ? ` Usa la plantilla ${template} como base de estructura y estilo.` : '';
   const fmtNote =
     format === 'docx'
-      ? 'Formato: docx. Genera el fichero con la skill docx si esta disponible; si no, dilo claramente.'
+      ? 'Formato: docx. Genera el fichero con la skill docx si está disponible; si no, dilo claramente.'
       : `Formato: ${format}.`;
-  const notes = research ? `Notas de investigacion:\n${research}` : 'No hay notas de investigacion previas.';
+  const notes = research ? `Notas de investigación:\n${research}` : 'No hay notas de investigación previas.';
 
   if (mode === 'edit') {
     return [
@@ -236,8 +241,8 @@ function buildWritePrompt(task, { mode, format, targetPath, template }, research
   }
   if (mode === 'fragments') {
     return [
-      'Etapa de REDACCION: trozos para anadir a un documento existente.',
-      `NO modifiques ${targetPath}. Devuelve en tu respuesta los trozos de texto que habria que anadir, indicando en cada uno donde insertarlo (seccion o ancla). ${fmtNote}${tpl}`,
+      'Etapa de REDACCION: trozos para añadir a un documento existente.',
+      `NO modifiques ${targetPath}. Devuelve en tu respuesta los trozos de texto que habria que añadir, indicando en cada uno donde insertarlo (seccion o ancla). ${fmtNote}${tpl}`,
       `Encargo:\n${goal}`,
       notes
     ].join('\n\n');
@@ -270,70 +275,83 @@ function buildStageBody(task, stage, { docOptions, agent } = {}) {
     case 'plan':
       return [
         'Etapa de PLANIFICACION. No modifiques ficheros del repositorio.',
-        'Usa la skill plan y la skill plan-optimizer si estan disponibles para cerrar un plan concreto.',
+        'Usa la skill plan y la skill plan-optimizer si están disponibles para cerrar un plan concreto.',
         `Encargo:\n${goal}`,
         ASK_RULE('plan'),
         task.type === 'tests'
-          ? 'Si planificas, termina con el plan de tests: que comportamientos cubrir, casos limite y donde van los ficheros de test.'
+          ? 'Si planificas, termina con el plan de tests: que comportamientos cubrir, casos límite y donde van los ficheros de test.'
           : 'Si planificas, termina con el plan final en texto, listo para que otro agente lo implemente.'
       ].join('\n\n');
     case 'diagnose':
       return [
         'Etapa de DIAGNOSTICO. No modifiques ficheros del repositorio.',
         `Bug a resolver:\n${goal}`,
-        'Reproduce el fallo si es posible (tests, scripts, comandos), localiza la causa raiz con evidencias y termina con: 1) causa raiz, 2) ficheros y lineas implicados, 3) el arreglo minimo propuesto, 4) como comprobar que queda arreglado.',
+        'Reproduce el fallo si es posible (tests, scripts, comandos), localiza la causa raíz con evidencias y termina con: 1) causa raíz, 2) ficheros y líneas implicados, 3) el arreglo minimo propuesto, 4) como comprobar que queda arreglado.',
         ASK_RULE('plan')
       ].join('\n\n');
     case 'implement':
       return [
         'Etapa de IMPLEMENTACION. Implementa el plan siguiente en este worktree.',
-        `${task.type === 'bugfix' ? 'Diagnostico' : 'Plan'}:\n${previousOutput(task, 'implement') || goal}`,
+        // El encargo original va siempre: el plan puede no recoger cada detalle o
+        // criterio de aceptacion que pidio el usuario.
+        `Encargo original del usuario (manda si el plan lo contradice u omite algo):\n${goal}`,
+        previousOutput(task, 'implement')
+          ? `${task.type === 'bugfix' ? 'Diagnóstico' : 'Plan'}:\n${previousOutput(task, 'implement')}`
+          : null,
         'Reporta el progreso con update_task_progress (fase "implement").',
         'Si te falta un dato para continuar, llama a update_task_progress con fase "implement" y estado "blocked", y termina tu respuesta con las preguntas concretas que necesitas que responda el usuario.',
         'No hagas git commit ni git push.'
-      ].join('\n\n');
+      ]
+        .filter(Boolean)
+        .join('\n\n');
     case 'write-tests':
       return [
         'Etapa de TESTS. Escribe los tests del plan siguiente en este worktree, con el framework que ya usa el proyecto.',
-        `Plan de tests:\n${out('plan') || goal}`,
+        `Encargo original del usuario:\n${goal}`,
+        out('plan') ? `Plan de tests:\n${out('plan')}` : null,
         'Ejecuta los tests nuevos y comprueba que pasan (o que fallan por un bug real, explicandolo).',
         ASK_RULE('implement'),
         'No hagas git commit ni git push.'
-      ].join('\n\n');
+      ]
+        .filter(Boolean)
+        .join('\n\n');
     case 'verify':
       return [
         'Etapa de VERIFICACION de los cambios de este worktree (git diff HEAD).',
         `Encargo original:\n${goal}`,
         'Ejecuta los tests, el lint y la compilacion que tenga el proyecto. Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
         'No hagas git commit ni git push.',
-        'Termina tu respuesta con una linea exactamente "VEREDICTO: OK" si todo pasa, o "VEREDICTO: FALLA" seguido del motivo.'
+        'Termina tu respuesta con una línea exactamente "VEREDICTO: OK" si todo pasa, o "VEREDICTO: FALLA" seguido del motivo.'
       ].join('\n\n');
     case 'review':
       return [
         'Etapa de REVISION FINAL. No modifiques ficheros.',
-        'Revisa los cambios staged de este worktree (git diff --cached). Usa la skill code-review si esta disponible.',
-        'Devuelve los hallazgos ordenados por gravedad, con fichero:linea, y un veredicto final: listo para ship o cambios necesarios.'
+        `Encargo original:\n${goal}`,
+        'Comprueba que los cambios cumplen el encargo y revisa los cambios staged de este worktree (git diff --cached). Usa la skill code-review si está disponible.',
+        'Devuelve los hallazgos ordenados por gravedad, con fichero:línea, y un veredicto final: listo para ship o cambios necesarios.'
       ].join('\n\n');
     case 'commit':
       return [
         'Etapa de PREPARAR COMMIT. No ejecutes git add, git commit ni git push.',
-        'Revisa los cambios staged (git diff --cached --stat) y devuelve: 1) el comando git add con los ficheros a incluir, 2) un mensaje de commit en formato conventional commits. No anadas lineas Co-Authored-By ni firmas de agente.'
+        'Revisa los cambios staged (git diff --cached --stat y git diff --cached) y el estilo de los ultimos commits (git log --oneline -10).',
+        'Propon un mensaje en formato Conventional Commits: tipo(ambito): resumen en minusculas, imperativo, sin punto final y de 72 caracteres como mucho; si hace falta, un cuerpo breve tras una línea en blanco. Sigue el idioma de los commits anteriores del repo. No anadas líneas Co-Authored-By ni firmas de agente.',
+        'Termina SIEMPRE con una línea exacta "MENSAJE: <primera línea del commit>", que optimia usa para rellenar el campo de commit.'
       ].join('\n\n');
     case 'research':
       return [
         'Etapa de INVESTIGACION. No escribas ni modifiques documentos.',
-        `Encargo de documentacion:\n${goal}`,
+        `Encargo de documentación:\n${goal}`,
         ASK_RULE('plan'),
-        'Si investigas, lee el repositorio y las fuentes necesarias. Devuelve notas estructuradas: hechos verificados (con fuente), huecos de informacion y ficheros existentes relacionados.'
+        'Si investigas, lee el repositorio y las fuentes necesarias. Devuelve notas estructuradas: hechos verificados (con fuente), huecos de información y ficheros existentes relacionados.'
       ].join('\n\n');
     case 'write':
       return buildWritePrompt(task, docOptions || task.docOptions || {}, out('research'));
     case 'audit':
       return [
         'Etapa de AUDITORIA. No modifiques ficheros.',
-        `Alcance de la auditoria:\n${goal}`,
+        `Alcance de la auditoría:\n${goal}`,
         ASK_RULE('test'),
-        'Devuelve un informe con los hallazgos ordenados por gravedad (critica, alta, media, baja), cada uno con evidencia (fichero:linea), impacto y recomendacion concreta, y un resumen final.'
+        'Devuelve un informe con los hallazgos ordenados por gravedad (critica, alta, media, baja), cada uno con evidencia (fichero:línea), impacto y recomendacion concreta, y un resumen final.'
       ].join('\n\n');
     case 'custom':
       return [
@@ -350,12 +368,12 @@ function buildStageBody(task, stage, { docOptions, agent } = {}) {
 function answerPrompt(answer, stage) {
   const tail =
     {
-      plan: 'Continua la planificacion con esta respuesta y termina con el plan final.',
-      research: 'Continua la investigacion con esta respuesta y termina con las notas estructuradas.',
-      diagnose: 'Continua el diagnostico con esta respuesta y termina con la causa raiz y el arreglo propuesto.',
-      implement: 'Continua la implementacion y termina cuando el cambio este completo.',
+      plan: 'Continua la planificación con esta respuesta y termina con el plan final.',
+      research: 'Continua la investigación con esta respuesta y termina con las notas estructuradas.',
+      diagnose: 'Continua el diagnóstico con esta respuesta y termina con la causa raíz y el arreglo propuesto.',
+      implement: 'Continua la implementación y termina cuando el cambio este completo.',
       'write-tests': 'Continua con los tests y termina cuando esten escritos y ejecutados.',
-      audit: 'Continua la auditoria con esta respuesta y termina con el informe.'
+      audit: 'Continua la auditoría con esta respuesta y termina con el informe.'
     }[stage] || 'Continua y termina tu etapa.';
   return `Respuesta del usuario a tus preguntas:\n${answer.trim()}\n\n${tail}`;
 }
@@ -365,6 +383,27 @@ function parseVerdict(text) {
   const m = /VEREDICTO:\s*(OK|FALLA)\b[^\n]*/i.exec(text || '');
   if (!m) return null;
   return { ok: m[1].toUpperCase() === 'OK', line: m[0].trim() };
+}
+
+// Mensaje que propone la etapa "Preparar commit" (su ultima linea "MENSAJE: ...").
+function parseCommitSuggestion(text) {
+  const matches = [...String(text || '').matchAll(/^\s*\**MENSAJE:\**\s*`?([^`\n]+?)`?\s*$/gim)];
+  const msg = matches.length ? matches[matches.length - 1][1].trim() : '';
+  return msg && msg.length <= 120 ? msg : null;
+}
+
+// Mensaje por defecto si no se ha preparado el commit: tipo convencional segun el
+// tipo de tarea y el titulo en minuscula inicial.
+const COMMIT_TYPE = { coding: 'feat', bugfix: 'fix', tests: 'test', documentation: 'docs', audit: 'chore' };
+function defaultCommitMessage(task) {
+  const type = COMMIT_TYPE[task.type] || 'feat';
+  const title = String(task.title || '')
+    .trim()
+    .replace(/[.:]+$/, '');
+  // "Añade X" -> "añade X", pero las siglas se quedan como estan ("README", "API").
+  const acronym = /^\p{Lu}{2,}/u.test(title);
+  const summary = acronym ? title : title.charAt(0).toLocaleLowerCase('es') + title.slice(1);
+  return `${type}: ${summary}`.slice(0, 72);
 }
 
 /**
@@ -387,24 +426,29 @@ function decideAfterStage(
   // La revision y el commit no tocan el estado de los cambios: un fallo solo
   // se muestra, la tarea sigue lista para revisar.
   if (stage === 'review' || stage === 'commit') {
-    return done({ status: 'ready_to_test', error: isError ? 'la etapa termino con error' : null });
+    const suggested = stage === 'commit' ? parseCommitSuggestion(text) : null;
+    return done({
+      status: 'ready_to_test',
+      error: isError ? 'la etapa terminó con error' : null,
+      ...(suggested ? { suggestedCommit: suggested } : {})
+    });
   }
-  if (isError) return done({ status: 'pending', error: 'la etapa termino con error; puedes reintentarla' });
+  if (isError) return done({ status: 'pending', error: 'la etapa terminó con error; puedes reintentarla' });
   if (QUESTION_KIND[stage] && phaseStatus === 'blocked') {
     return done({
       status: 'awaiting_input',
-      pendingQuestion: { kind: QUESTION_KIND[stage], text: text || 'El agente necesita mas detalles para continuar.' }
+      pendingQuestion: { kind: QUESTION_KIND[stage], text: text || 'El agente necesita más detalles para continuar.' }
     });
   }
 
   const access = stageAccess(stage, agent);
   if (stage === 'research') {
-    if (!text.trim()) return done({ status: 'pending', error: 'la investigacion no devolvio texto' });
+    if (!text.trim()) return done({ status: 'pending', error: 'la investigación no devolvio texto' });
     return done({
       status: 'awaiting_input',
       pendingQuestion: {
         kind: 'doc-options',
-        text: 'Investigacion lista. Elige el modo de salida, el formato y el destino.'
+        text: 'Investigación lista. Elige el modo de salida, el formato y el destino.'
       }
     });
   }
@@ -423,7 +467,7 @@ function decideAfterStage(
   if (access === 'read') {
     // Etapas que solo preparan texto para la siguiente (plan, diagnostico) o agentes propios de lectura.
     if (!text.trim()) {
-      const what = { plan: 'la planificacion', diagnose: 'el diagnostico' }[stage] || 'la etapa';
+      const what = { plan: 'la planificación', diagnose: 'el diagnóstico' }[stage] || 'la etapa';
       return done({ status: 'pending', error: `${what} no devolvio texto` });
     }
     if (following) return done({ status: 'pending' }, following);
@@ -436,6 +480,8 @@ function decideAfterStage(
 }
 
 module.exports = {
+  parseCommitSuggestion,
+  defaultCommitMessage,
   STAGES,
   TASK_TYPES,
   STAGE_PHASE,

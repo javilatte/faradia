@@ -35,7 +35,7 @@ test('firstStage: documentacion investiga primero, codigo planifica', () => {
 
 test('validateDocOptions: exige formato valido y ruta relativa segura para editar', () => {
   assert.equal(validateDocOptions({ mode: 'new', format: 'md' }), null);
-  assert.equal(validateDocOptions({ mode: 'new', format: 'pdf' }), 'formato no valido (md, html o docx)');
+  assert.equal(validateDocOptions({ mode: 'new', format: 'pdf' }), 'formato no válido (md, html o docx)');
   assert.match(validateDocOptions({ mode: 'edit', format: 'md' }), /ruta relativa/);
   assert.match(validateDocOptions({ mode: 'fragments', format: 'html', targetPath: '/etc/x.html' }), /ruta relativa/);
   assert.match(validateDocOptions({ mode: 'edit', format: 'md', targetPath: '../fuera.md' }), /ruta relativa/);
@@ -61,7 +61,7 @@ test('canRun: revision y commit solo cuando esta lista para revisar', () => {
 test('canRun: responder exige pregunta de implementacion pendiente y texto no vacio', () => {
   const awaiting = { ...base, status: 'awaiting_input', pendingQuestion: { kind: 'implement-details', text: '?' } };
   assert.equal(canRun(awaiting, 'implement', { answer: 'usa la opcion B' }), null);
-  assert.equal(canRun(awaiting, 'implement', { answer: '   ' }), 'la respuesta no puede estar vacia');
+  assert.equal(canRun(awaiting, 'implement', { answer: '   ' }), 'la respuesta no puede estar vacía');
   assert.match(canRun(base, 'implement', { answer: 'hola' }), /no hay preguntas pendientes/);
 });
 
@@ -189,9 +189,9 @@ test('decideAfterStage: investigacion bloqueada pregunta antes de pedir opciones
 });
 
 test('answerPrompt: cada etapa recibe la continuacion que le corresponde', () => {
-  assert.match(answerPrompt('azul', 'plan'), /planificacion/);
-  assert.match(answerPrompt('azul', 'research'), /investigacion/);
-  assert.match(answerPrompt('azul', 'implement'), /implementacion/);
+  assert.match(answerPrompt('azul', 'plan'), /planificación/);
+  assert.match(answerPrompt('azul', 'research'), /investigación/);
+  assert.match(answerPrompt('azul', 'implement'), /implementación/);
   assert.match(answerPrompt('azul', 'plan'), /Respuesta del usuario/);
 });
 
@@ -275,4 +275,46 @@ test('ensureGitGuardHooks: los hooks de commit y push fallan siempre', () => {
   } finally {
     rmTmpDir(dir);
   }
+});
+
+test('parseCommitSuggestion: takes the last MENSAJE line, tolerating markdown', () => {
+  const { parseCommitSuggestion } = require('../../server/bridge/taskStages');
+  assert.equal(
+    parseCommitSuggestion('git add src\n\nMENSAJE: feat(notes): add edit and delete'),
+    'feat(notes): add edit and delete'
+  );
+  assert.equal(
+    parseCommitSuggestion('**MENSAJE:** `fix(store): search ignores case`'),
+    'fix(store): search ignores case'
+  );
+  assert.equal(parseCommitSuggestion('MENSAJE: a\nMENSAJE: b'), 'b');
+  assert.equal(parseCommitSuggestion('sin propuesta'), null);
+});
+
+test('defaultCommitMessage: conventional type per task type and lower-case summary', () => {
+  const { defaultCommitMessage } = require('../../server/bridge/taskStages');
+  assert.equal(defaultCommitMessage({ type: 'bugfix', title: 'Arregla la búsqueda.' }), 'fix: arregla la búsqueda');
+  assert.equal(defaultCommitMessage({ type: 'documentation', title: 'README de la API' }), 'docs: README de la API');
+  assert.equal(defaultCommitMessage({ type: 'coding', title: 'Añade edición' }), 'feat: añade edición');
+});
+
+test('decideAfterStage: the commit stage stores its suggested message', () => {
+  const { decideAfterStage } = require('../../server/bridge/taskStages');
+  const { patch } = decideAfterStage({ type: 'coding' }, 'commit', {
+    text: 'git add .\nMENSAJE: feat(api): add delete'
+  });
+  assert.equal(patch.suggestedCommit, 'feat(api): add delete');
+  assert.equal(patch.status, 'ready_to_test');
+});
+
+test('stageDisallowed: read-only stages block the edit tools, edit stages do not', () => {
+  const { stageDisallowed } = require('../../server/bridge/taskStages');
+  for (const stage of ['plan', 'research', 'diagnose', 'audit', 'review']) {
+    const deny = stageDisallowed(stage);
+    for (const tool of ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'])
+      assert.ok(deny.includes(tool), `${stage}: ${tool}`);
+  }
+  for (const stage of ['implement', 'write-tests', 'write', 'verify'])
+    assert.ok(!stageDisallowed(stage).includes('Edit'));
+  assert.ok(stageDisallowed('plan').includes('Bash(git commit*)'));
 });
