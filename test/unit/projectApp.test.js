@@ -9,7 +9,7 @@ const { mkTmpDir, rmTmpDir } = require('./helpers');
 const { createApp, memoryFromOutput } = require('../../server/runtime/projectApp');
 const { addTask, updateTask } = require('../../server/store/taskStore');
 
-// Levanta la API de un proyecto en un puerto libre.
+// Starts a project's API on a free port.
 async function serve(t, projectRoot) {
   const handler = createApp(projectRoot, {});
   const server = http.createServer(handler);
@@ -39,7 +39,7 @@ function isolated(t) {
   return repo;
 }
 
-test('PATCH /api/settings: global para todos, project solo para el repo, con reset y promote', async (t) => {
+test('PATCH /api/settings: global for every repo, project for this repo only, with reset and promote', async (t) => {
   const repo = isolated(t);
   const api = await serve(t, repo);
 
@@ -56,12 +56,12 @@ test('PATCH /api/settings: global para todos, project solo para el repo, con res
   assert.equal(r.body.layers.global.ai.claude.effort, 'max');
 
   r = await api('PATCH', '/api/settings', { scope: 'project', ui: { theme: 'dark' } });
-  assert.equal(r.status, 400, 'la apariencia es global');
+  assert.equal(r.status, 400, 'appearance is global');
   r = await api('PATCH', '/api/settings', { ai: {} });
-  assert.equal(r.status, 400, 'sin scope');
+  assert.equal(r.status, 400, 'no scope');
 });
 
-test('POST /api/tasks/:id/apply-memory guarda la memoria propuesta y conserva la anterior', async (t) => {
+test('POST /api/tasks/:id/apply-memory saves the proposed memory and keeps the previous one', async (t) => {
   const repo = isolated(t);
   fs.mkdirSync(path.join(repo, '.optimia'), { recursive: true });
   fs.writeFileSync(path.join(repo, '.optimia', 'memory.md'), 'memoria vieja\n');
@@ -85,7 +85,7 @@ test('POST /api/tasks/:id/apply-memory guarda la memoria propuesta y conserva la
   assert.equal((await api('POST', `/api/tasks/${other.id}/apply-memory`)).status, 409);
 });
 
-test('memoryFromOutput: quita la envoltura ```markdown y el preámbulo', () => {
+test('memoryFromOutput: strips the ```markdown wrapper and the preamble', () => {
   assert.equal(memoryFromOutput('```markdown\n## A\nb\n```'), '## A\nb\n');
   assert.equal(memoryFromOutput('Hecho.\n\n# Memoria\n## A'), '# Memoria\n## A\n');
   assert.equal(memoryFromOutput('sin apartados'), 'sin apartados\n');

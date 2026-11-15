@@ -7,7 +7,7 @@ const path = require('path');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 const logger = require('../../server/bridge/logger');
 
-test('logger: escribe un evento JSON por linea en .optimia/logs/optimia.log', (t) => {
+test('logger: writes one JSON event per line to .optimia/logs/optimia.log', (t) => {
   const dir = mkTmpDir('logger-lines');
   t.after(() => rmTmpDir(dir));
   logger.initLogger(dir);
@@ -27,12 +27,12 @@ test('logger: escribe un evento JSON por linea en .optimia/logs/optimia.log', (t
   assert.equal(JSON.parse(lines[1]).level, 'warn');
 });
 
-test('logger: sin inicializar no lanza y no escribe nada', () => {
+test('logger: without init it neither throws nor writes anything', () => {
   logger.initLogger(mkTmpDir('logger-noinit'));
   assert.doesNotThrow(() => logger.info('server.start', { url: 'x' }));
 });
 
-test('logger: rota el fichero al llegar a 5 MB', (t) => {
+test('logger: rotates the file at 5 MB', (t) => {
   const dir = mkTmpDir('logger-rotate');
   t.after(() => rmTmpDir(dir));
   logger.initLogger(dir);
@@ -43,7 +43,7 @@ test('logger: rota el fichero al llegar a 5 MB', (t) => {
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8').trim()).event, 'server.start');
 });
 
-test('readRecent: devuelve las entradas más recientes primero, con límite', (t) => {
+test('readRecent: returns the newest entries first, with a limit', (t) => {
   const dir = mkTmpDir('logger-recent');
   t.after(() => rmTmpDir(dir));
   logger.initLogger(dir);
@@ -57,7 +57,7 @@ test('readRecent: devuelve las entradas más recientes primero, con límite', (t
   );
 });
 
-test('createLogger: cada proyecto escribe en su propio registro', (t) => {
+test('createLogger: each project writes to its own log', (t) => {
   const a = mkTmpDir('logger-a');
   const b = mkTmpDir('logger-b');
   t.after(() => {

@@ -1,5 +1,5 @@
-// Punto de entrada de la carcasa: selector de workbench/repo, navegacion entre
-// vistas y canal de eventos globales. Las vistas se registran importando su modulo.
+// Shell entry point: workbench/repo selector, navigation between views and the global events
+// channel. Views register themselves when their module is imported.
 
 import { connectEvents } from './events.js';
 import { loadWorkbenches, state } from './workbenches.js';
@@ -16,7 +16,7 @@ import './files.js';
 
 const ctx = { state };
 
-// Iconos de la barra lateral (trazo fino, al estilo de los símbolos de macOS).
+// Sidebar icons (thin stroke, in the style of macOS symbols).
 const NAV_ICONS = {
   project: 'M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM8 10h8M8 13h5',
   dashboard: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
@@ -68,22 +68,22 @@ function renderNav() {
   );
 }
 
-// Barra lateral plegable (botón de la barra de herramientas o ⌃⌘S / Ctrl+Alt+S).
+// Collapsible sidebar (toolbar button or ⌃⌘S / Ctrl+Alt+S).
 function setSidebar(open) {
   document.getElementById('app-window')?.classList.toggle('sidebar-hidden', !open);
   document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', String(open));
   try {
     localStorage.setItem('optimia:sidebar', open ? '1' : '0');
   } catch {
-    /* sin persistencia */
+    /* no persistence */
   }
 }
 function sidebarOpen() {
   return !document.getElementById('app-window')?.classList.contains('sidebar-hidden');
 }
 
-// Atajos: ⌥1…⌥5 (Alt en Linux y Windows) cambian de vista —⌘1…⌘8 los reserva el
-// navegador para sus pestañas—, ⌘, abre Ajustes y ⌃⌘S (Ctrl+Alt+S) pliega la barra lateral.
+// Shortcuts: ⌥1…⌥5 (Alt on Linux and Windows) switch views —the browser reserves ⌘1…⌘8 for its
+// tabs—, ⌘, opens Settings and ⌃⌘S (Ctrl+Alt+S) collapses the sidebar.
 function bindShortcuts() {
   document.addEventListener('keydown', (e) => {
     const mod = isMac ? e.metaKey : e.ctrlKey;
@@ -120,9 +120,9 @@ async function boot() {
   try {
     open = localStorage.getItem('optimia:sidebar') !== '0';
   } catch {
-    /* sin persistencia */
+    /* no persistence */
   }
-  // En ventanas estrechas la barra lateral empieza plegada (como Mail o Finder).
+  // In narrow windows the sidebar starts collapsed (like Mail or Finder).
   if (window.innerWidth < 900) open = false;
   setSidebar(open);
   document.getElementById('sidebar-toggle')?.addEventListener('click', () => setSidebar(!sidebarOpen()));

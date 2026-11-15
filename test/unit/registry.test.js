@@ -11,7 +11,7 @@ function makeRegistry(sent = []) {
   return new ProjectRegistry({ port: 1234, token: 't', sendToClients: (p) => sent.push(p) });
 }
 
-test('projectIdFor: estable para la misma carpeta y distinto entre carpetas', (t) => {
+test('projectIdFor: stable for the same folder and different across folders', (t) => {
   const a = mkTmpDir('reg-a');
   const b = mkTmpDir('reg-b');
   t.after(() => {
@@ -23,7 +23,7 @@ test('projectIdFor: estable para la misma carpeta y distinto entre carpetas', (t
   assert.match(projectIdFor(a), /^[a-f0-9]{12}$/);
 });
 
-test('register: valida la carpeta y no duplica proyectos', (t) => {
+test('register: validates the folder and does not duplicate projects', (t) => {
   const dir = mkTmpDir('reg-dup');
   t.after(() => rmTmpDir(dir));
   const reg = makeRegistry();
@@ -35,7 +35,7 @@ test('register: valida la carpeta y no duplica proyectos', (t) => {
   assert.throws(() => reg.register(path.join(dir, 'no-existe')), /no existe/);
 });
 
-test('runtime: se crea bajo demanda, una vez, y escribe un mcp.json con proyecto y token', (t) => {
+test('runtime: created on demand, once, and writes an mcp.json with the project and token', (t) => {
   const dir = mkTmpDir('reg-rt');
   t.after(() => rmTmpDir(dir));
   const reg = makeRegistry();
@@ -54,7 +54,7 @@ test('runtime: se crea bajo demanda, una vez, y escribe un mcp.json con proyecto
   reg.dispose();
 });
 
-test('runtime: lo que emite un proyecto sale etiquetado con su id', (t) => {
+test('runtime: what a project emits is tagged with its id', (t) => {
   const dir = mkTmpDir('reg-bc');
   t.after(() => rmTmpDir(dir));
   const sent = [];

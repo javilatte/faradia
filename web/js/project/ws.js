@@ -1,6 +1,6 @@
 'use strict';
 
-// Conexion WebSocket con el servidor y despacho de mensajes.
+// WebSocket connection to the server and message dispatch.
 
 function connect() {
   setConnectionState(false, 'Conectando...');

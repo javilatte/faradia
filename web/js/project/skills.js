@@ -1,9 +1,9 @@
 'use strict';
 
-// Autocompletado de skills al escribir /.
+// Skill autocompletion when typing /.
 
-// Autocompletado de skills: al escribir "/" al inicio de una palabra se
-// ofrecen las skills de .claude/skills/ y se insertan como "/slug ".
+// Skill autocompletion: typing "/" at the start of a word offers the skills in .claude/skills/ and
+// inserts them as "/slug ".
 const skillSuggest = document.getElementById('skill-suggest');
 let skillSuggestItems = [];
 let skillSuggestIndex = 0;
@@ -48,7 +48,7 @@ function renderSkillSuggest() {
       desc.textContent = skill.description;
       row.appendChild(desc);
     }
-    // mousedown + preventDefault evita que el textarea pierda el foco antes de insertar.
+    // mousedown + preventDefault keeps the textarea from losing focus before inserting.
     row.addEventListener('mousedown', (e) => {
       e.preventDefault();
       applySkillSuggest(i);
@@ -71,9 +71,8 @@ function applySkillSuggest(i) {
   input.focus();
 }
 
-// Comandos integrados de Claude Code. Lista estatica: los comandos de plugins
-// o del usuario no aparecen aqui. Los de tipo interactivo (/model, /config,
-// /vim...) necesitan la terminal; en el chat se insertan igual.
+// Claude Code built-in commands. Static list: plugin or user commands do not show here. Interactive
+// ones (/model, /config, /vim...) need the terminal; in the chat they are inserted anyway.
 const CLAUDE_COMMANDS = [
   { slug: 'add-dir', description: 'Añade un directorio de trabajo a la sesión' },
   { slug: 'agents', description: 'Gestiona los subagentes' },
@@ -124,7 +123,7 @@ async function updateSkillSuggest() {
   renderSkillSuggest();
 }
 
-// Devuelve true si la tecla la ha consumido el menu de skills.
+// Returns true if the skill menu consumed the key.
 function handleSkillSuggestKey(e) {
   if (skillSuggest.hidden) return false;
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

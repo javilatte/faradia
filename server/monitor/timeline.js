@@ -7,16 +7,15 @@ const { EventEmitter } = require('events');
 const { dataDir } = require('../store/globalPaths');
 const { loadPrefs } = require('../store/globalPrefs');
 
-// Timeline: feed cronologico de lo que pasa en los repos vigilados. Se guarda en
-// ~/.local/share/optimia/timeline/events.jsonl (rota a 5 MB, como el registro).
-// Tipos de entrada (kind):
-//   files    ficheros que cambiaron (lotes agrupados por repo/worktree en ventanas cortas)
-//   commit   commit nuevo en un repo
-//   branch   cambio de rama
-//   watch    evento del plano 2 (lista de vigilancia)
-//   agent    una tarea cambio de estado (empezo una etapa, quedo lista, pregunto...)
-//   signal   aviso pasivo (borrado grande, fichero sensible, posible secreto...)
-//   orphan   cambios sin commitear que llevan un rato sin tocarse
+// Timeline: chronological feed of what happens in the watched repos. Stored in
+// ~/.local/share/optimia/timeline/events.jsonl (rotated at 5 MB, like the log). Entry kinds:
+//   files    files that changed (batched per repo/worktree in short windows)
+//   commit   new commit in a repo
+//   branch   branch switch
+//   watch    plane 2 event (watchlist)
+//   agent    a task changed state (a stage started, it became ready, it asked...)
+//   signal   passive signal (large delete, sensitive file, possible secret...)
+//   orphan   uncommitted changes untouched for a while
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const COALESCE_MS = 20 * 1000;
@@ -31,8 +30,8 @@ class Timeline extends EventEmitter {
   constructor() {
     super();
     this.recent = this.readAll().slice(-MEMORY);
-    this.open = new Map(); // `${projectId}:${taskId}` -> entrada de ficheros abierta
-    this.orphaned = new Map(); // projectId -> true mientras dure el periodo huerfano
+    this.open = new Map(); // `${projectId}:${taskId}` -> open files entry
+    this.orphaned = new Map(); // projectId -> true while the orphan period lasts
   }
 
   readAll() {
@@ -66,7 +65,7 @@ class Timeline extends EventEmitter {
       }
       fs.appendFileSync(f, JSON.stringify(entry) + '\n');
     } catch {
-      /* disco lleno o permisos: el timeline nunca tumba el servidor */
+      /* disk full or permissions: the timeline never brings the server down */
     }
   }
 
@@ -79,20 +78,23 @@ class Timeline extends EventEmitter {
     return full;
   }
 
-  /** Lote de ficheros cambiados: se agrupa con el anterior del mismo repo si llega pronto. */
+  /**
+   * Batch of changed files: merged with the previous one of the same repo if it arrives soon
+   * enough.
+   */
   recordFiles({ projectId, name, taskId = null, paths, at }) {
     const key = `${projectId}:${taskId}`;
     const now = Date.parse(at) || Date.now();
     const current = this.open.get(key);
     if (current && now - current.lastAt < COALESCE_MS) {
-      // Lo mas reciente primero: es lo que se ve en la entrada (que solo ensena unas pocas rutas).
+      // Newest first: that is what the entry shows (it only lists a few paths).
       const fresh = [...new Set(paths)];
       current.entry.paths = [...fresh, ...current.entry.paths.filter((p) => !fresh.includes(p))].slice(0, MAX_PATHS);
       current.entry.count = new Set([...current.all, ...paths]).size;
       for (const p of paths) current.all.add(p);
       current.lastAt = now;
       current.entry.until = at;
-      this.emit('entry', current.entry); // actualizacion de la misma entrada (mismo id)
+      this.emit('entry', current.entry); // update of the same entry (same id)
       clearTimeout(current.timer);
       current.timer = setTimeout(() => this.closeFiles(key), COALESCE_MS);
       return current.entry;
@@ -119,7 +121,7 @@ class Timeline extends EventEmitter {
     };
     this.open.set(key, open);
     this.emit('entry', entry);
-    this.orphaned.delete(projectId); // hay actividad: ya no es huerfano
+    this.orphaned.delete(projectId); // there is activity: no longer orphaned
     return entry;
   }
 
@@ -131,7 +133,7 @@ class Timeline extends EventEmitter {
     this.persist(open.entry);
   }
 
-  /** Cambios de estado git: commits nuevos y cambios de rama. */
+  /** Git state changes: new commits and branch switches. */
   recordState({ projectId, name, state, previous }) {
     if (!previous || !state) return;
     const before = previous.lastCommit?.sha;
@@ -177,8 +179,8 @@ class Timeline extends EventEmitter {
   }
 
   /**
-   * Cambios huerfanos: repos con cambios sin commitear cuya ultima actividad es
-   * mas antigua que `orphanMinutes`. Se avisa una vez por periodo.
+   * Orphaned changes: repos with uncommitted changes whose last activity is older than
+   * `orphanMinutes`. Reported once per period.
    */
   checkOrphans(repos, now = Date.now()) {
     const minutes = loadPrefs().orphanMinutes;
@@ -206,7 +208,7 @@ class Timeline extends EventEmitter {
     return found;
   }
 
-  /** Entradas mas recientes primero, con filtros. */
+  /** Newest entries first, with filters. */
   query({ projectIds, kinds, ext, since, until, limit = 200 } = {}) {
     const exts = ext
       ? String(ext)

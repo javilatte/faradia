@@ -1,5 +1,5 @@
-// Selector de workbench y repo en la barra superior, y el gestor de workbenches
-// (crear, renombrar, borrar, anadir repos a mano o buscandolos en una carpeta).
+// Workbench and repo selector in the sidebar, and the workbench manager (create, rename, delete,
+// add repos by hand or by searching a folder).
 
 import { api } from './api.js';
 import { h, clear, toast } from './dom.js';
@@ -25,7 +25,7 @@ export function currentProjectId() {
   return state.currentProjectId || state.defaultProjectId;
 }
 
-// Repos del workbench activo que existen en disco, con su id de proyecto.
+// Repos of the active workbench that exist on disk, with their project id.
 export function activeRepos() {
   return (activeWorkbench()?.repos || []).filter((r) => r.exists && r.projectId);
 }
@@ -51,7 +51,7 @@ export async function loadWorkbenches() {
   apply(wbs);
 }
 
-// Cambiar de repo recarga la vista de proyecto con ?p=<id> y conserva la vista actual.
+// Switching repos reloads the project view with ?p=<id> and keeps the current view.
 export function openProject(projectId) {
   const params = new URLSearchParams(location.search);
   params.set('p', projectId);
@@ -98,8 +98,8 @@ function renderSwitcher() {
   renderRepoList(wb);
 }
 
-// Repos del workbench activo, como los buzones de Mail: el seleccionado es el
-// proyecto abierto (chat, agentes, ajustes).
+// Repos of the active workbench, like Mail's mailboxes: the selected one is the open project (chat,
+// agents, settings).
 function renderRepoList(wb) {
   const list = document.getElementById('repo-list');
   if (!list) return;
@@ -107,7 +107,7 @@ function renderRepoList(wb) {
   const current = currentProjectId();
   const repos = wb ? wb.repos.filter((r) => r.exists && r.projectId) : [];
   const items = repos.map((r) => ({ id: r.projectId, name: r.name, path: r.path }));
-  // El proyecto abierto puede no estar en el workbench activo: se muestra igualmente.
+  // The open project may not be in the active workbench: it is shown anyway.
   if (current && !items.some((r) => r.id === current)) {
     const repo = repoByProject(current);
     items.unshift({ id: current, name: repo ? repo.name : 'proyecto actual', path: repo?.path, other: true });
@@ -156,7 +156,7 @@ function svgIcon(d) {
   return svg;
 }
 
-// ---- gestor de workbenches ----
+// ---- workbench manager ----
 
 let managerSelected = null;
 

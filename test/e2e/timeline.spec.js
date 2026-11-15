@@ -9,7 +9,7 @@ const { e2eTmp, trackErrors } = require('./helpers');
 const demo = () => path.join(e2eTmp(), 'repos', 'demo');
 const git = (...args) => execFileSync('git', args, { cwd: demo(), stdio: 'pipe' });
 
-test('el timeline recoge cambios, commits y la lista de vigilancia en vivo', async ({ page }) => {
+test('the timeline collects changes, commits and the watchlist live', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?token=e2e-token#/timeline');
   await expect(page.locator('.view-timeline h2')).toHaveText('Timeline');
@@ -26,11 +26,11 @@ test('el timeline recoge cambios, commits y la lista de vigilancia en vivo', asy
   const commit = page.locator('.tl-entry.kind-commit', { hasText: 'docs: notas del timeline' });
   await expect(commit).toBeVisible({ timeout: 10_000 });
 
-  // Filtrar por tipo deja solo commits
+  // Filtering by kind leaves only commits
   await page.locator('.tl-chip', { hasText: 'Ficheros' }).click();
   await expect(page.locator('.tl-entry.kind-files')).toHaveCount(0);
 
-  // Del commit al diff
+  // From the commit to the diff
   await commit.locator('.tl-commit').click();
   await expect(page).toHaveURL(/#\/changes/);
   await expect(page.locator('.commit-chip')).toContainText('docs: notas del timeline');
@@ -41,7 +41,7 @@ test('el timeline recoge cambios, commits y la lista de vigilancia en vivo', asy
   expect(errors).toEqual([]);
 });
 
-test('el historial de commits abre cualquier commit del repo', async ({ page }) => {
+test('the commit history opens any commit of the repo', async ({ page }) => {
   await page.goto('/?token=e2e-token#/timeline');
   const first = page.locator('.tl-commit-item').filter({ hasText: 'init' });
   await expect(first).toBeVisible();

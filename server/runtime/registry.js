@@ -5,17 +5,17 @@ const path = require('path');
 const crypto = require('crypto');
 const { createProjectRuntime } = require('./projectRuntime');
 
-// Id estable de un proyecto: no depende del orden en que se abren ni del nombre de
-// la carpeta, solo de su ruta real, asi que sobrevive a reinicios de optimia.
+// Stable project id: it does not depend on the order projects open in or on the folder name, only
+// on its real path, so it survives optimia restarts.
 function projectIdFor(root) {
   const real = fs.realpathSync(root);
   return crypto.createHash('sha1').update(real).digest('hex').slice(0, 12);
 }
 
 /**
- * Proyectos que este servidor conoce y sus runtimes. Un runtime (sesiones de
- * chat y tareas, mcp.json, registro) se crea la primera vez que se usa el
- * proyecto, no al registrarlo: un workbench con 30 repos no arranca 30 runtimes.
+ * Projects this server knows and their runtimes. A runtime (chat and task sessions, mcp.json, log)
+ * is created the first time the project is used, not when it is registered: a workbench with 30
+ * repos does not start 30 runtimes.
  */
 class ProjectRegistry {
   constructor({ port, token, sendToClients }) {

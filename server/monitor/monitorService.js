@@ -9,13 +9,13 @@ const { compileGlobs, staticPrefix } = require('./glob');
 const { getWatchlist } = require('./watchlists');
 const { loadTasks } = require('../store/taskStore');
 
-// Vigilancia de solo lectura de los repos del workbench activo (y de los worktrees
-// de sus tareas, donde trabajan los agentes). Nunca escribe en un repo.
-// Eventos:
-//   'state'          { projectId, name, path, state }           plano 1 recalculado
-//   'activity'       { projectId, taskId?, paths, at }           ficheros que cambiaron
-//   'watch_event'    { projectId, path, kind, size, mtime, at }  plano 2 (lista de vigilancia)
-//   'worktree_state' { projectId, taskId, state }                plano 1 del worktree de una tarea
+// Read-only supervision of the active workbench's repos (and of their tasks' worktrees, where
+// agents work). Never writes to a repo.
+// Events:
+//   'state'          { projectId, name, path, state }           plane 1 recomputed
+//   'activity'       { projectId, taskId?, paths, at }           files that changed
+//   'watch_event'    { projectId, path, kind, size, mtime, at }  plane 2 (watchlist)
+//   'worktree_state' { projectId, taskId, state }                plane 1 of a task's worktree
 
 const REFRESH_DEBOUNCE_MS = 400;
 const WORKTREE_SYNC_MS = 5000;
@@ -27,7 +27,7 @@ class MonitorService extends EventEmitter {
     this.getRepos = getRepos; // () => [{ projectId, name, path }]
     this.debounceMs = debounceMs;
     this.repos = new Map(); // projectId -> entry
-    this.watchEvents = []; // ultimos eventos del plano 2
+    this.watchEvents = []; // latest plane 2 events
     this.worktreeTimer = null;
   }
 
@@ -37,7 +37,7 @@ class MonitorService extends EventEmitter {
     this.worktreeTimer.unref?.();
   }
 
-  /** Arranca o para vigilantes para que coincidan con los repos actuales. */
+  /** Starts or stops watchers to match the current repos. */
   async sync() {
     const wanted = new Map((this.getRepos() || []).filter((r) => fs.existsSync(r.path)).map((r) => [r.projectId, r]));
     for (const [id, entry] of this.repos) {
@@ -96,7 +96,7 @@ class MonitorService extends EventEmitter {
     try {
       stat = fs.statSync(path.join(entry.path, rel));
     } catch {
-      /* borrado */
+      /* deleted */
     }
     if (stat && stat.isDirectory()) return;
     const before = entry.known.get(rel);
@@ -106,7 +106,7 @@ class MonitorService extends EventEmitter {
       entry.known.delete(rel);
     } else {
       kind = before ? 'modified' : 'created';
-      // Un evento sin cambios reales (mismo tamano y fecha) no se repite.
+      // An event without real changes (same size and date) is not repeated.
       if (before && before.size === stat.size && before.mtime === stat.mtimeMs) return;
       entry.known.set(rel, { size: stat.size, mtime: stat.mtimeMs });
     }
@@ -156,7 +156,7 @@ class MonitorService extends EventEmitter {
     }
   }
 
-  /** Vigila el worktree de cada tarea con worktree en disco (alli escriben los agentes). */
+  /** Watches the worktree of every task that has one on disk (agents write there). */
   async syncWorktrees() {
     for (const entry of this.repos.values()) {
       let tasks = [];
@@ -203,11 +203,11 @@ class MonitorService extends EventEmitter {
         previous
       });
     } catch {
-      /* el worktree se borro */
+      /* the worktree was removed */
     }
   }
 
-  /** La lista del plano 2 de un repo cambio: se vuelve a montar su vigilante. */
+  /** A repo's plane 2 watchlist changed: its watcher is set up again. */
   async reloadWatchlist(projectId) {
     const entry = this.repos.get(projectId);
     if (entry) await this.restartWatcher(entry);

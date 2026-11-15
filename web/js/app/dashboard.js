@@ -1,6 +1,6 @@
-// Dashboard: una tarjeta por repo del workbench activo con su estado git en vivo
-// (rama, ahead/behind, cambios, lineas, ultimo commit) y la actividad reciente,
-// incluida la de los agentes en los worktrees de sus tareas.
+// Dashboard: one card per repo of the active workbench with its live git state (branch,
+// ahead/behind, changes, lines, last commit) and recent activity, including the agents' activity in
+// their task worktrees.
 
 import { api } from './api.js';
 import { h, clear, timeAgo } from './dom.js';
@@ -11,8 +11,8 @@ import { openChanges } from './changes.js';
 import { onSignal, RULE_LABEL } from './signals.js';
 
 const ACTIVE_MS = 60 * 1000;
-const repos = new Map(); // projectId -> snapshot del monitor
-const metrics = new Map(); // projectId -> metricas (actividad 24 h, sesiones de agentes)
+const repos = new Map(); // projectId -> monitor snapshot
+const metrics = new Map(); // projectId -> metrics (24 h activity, agent sessions)
 let signals = [];
 let root = null;
 let compact = localStorage.getItem('optimia:dashboard-compact') === '1';
@@ -169,7 +169,7 @@ function renderCard(repo) {
   return card;
 }
 
-// Actividad de las ultimas 24 h (ficheros cambiados por hora) y metricas de agentes.
+// Activity in the last 24 h (changed files per hour) and agent metrics.
 function renderActivity(met) {
   const max = Math.max(1, ...met.hourly);
   const bars = h(
@@ -269,7 +269,7 @@ function setCompact(value) {
   render();
 }
 
-// Re-render barato y agrupado: muchos eventos seguidos pintan una sola vez.
+// Cheap, batched re-render: many events in a row paint once.
 let renderQueued = false;
 function queueRender() {
   if (renderQueued) return;
@@ -294,7 +294,7 @@ on('monitor_activity', (e) => {
     const wt = repo.worktrees.find((w) => w.taskId === e.taskId);
     if (wt) wt.lastActivity = e.at;
   } else repo.lastActivity = e.at;
-  // Las metricas de actividad tambien se actualizan en vivo (la hora actual es la ultima).
+  // Activity metrics also update live (the current hour is the last one).
   const met = metrics.get(e.projectId);
   if (met) {
     met.hourly[23] += e.paths.length;
@@ -328,7 +328,7 @@ registerView('dashboard', {
   },
   show() {
     load().catch(() => {});
-    // Los "hace X min" y el pulso de actividad caducan solos.
+    // The "hace X min" texts and the activity pulse expire on their own.
     tick = setInterval(render, 30 * 1000);
   },
   hide() {

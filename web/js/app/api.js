@@ -1,5 +1,5 @@
-// Acceso a la API desde las vistas nuevas (modulos ES). La sesion va en la cookie
-// que optimia fija al abrir su enlace, asi que basta con fetch normal.
+// API access from the new views (ES modules). The session lives in the cookie optimia sets when its
+// link is opened, so a plain fetch is enough.
 
 export class ApiError extends Error {
   constructor(status, message) {
@@ -28,5 +28,5 @@ export const api = {
   del: (url, body) => request('DELETE', url, body)
 };
 
-// Ruta de la API de un proyecto concreto.
+// API path of a specific project.
 export const projectApi = (projectId, rest) => `/api/projects/${projectId}${rest}`;

@@ -1,13 +1,12 @@
 'use strict';
 
-// Patrones de la lista de vigilancia del plano 2, con la semantica de .gitignore
-// que el usuario ya conoce:
-//   .env          sin barra: coincide con ese nombre en cualquier carpeta
-//   /.env         con barra inicial: solo en la raiz del repo
-//   dist/**       todo lo que hay dentro de dist/ (en la raiz)
-//   *.log         cualquier fichero .log, en cualquier carpeta
-//   config/*.json un nivel: config/a.json si, config/x/a.json no
-// Las rutas se comparan siempre relativas al repo y con "/".
+// Patterns of the plane 2 watchlist, with the .gitignore semantics users already know:
+//   .env          no slash: matches that name in any folder
+//   /.env         leading slash: only at the repo root
+//   dist/**       everything inside dist/ (at the root)
+//   *.log         any .log file, in any folder
+//   config/*.json one level: config/a.json yes, config/x/a.json no
+// Paths are always compared relative to the repo and with "/".
 
 function escape(ch) {
   return /[.+^${}()|[\]\\]/.test(ch) ? `\\${ch}` : ch;
@@ -19,7 +18,7 @@ function globToRegExp(pattern) {
   let anchored = p.startsWith('/');
   if (anchored) p = p.slice(1);
   if (p.endsWith('/')) p += '**';
-  // Sin barra en medio: vale en cualquier nivel (como .gitignore).
+  // No slash in the middle: matches at any level (like .gitignore).
   if (!p.includes('/')) anchored = false;
   else anchored = true;
 
@@ -43,7 +42,7 @@ function globToRegExp(pattern) {
   return new RegExp(anchored ? `^${re}$` : `(?:^|/)${re}$`);
 }
 
-/** Devuelve una funcion (rutaRelativa) => boolean para una lista de patrones. */
+/** Returns a function (relativePath) => boolean for a list of patterns. */
 function compileGlobs(patterns) {
   const res = (patterns || []).map(globToRegExp).filter(Boolean);
   return (rel) => {
@@ -53,9 +52,9 @@ function compileGlobs(patterns) {
 }
 
 /**
- * Carpeta fija al principio de un patron ("dist/**" -> "dist", "a/b/*.js" -> "a/b").
- * Sirve para saber que carpetas ignoradas hay que vigilar. null si el patron vale
- * en cualquier carpeta (sin barra) o empieza por comodin.
+ * Fixed folder at the start of a pattern ("dist/**" -> "dist", "a/b/*.js" -> "a/b"). Used to know
+ * which ignored folders must be watched. null if the pattern matches in any folder (no slash) or
+ * starts with a wildcard.
  */
 function staticPrefix(pattern) {
   let p = String(pattern).trim().replace(/^\//, '');

@@ -9,13 +9,13 @@ const { EventEmitter } = require('events');
 const { compileGlobs } = require('./glob');
 const { loadPrefs } = require('../store/globalPrefs');
 
-// Avisos pasivos: optimia no aprueba ni bloquea nada, solo senala lo que merece
-// una segunda mirada. Reglas:
-//   largeDelete  se borran muchas lineas o ficheros de golpe
-//   sensitive    cambia un fichero sensible (.env, claves, CI, despliegue)
-//   secret       posible secreto en un fichero que git commitearia
-//   tests        cambian tests (sobre todo si lo hace un agente)
-// Un aviso nunca incluye el valor de un secreto: solo la regla y fichero:linea.
+// Passive signals: optimia neither approves nor blocks anything, it only points out what deserves a
+// second look. Rules:
+//   largeDelete  many lines or files deleted at once
+//   sensitive    a sensitive file changes (.env, keys, CI, deployment)
+//   secret       a possible secret in a file git would commit
+//   tests        tests change (especially when an agent changes them)
+// A signal never includes a secret's value: only the rule and file:line.
 
 const SENSITIVE = [
   { pattern: '.env', severity: 'high' },
@@ -47,7 +47,7 @@ const TEST_FILES = compileGlobs([
   '*.bats'
 ]);
 
-// Patrones de secretos (sin dependencias). El valor encontrado nunca sale de aqui.
+// Secret patterns (no dependencies). The matched value never leaves this module.
 const SECRET_RULES = [
   { id: 'aws-access-key', label: 'clave de acceso de AWS', re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/, severity: 'high' },
   {
@@ -73,7 +73,10 @@ const SECRET_RULES = [
 const MAX_SCAN_BYTES = 1024 * 1024;
 const DEDUPE_MS = 10 * 60 * 1000;
 
-/** Busca posibles secretos en un texto. Devuelve [{ rule, label, severity, line }] sin el valor. */
+/**
+ * Looks for possible secrets in a text. Returns [{ rule, label, severity, line }] without the
+ * value.
+ */
 function scanText(text) {
   const found = [];
   const lines = text.split('\n');
@@ -98,7 +101,7 @@ function hasGitleaks() {
   return gitleaksAvailable;
 }
 
-// Si gitleaks esta instalado, se usa ademas de las reglas propias (tiene muchas mas).
+// If gitleaks is installed it is used on top of the built-in rules (it has many more).
 async function gitleaksScan(file) {
   if (!(await hasGitleaks())) return [];
   const report = path.join(os.tmpdir(), `optimia-gitleaks-${crypto.randomUUID()}.json`);
@@ -144,7 +147,7 @@ class SignalEngine extends EventEmitter {
   constructor() {
     super();
     this.recent = [];
-    this.lastFired = new Map(); // clave de dedupe -> ms
+    this.lastFired = new Map(); // dedupe key -> ms
   }
 
   fire(signal) {
@@ -160,8 +163,8 @@ class SignalEngine extends EventEmitter {
   }
 
   /**
-   * Lote de ficheros cambiados. `committable(rel)` dice si git lo commitearia
-   * (versionado o nuevo no ignorado): solo esos se escanean en busca de secretos.
+   * Batch of changed files. `committable(rel)` tells whether git would commit it (tracked, or new
+   * and not ignored): only those are scanned for secrets.
    */
   async onActivity({ projectId, name, taskId = null, paths, root, committable = async () => true }) {
     const prefs = loadPrefs().signals;
@@ -170,7 +173,7 @@ class SignalEngine extends EventEmitter {
       for (const rel of paths) {
         const rule = sensitiveRule(rel);
         if (!rule) continue;
-        // Un .env o una clave que git NO ignora es mucho mas grave: se commitearia.
+        // A .env or a key that git does NOT ignore is much more serious: it would be committed.
         const exposed = rule.severity === 'high' && root ? await committable(rel) : false;
         this.fire({
           ...base,
@@ -232,7 +235,7 @@ class SignalEngine extends EventEmitter {
     return fired;
   }
 
-  /** Estado git recalculado: borrados grandes frente al estado anterior. */
+  /** Recomputed git state: large deletes compared with the previous state. */
   onState({ projectId, name, state, previous, taskId = null }) {
     if (!state || !previous) return;
     const prefs = loadPrefs().signals;

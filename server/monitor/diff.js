@@ -4,14 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const { git } = require('./gitState');
 
-// Diffs para el visor: siempre de solo lectura (git diff / git show) y ya
-// troceados en hunks y lineas, con numeros de linea antiguos y nuevos.
-// Modos:
-//   worktree  cambios sin stage            (git diff)
-//   staged    cambios en stage             (git diff --cached)
-//   head      todo frente a HEAD           (git diff HEAD) — lo que ve un agente en su worktree
-//   commit    los cambios de un commit     (git show <ref>)
-// context: lineas de contexto; "full" = el fichero entero con los cambios marcados.
+// Diffs for the viewer: always read-only (git diff / git show) and already split into hunks and
+// lines, with old and new line numbers.
+// Modes:
+//   worktree  unstaged changes             (git diff)
+//   staged    staged changes               (git diff --cached)
+//   head      everything against HEAD      (git diff HEAD) — what an agent sees in its worktree
+//   commit    the changes of a commit      (git show <ref>)
+// context: context lines; "full" = the whole file with the changes marked.
 
 const MODES = ['worktree', 'staged', 'head', 'commit'];
 const MAX_DIFF_BYTES = 4 * 1024 * 1024;
@@ -79,7 +79,7 @@ function parseUnifiedDiff(text) {
   return files;
 }
 
-// Un fichero nuevo sin seguimiento no sale en git diff: se muestra entero como anadido.
+// A new untracked file does not show up in git diff: it is shown whole as added.
 function untrackedAsDiff(cwd, rel) {
   const abs = path.join(cwd, rel);
   const stat = fs.statSync(abs);
@@ -115,8 +115,8 @@ async function isUntracked(cwd, rel) {
 }
 
 /**
- * Diff de un fichero (o de todo si no se da path) en `cwd`.
- * Devuelve { mode, context, files: [...], truncated }.
+ * Diff of one file (or of everything if no path is given) in `cwd`.
+ * Returns { mode, context, files: [...], truncated }.
  */
 async function getDiff(cwd, { path: p, mode = 'head', ref, context = 3 } = {}) {
   if (!MODES.includes(mode)) throw new Error(`modo de diff no válido: ${mode}`);
@@ -142,7 +142,7 @@ async function getDiff(cwd, { path: p, mode = 'head', ref, context = 3 } = {}) {
   return { mode, context, files: parseUnifiedDiff(out), truncated };
 }
 
-/** Ultimos commits de la rama actual, con sus ficheros y lineas. */
+/** Latest commits of the current branch, with their files and lines. */
 async function listCommits(cwd, { limit = 50, skip = 0 } = {}) {
   const n = Math.max(1, Math.min(200, Number(limit) || 50));
   let out;
@@ -156,7 +156,7 @@ async function listCommits(cwd, { limit = 50, skip = 0 } = {}) {
       '-z'
     ]);
   } catch {
-    return []; // sin commits
+    return []; // no commits
   }
   return out
     .split('\x1e')

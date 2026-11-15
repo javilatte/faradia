@@ -65,7 +65,7 @@ test('syncClaudeSettings: removes the untracked .claude/settings.json an older o
   fs.mkdirSync(path.join(dir, '.claude'));
   fs.writeFileSync(claudeSettingsPath(dir), JSON.stringify(buildClaudeSettings(['Read(**/.env*)'])));
 
-  // Su deny aun no esta en la lista de optimia: se conserva para poder importarlo.
+  // Its deny list is not in optimia's yet: it is kept so it can be imported.
   syncClaudeSettings(dir, []);
   assert.equal(fs.existsSync(claudeSettingsPath(dir)), true);
 

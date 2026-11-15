@@ -4,14 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const { execFile, execFileSync } = require('child_process');
 
-// Carpetas que nunca son "resultado de la etapa": dependencias, metadatos y
-// el propio estado de optimia.
+// Folders that are never a "stage result": dependencies, metadata and optimia's own state.
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.optimia', '.claude', '.codegraph']);
 const MAX_FILES = 500;
 const MAX_PREVIEW_BYTES = 1_000_000;
 
-// Ficheros tocados desde sinceMs dentro del worktree, incluidos los ignorados por
-// git (p. ej. docs/ esta en .gitignore y no aparece en git status).
+// Files touched since sinceMs inside the worktree, including those git ignores (e.g. docs/ is in
+// .gitignore and does not show in git status).
 function listFilesModifiedSince(worktreeDir, sinceMs) {
   const out = [];
   const walk = (dir) => {
@@ -37,7 +36,7 @@ function listFilesModifiedSince(worktreeDir, sinceMs) {
   return out.sort();
 }
 
-// Devuelve la ruta absoluta solo si queda dentro del worktree. Nunca sale de el.
+// Returns the absolute path only if it stays inside the worktree. Never leaves it.
 function resolveInside(worktreeDir, rel) {
   if (typeof rel !== 'string' || !rel.trim() || path.isAbsolute(rel)) return null;
   const abs = path.resolve(worktreeDir, rel);
@@ -63,8 +62,8 @@ function docxText(abs) {
     .trim();
 }
 
-// Previsualizacion sin ejecutar nada del documento: texto plano para md/docx/txt,
-// y html solo se muestra dentro de un iframe sin scripts en el cliente.
+// Preview without running anything from the document: plain text for md/docx/txt, and html is only
+// shown in a script-less iframe on the client.
 function readPreview(abs) {
   const ext = path.extname(abs).toLowerCase();
   if (fs.statSync(abs).size > MAX_PREVIEW_BYTES)
@@ -81,7 +80,7 @@ function readPreview(abs) {
   return { kind: 'unsupported', reason: 'no hay previsualización para este tipo de fichero' };
 }
 
-// Abre el fichero (o su carpeta) con la app por defecto del sistema.
+// Opens the file (or its folder) with the system's default app.
 function openWithSystem(abs, { reveal = false, platform = process.platform } = {}) {
   let cmd;
   let args;

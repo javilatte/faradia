@@ -4,21 +4,21 @@ const fs = require('fs');
 const path = require('path');
 const { configDir } = require('../store/globalPaths');
 
-// Catalogo de agentes. Un agente es un rol con su propio motor y modelo:
+// Agent catalog. An agent is a role with its own engine and model:
 //   id, name, description, engine (claude | local), model, effort, access (read | edit),
-//   enabled, y un prompt de rol (el cuerpo del .md).
-// Tres origenes, de menos a mas prioridad:
-//   builtin  agentes por defecto, en este fichero (restaurables)
-//   global   ~/.config/optimia/agents/<id>.md       (todos los proyectos)
-//   project  <proyecto>/.optimia/agents/<id>.md       (solo ese proyecto)
-// Un fichero global o de proyecto con el id de un agente por defecto lo sobrescribe
-// campo a campo; con un id nuevo crea un agente propio.
+//   enabled, and a role prompt (the body of the .md).
+// Three sources, from lowest to highest priority:
+//   builtin  default agents, defined in this file (restorable)
+//   global   ~/.config/optimia/agents/<id>.md       (every project)
+//   project  <project>/.optimia/agents/<id>.md       (that project only)
+// A global or project file with a default agent's id overrides it field by field; a new id creates
+// a custom agent.
 
 const ENGINES = ['claude', 'local'];
 const ACCESS = ['read', 'edit'];
-// Niveles de --effort del CLI de claude (2.1.x: low, medium, high, xhigh, max).
+// --effort levels of the claude CLI (2.1.x: low, medium, high, xhigh, max).
 const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
-// Alias de modelo que entiende el CLI de claude; 'default' = el modelo por defecto de la cuenta.
+// Model aliases the claude CLI understands; 'default' = the account's default model.
 const CLAUDE_MODELS = ['default', 'opus', 'sonnet', 'haiku', 'fable'];
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 const FIELDS = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled'];
@@ -150,7 +150,7 @@ function dirFor(scope, projectRoot) {
   throw new Error('scope debe ser "global" o "project"');
 }
 
-// Frontmatter minimo: lineas "clave: valor" entre dos "---". Sin dependencias YAML.
+// Minimal frontmatter: "key: value" lines between two "---". No YAML dependency.
 function parseAgentFile(text) {
   const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(text);
   if (!m) return { fields: {}, prompt: text.trim() };
@@ -164,7 +164,7 @@ function parseAgentFile(text) {
       try {
         value = JSON.parse(value);
       } catch {
-        /* se queda como texto */
+        /* kept as text */
       }
     }
     if (value === 'true') value = true;
@@ -201,7 +201,7 @@ function readDir(dir) {
       const { fields, prompt } = parseAgentFile(fs.readFileSync(path.join(dir, name), 'utf8'));
       out.set(id, { ...fields, ...(prompt ? { prompt } : {}) });
     } catch {
-      /* fichero ilegible: se ignora */
+      /* unreadable file: ignored */
     }
   }
   return out;
@@ -221,8 +221,8 @@ function normalize(agent) {
 }
 
 /**
- * Agentes efectivos para un proyecto, ya combinados. Cada uno indica de donde
- * sale (`source`) y en que ambitos tiene ajustes propios (`overriddenIn`).
+ * Effective agents for a project, already merged. Each one tells where it comes from (`source`) and
+ * in which scopes it has its own settings (`overriddenIn`).
  */
 function loadAgents(projectRoot) {
   const global = readDir(globalAgentsDir());
@@ -273,7 +273,7 @@ function slugify(name) {
     .slice(0, 40);
 }
 
-/** Guarda los campos dados del agente en un ambito (se combinan con lo que ya hubiera ahi). */
+/** Saves the given agent fields in a scope (merged with whatever was already there). */
 function saveAgent(projectRoot, scope, id, input) {
   if (!ID_RE.test(id)) throw new Error('id de agente no válido');
   const exists = BUILTIN_AGENTS.some((a) => a.id === id) || loadAgents(projectRoot).some((a) => a.id === id);
@@ -294,7 +294,7 @@ function saveAgent(projectRoot, scope, id, input) {
   return getAgent(projectRoot, id);
 }
 
-/** Crea un agente propio y devuelve el agente efectivo. */
+/** Creates a custom agent and returns the effective agent. */
 function createAgent(projectRoot, scope, input) {
   let id = typeof input.id === 'string' && input.id ? input.id : slugify(input.name || '');
   if (!ID_RE.test(id)) throw new Error('el nombre necesita al menos dos letras o numeros');
@@ -313,7 +313,7 @@ function createAgent(projectRoot, scope, input) {
   });
 }
 
-/** Borra los ajustes de un agente en un ambito: restaura el por defecto o elimina un agente propio. */
+/** Removes an agent's settings in a scope: restores the default one or deletes a custom agent. */
 function removeAgent(projectRoot, scope, id) {
   if (!ID_RE.test(id)) throw new Error('id de agente no válido');
   const file = path.join(dirFor(scope, projectRoot), `${id}.md`);

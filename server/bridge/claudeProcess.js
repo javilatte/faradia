@@ -54,10 +54,10 @@ class ClaudeSession extends EventEmitter {
     if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
     if (settingsPath) args.push('--settings', settingsPath);
     const allowedTools = [];
-    // Agentes de tarea: solo los servidores MCP de optimia y los del propio proyecto
-    // (.mcp.json). Sin --strict-mcp-config heredarian los conectores de la cuenta de
-    // claude.ai del usuario (Gmail, Drive, Slack...), que gastan contexto, no pintan
-    // nada en una tarea de codigo y abren una via de inyeccion de instrucciones.
+    // Task agents: only optimia's MCP servers and the project's own (.mcp.json). Without
+    // --strict-mcp-config they would inherit the connectors of the user's claude.ai account (Gmail,
+    // Drive, Slack...), which use up context, have nothing to do with a coding task and open a path
+    // for prompt injection.
     if (strictMcpConfig) args.push('--strict-mcp-config');
     const extraMcp = extraMcpConfigPaths.filter(Boolean);
     if (extraMcp.length && !mcpConfigPath) args.push('--mcp-config', ...extraMcp);
@@ -72,16 +72,15 @@ class ClaudeSession extends EventEmitter {
       // deny list).
       allowedTools.push('mcp__optimia-tasks__create_task', 'mcp__optimia-tasks__update_task_progress');
     }
-    // Herramientas extra que una etapa de tarea necesita sin preguntar (ver
-    // taskStages.js). Las reglas "deny" de .claude/settings.json siguen
-    // ganando sobre estas.
+    // Extra tools a task stage needs without asking (see taskStages.js). Deny rules still win over
+    // these.
     allowedTools.push(...extraAllowedTools);
     if (allowedTools.length) args.push('--allowedTools', allowedTools.join(','));
     if (disallowedTools.length) args.push('--disallowedTools', disallowedTools.join(','));
 
     const env = { ...process.env };
-    // Solo para sesiones de tarea: el hook bloquea commits y pushes aunque el
-    // comando llegue con flags (git -c ...) que las reglas de texto no cubren.
+    // Task sessions only: the hook blocks commits and pushes even when the command comes with flags
+    // (git -c ...) that text rules do not cover.
     if (gitHooksPath) {
       env.GIT_CONFIG_COUNT = '1';
       env.GIT_CONFIG_KEY_0 = 'core.hooksPath';

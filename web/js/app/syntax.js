@@ -1,6 +1,6 @@
-// Resaltado de sintaxis con Shiki, cargado bajo demanda desde jsDelivr (igual que
-// xterm). Es una mejora progresiva: si no hay red o falla, el diff se ve en texto
-// plano. Los colores siguen el tema claro/oscuro con variables CSS de Shiki.
+// Syntax highlighting with Shiki, loaded on demand from jsDelivr (like xterm). It is a progressive
+// enhancement: without network or on failure, the diff shows as plain text. Colors follow the
+// light/dark theme with Shiki's CSS variables.
 
 const SHIKI_URL = 'https://cdn.jsdelivr.net/npm/shiki@1.24.0/+esm';
 const THEMES = { light: 'github-light', dark: 'github-dark' };
@@ -69,8 +69,8 @@ async function getHighlighter() {
 }
 
 /**
- * Tokeniza un bloque de codigo y devuelve, por linea, una lista de
- * { content, style } (style: objeto de propiedades CSS), o null si no se puede.
+ * Tokenizes a block of code and returns, per line, a list of { content, style } (style: an object
+ * of CSS properties), or null if it cannot.
  */
 export async function tokenizeLines(code, lang) {
   if (!lang) return null;
@@ -88,7 +88,7 @@ export async function tokenizeLines(code, lang) {
   }
 }
 
-/** Pinta tokens en un elemento sin innerHTML (el codigo nunca se interpreta como HTML). */
+/** Paints tokens into an element without innerHTML (code is never interpreted as HTML). */
 export function paintTokens(el, tokens) {
   el.textContent = '';
   for (const t of tokens) {

@@ -4,9 +4,9 @@ const { getDiff, listCommits } = require('../monitor/diff');
 const { getWatchlist, setWatchlist } = require('../monitor/watchlists');
 const { sendJson, readJsonBody } = require('./util');
 
-// Rutas de vigilancia (solo lectura de los repos, salvo la lista del plano 2, que
-// vive en la configuracion de optimia):
-//   GET /api/monitor/state                                  todos los repos vigilados
+// Supervision routes (read-only on the repos, except the plane 2 watchlist, which lives in
+// optimia's configuration):
+//   GET /api/monitor/state                                  every watched repo
 //   GET /api/monitor/diff?projectId&taskId?&path?&mode&context&ref
 //   GET /api/monitor/commits?projectId&limit&skip
 //   GET /api/monitor/watch-events?projectId?
@@ -16,7 +16,7 @@ async function handleMonitorRoutes(req, res, url, { monitor, registry }) {
   const p = url.pathname;
   const q = url.searchParams;
 
-  // Carpeta sobre la que se hace la lectura: el repo o el worktree de una de sus tareas.
+  // Folder the read happens on: the repo or the worktree of one of its tasks.
   const cwdFor = (projectId, taskId) => {
     const info = registry.info(projectId);
     if (!info) return null;

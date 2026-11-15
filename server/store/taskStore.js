@@ -27,17 +27,17 @@ function addTask(projectRoot, { title, type, steps, instruction, chatId, baseBra
     id: crypto.randomUUID(),
     title,
     type, // coding | bugfix | tests | documentation | audit | custom (ver bridge/taskStages.js TASK_TYPES)
-    agentId: type === 'custom' ? agentId || null : null, // agente propio de una tarea custom
+    agentId: type === 'custom' ? agentId || null : null, // custom agent of a custom task
     stageRuns: [], // { stage, agentId, agentName, engine, model, startedAt, finishedAt, status, filesTouched, costUsd }
-    chatId: chatId || null, // chat desde el que se lanzo, para avisar en esa conversacion
+    chatId: chatId || null, // chat it was started from, to notify that conversation
     // pending | in_progress | awaiting_input | ready_to_test (ver bridge/taskStages.js)
     status: 'pending',
-    stage: null, // etapa en curso o la ultima ejecutada (plan, implement, research, write, review, commit)
-    stageOutputs: {}, // texto final de cada etapa, por nombre de etapa
-    output: null, // texto final de la ultima etapa, lo que muestra la tarjeta
+    stage: null, // running stage or the last one that ran (plan, implement, research, write, review, commit)
+    stageOutputs: {}, // final text of each stage, by stage name
+    output: null, // final text of the last stage, shown on the card
     pendingQuestion: null, // { kind: 'plan-details' | 'research-details' | 'implement-details' | 'doc-options', text }
-    docOptions: null, // { mode, format, targetPath, template } para documentacion
-    sessionId: null, // sesion de Claude de la ultima etapa (para reanudar al responder)
+    docOptions: null, // { mode, format, targetPath, template } for documentation
+    sessionId: null, // Claude session of the last stage (to resume when answering)
     error: null,
     steps: (steps || []).map((label) => ({ id: crypto.randomUUID(), label, status: 'pending' })),
     // Real checkpoints an agent self-reports via the update_task_progress MCP

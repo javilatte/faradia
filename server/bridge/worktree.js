@@ -22,15 +22,15 @@ function createTaskWorktree(projectRoot, taskId, { baseRef, branchName } = {}) {
   const branch = branchName || `optimia/task-${taskId.slice(0, 8)}`;
   const base = baseRef || git(projectRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
   git(projectRoot, ['worktree', 'add', '-b', branch, dir, base]);
-  // Los permisos de la sesion llegan con --settings (.optimia/claude-settings-agents.json):
-  // no se copia nada al worktree, que acabaria en el commit de la tarea.
+  // The session's permissions come with --settings (.optimia/claude-settings-agents.json): nothing
+  // is copied into the worktree, where it would end up in the task's commit.
   return { dir, branch };
 }
 
 /**
- * Stages all changes in the task's worktree so a human can review and commit
- * — never commits on its own. The golden rule ("no commit sin que el
- * usuario lo pida") applies to task worktrees exactly like the main repo.
+ * Stages all changes in the task's worktree so a human can review and commit — never commits on its
+ * own. The golden rule (no commit unless the user asks for it) applies to task worktrees exactly
+ * like the main repo.
  */
 function stageForReview(worktreeDirPath) {
   execFileSync('git', ['add', '-A'], { cwd: worktreeDirPath });
@@ -67,7 +67,7 @@ function listLocalBranches(projectRoot) {
   return { current: git(projectRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), branches };
 }
 
-// Devuelve el motivo si el nombre no es una rama valida, o null.
+// Returns the reason if the name is not a valid branch name, or null.
 function branchNameProblem(name) {
   try {
     execFileSync('git', ['check-ref-format', '--branch', name], { stdio: 'pipe' });
@@ -77,10 +77,8 @@ function branchNameProblem(name) {
   }
 }
 
-// Commit de los cambios de la tarea. Los ficheros generados (p. ej. docs/, que
-// esta en .gitignore) se anaden de forma explicita, porque la tarea los produce.
-// Commit de la tarea. Respeta .gitignore: un fichero que git ignora solo entra
-// si el usuario lo pide expresamente (`includeIgnored`, p. ej. un .docx generado).
+// Commits the task's changes. Respects .gitignore: a file git ignores only goes in if the user
+// explicitly asks for it (`includeIgnored`, e.g. a generated .docx).
 function commitTaskWorktree(worktreeDirPath, message, includeIgnored = []) {
   execFileSync('git', ['add', '-A'], { cwd: worktreeDirPath });
   const existing = includeIgnored.filter((f) => fs.existsSync(path.join(worktreeDirPath, f)));
@@ -94,7 +92,7 @@ function commitTaskWorktree(worktreeDirPath, message, includeIgnored = []) {
   return git(worktreeDirPath, ['rev-parse', 'HEAD']);
 }
 
-// De `files` (relativos), los que git ignora en `dir`.
+// Out of `files` (relative), the ones git ignores in `dir`.
 function ignoredAmong(dir, files) {
   if (!files.length) return [];
   const res = spawnSync('git', ['check-ignore', '--stdin'], { cwd: dir, input: files.join('\n'), encoding: 'utf8' });
@@ -105,7 +103,7 @@ function worktreeIsClean(worktreeDirPath) {
   return git(worktreeDirPath, ['status', '--porcelain']) === '';
 }
 
-// Ruta del worktree donde esta checkeada una rama, o null si no esta checkeada en ninguno.
+// Path of the worktree where a branch is checked out, or null if it is not checked out anywhere.
 function worktreeOfBranch(projectRoot, branch) {
   let current = null;
   for (const line of git(projectRoot, ['worktree', 'list', '--porcelain']).split('\n')) {
@@ -115,16 +113,15 @@ function worktreeOfBranch(projectRoot, branch) {
   return null;
 }
 
-// Fast-forward si la base no ha avanzado (historial lineal); si ha avanzado, un
-// merge normal con el mensaje estandar de git ("Merge branch '...'"), que las
-// herramientas de Conventional Commits ignoran.
+// Fast-forward if the base has not moved (linear history); if it has, a normal merge with git's
+// standard message ("Merge branch '...'"), which Conventional Commits tools ignore.
 function mergeAt(dir, branch, targetBranch) {
   const before = git(dir, ['rev-parse', 'HEAD']);
   try {
     git(dir, ['merge', '--ff-only', branch]);
     return { sha: git(dir, ['rev-parse', 'HEAD']), before, fastForward: true };
   } catch {
-    /* la base avanzo: hace falta un commit de merge */
+    /* the base moved on: a merge commit is needed */
   }
   try {
     git(dir, ['merge', '--no-ff', '--no-edit', branch]);
@@ -141,9 +138,9 @@ function mergeAt(dir, branch, targetBranch) {
   return { sha: git(dir, ['rev-parse', 'HEAD']), before, fastForward: false };
 }
 
-// Fusiona la rama de la tarea en la base sin cambiar de rama en el checkout del usuario:
-// si la base esta checkeada en algun worktree, se fusiona ahi (exigiendo que este limpio);
-// si no, se usa un worktree temporal sobre la base que se borra al terminar.
+// Merges the task branch into its base without switching branches in the user's checkout: if the
+// base is checked out in some worktree, the merge happens there (it must be clean); otherwise a
+// temporary worktree on the base is used and removed afterwards.
 function mergeTaskBranch(projectRoot, branch, targetBranch) {
   const checkedOutAt = worktreeOfBranch(projectRoot, targetBranch);
   if (checkedOutAt) {
@@ -165,18 +162,18 @@ function mergeTaskBranch(projectRoot, branch, targetBranch) {
     try {
       git(projectRoot, ['worktree', 'remove', '--force', tmp]);
     } catch {
-      /* ya borrado */
+      /* already removed */
     }
   }
 }
 
-// Ficheros que cambia un commit (o una fusion, frente a su primer padre), o
-// los que cambian entre dos commits si se pasa `from`.
+// Files changed by a commit (or a merge, against its first parent), or the files changed between
+// two commits when `from` is given.
 function filesChangedBy(dir, sha, from = `${sha}^1`) {
   return git(dir, ['diff', '--name-only', from, sha]).split('\n').filter(Boolean);
 }
 
-// Ficheros modificados, staged o sin seguimiento en un worktree ahora mismo.
+// Files modified, staged or untracked in a worktree right now.
 function changedFiles(dir) {
   try {
     return git(dir, ['status', '--porcelain', '--untracked-files=all'])

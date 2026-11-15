@@ -1,6 +1,5 @@
-// Modo compacto (glance): una ventana pequena para dejar en una esquina, con una
-// linea por repo del workbench activo y el ultimo aviso. Se abre desde la barra
-// superior y se actualiza en vivo con el mismo canal de eventos.
+// Glance mode: a small window to leave in a corner, with one line per repo of the active workbench
+// and the latest signal. Opened from the toolbar and updated live through the same events channel.
 
 import { api } from './api.js';
 import { h, clear, timeAgo } from './dom.js';

@@ -1,7 +1,6 @@
-// Cambios: lista de ficheros cambiados de un repo (o del worktree de una tarea,
-// donde escribe un agente) y su diff EN VIVO: se vuelve a pedir cada vez que el
-// monitor avisa de un cambio. En linea o lado a lado, con contexto o el fichero
-// entero, resaltado de sintaxis y un mapa de cambios sincronizado con el scroll.
+// Changes: list of a repo's changed files (or of a task's worktree, where an agent writes) and
+// their LIVE diff: fetched again every time the monitor reports a change. Inline or side by side,
+// with context or the whole file, syntax highlighting and a change map synced with the scroll.
 
 import { api } from './api.js';
 import { h, clear } from './dom.js';
@@ -12,9 +11,9 @@ import { langFor, tokenizeLines, paintTokens } from './syntax.js';
 
 const sel = {
   projectId: null,
-  taskId: null, // null = arbol de trabajo del repo
-  ref: null, // sha de un commit: se ven sus cambios (navegacion desde el timeline)
-  commit: null, // { short, subject } del commit abierto
+  taskId: null, // null = the repo's working tree
+  ref: null, // a commit sha: its changes are shown (navigation from the timeline)
+  commit: null, // { short, subject } of the open commit
   path: null,
   mode: 'head',
   layout: localStorage.getItem('optimia:diff-layout') || 'inline',
@@ -23,7 +22,7 @@ const sel = {
 let root = null;
 let monitorRepos = [];
 let lastDiff = null;
-let commitFiles = []; // ficheros del commit abierto (sel.ref)
+let commitFiles = []; // files of the open commit (sel.ref)
 let refreshTimer = null;
 
 export function openChanges({ projectId, taskId = null, path = null, ref = null, commit = null } = {}) {
@@ -37,7 +36,7 @@ export function openChanges({ projectId, taskId = null, path = null, ref = null,
   showView('changes', {});
 }
 
-// Para los scripts clasicos del proyecto (tarjetas de tarea): abrir un commit.
+// For the project's classic scripts (task cards): open a commit.
 window.optimiaOpenCommit = (projectId, ref) => openChanges({ projectId, ref });
 
 function leaveCommit() {
@@ -275,7 +274,7 @@ function lineEl(line, side) {
   );
 }
 
-// Lado a lado: las lineas borradas a la izquierda y las anadidas a la derecha, emparejadas.
+// Side by side: deleted lines on the left and added lines on the right, paired.
 function splitRows(lines) {
   const rows = [];
   let dels = [];
@@ -368,7 +367,7 @@ function renderDiffPane() {
   return pane;
 }
 
-// Mapa de cambios: una marca por linea anadida/borrada, en su posicion relativa.
+// Change map: one mark per added/deleted line, at its relative position.
 function drawRuler(scroller, ruler) {
   clear(ruler);
   const total = scroller.scrollHeight || 1;
@@ -393,8 +392,8 @@ function updateRulerViewport(scroller, ruler) {
   vp.style.height = `${(scroller.clientHeight / total) * 100}%`;
 }
 
-// Resaltado: se tokeniza cada lado (antiguo y nuevo) como un bloque, para que los
-// comentarios y cadenas de varias lineas se coloreen bien, y se pinta linea a linea.
+// Highlighting: each side (old and new) is tokenized as one block, so multi-line comments and
+// strings are colored correctly, then painted line by line.
 async function paintSyntax() {
   const scroller = root?.querySelector('.diff-scroll');
   const lang = scroller?.dataset.lang;
@@ -408,7 +407,7 @@ async function paintSyntax() {
   }
 }
 
-// ---- datos en vivo ----
+// ---- live data ----
 
 async function refresh() {
   try {

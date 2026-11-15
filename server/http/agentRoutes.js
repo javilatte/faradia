@@ -5,12 +5,12 @@ const stageMap = require('../agents/stageMap');
 const { STAGES, TASK_TYPES } = require('../bridge/taskStages');
 const { sendJson, readJsonBody } = require('./util');
 
-// Rutas de agentes de un proyecto (los ajustes de proyecto ganan a los globales):
-//   GET    /api/agents                          catalogo efectivo, etapas, tipos de tarea y mapa etapa->agente
-//   POST   /api/agents {scope, name, ...}        crea un agente propio
-//   PATCH  /api/agents/:id {scope, ...campos}    cambia campos de un agente en un ambito
-//   DELETE /api/agents/:id?scope=global|project  restaura el por defecto o borra el agente propio
-//   PUT    /api/agents/stages {scope, changes}   cambia que agente hace cada etapa
+// Agent routes of a project (project settings win over global ones):
+//   GET    /api/agents                          effective catalog, stages, task types and stage->agent map
+//   POST   /api/agents {scope, name, ...}        creates a custom agent
+//   PATCH  /api/agents/:id {scope, ...fields}    changes an agent's fields in a scope
+//   DELETE /api/agents/:id?scope=global|project  restores the default or deletes the custom agent
+//   PUT    /api/agents/stages {scope, changes}   changes which agent runs each stage
 
 function catalogView(projectRoot) {
   return {

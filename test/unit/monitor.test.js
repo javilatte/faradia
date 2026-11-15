@@ -51,14 +51,14 @@ test('glob: semantica tipo .gitignore', () => {
   assert.ok(compileGlobs(['src/**/*.test.js'])('src/c.test.js'));
 });
 
-test('staticPrefix: carpeta fija al inicio del patron', () => {
+test('staticPrefix: fixed folder at the start of the pattern', () => {
   assert.equal(staticPrefix('dist/**'), 'dist');
   assert.equal(staticPrefix('/build/out/*.js'), 'build/out');
   assert.equal(staticPrefix('.env'), null);
   assert.equal(staticPrefix('**/x'), null);
 });
 
-test('parseStatusV2: rama, ahead/behind y estados', () => {
+test('parseStatusV2: branch, ahead/behind and states', () => {
   const out = [
     '# branch.oid abc',
     '# branch.head main',
@@ -87,14 +87,14 @@ test('parseStatusV2: rama, ahead/behind y estados', () => {
   assert.equal(s.files[2].origPath, 'src.js');
 });
 
-test('parseNumstat: lineas, binarios y renombrados', () => {
+test('parseNumstat: lines, binaries and renames', () => {
   const map = parseNumstat(['3\t1\ta.js', '-\t-\timg.png', '2\t0\t', 'old.js', 'new.js', ''].join('\0'));
   assert.deepEqual(map.get('a.js'), { added: 3, removed: 1, binary: false });
   assert.equal(map.get('img.png').binary, true);
   assert.deepEqual(map.get('new.js'), { added: 2, removed: 0, binary: false });
 });
 
-test('getRepoState: cambios reales de un repo', async (t) => {
+test('getRepoState: real changes in a repo', async (t) => {
   const { dir, git } = makeRepo(t);
   fs.writeFileSync(path.join(dir, 'src', 'a.js'), 'uno\nDOS\ntres\ncuatro\n');
   fs.writeFileSync(path.join(dir, 'nuevo.txt'), 'x\n');
@@ -110,11 +110,11 @@ test('getRepoState: cambios reales de un repo', async (t) => {
   assert.equal(s.lastCommit.subject, 'init');
 });
 
-test('dirsOf: carpetas de una lista de ficheros', () => {
+test('dirsOf: folders of a list of files', () => {
   assert.deepEqual([...dirsOf(['a/b/c.js', 'a/d.js', 'x.js'])].sort(), ['', 'a', 'a/b']);
 });
 
-test('TreeWatcher: agrupa cambios, vigila carpetas nuevas y no entra en las ignoradas', async (t) => {
+test('TreeWatcher: batches changes, watches new folders and skips ignored ones', async (t) => {
   const { dir } = makeRepo(t);
   fs.mkdirSync(path.join(dir, 'node_modules', 'pkg'), { recursive: true });
   const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();
@@ -129,26 +129,26 @@ test('TreeWatcher: agrupa cambios, vigila carpetas nuevas y no entra en las igno
   batch = waitFor(w, 'change');
   fs.mkdirSync(path.join(dir, 'lib'));
   await batch;
-  await new Promise((r) => setTimeout(r, 150)); // la carpeta nueva se vigila tras comprobar git
+  await new Promise((r) => setTimeout(r, 150)); // the new folder is watched after checking git
   batch = waitFor(w, 'change');
   fs.writeFileSync(path.join(dir, 'lib', 'b.js'), 'x');
   assert.ok((await batch).paths.includes('lib/b.js'));
 });
 
-test('TreeWatcher: un fichero creado justo despues de su carpeta no se pierde', async (t) => {
+test('TreeWatcher: a file created right after its folder is not missed', async (t) => {
   const { dir } = makeRepo(t);
   const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();
   t.after(() => w.close());
   const seen = new Set();
   w.on('change', ({ paths }) => paths.forEach((p) => seen.add(p)));
   fs.mkdirSync(path.join(dir, 'test'));
-  fs.writeFileSync(path.join(dir, 'test', 'a.test.js'), 'x'); // antes de que llegue el watch de test/
+  fs.writeFileSync(path.join(dir, 'test', 'a.test.js'), 'x'); // before the watch on test/ is in place
   const deadline = Date.now() + 3000;
   while (!seen.has('test/a.test.js') && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
   assert.ok(seen.has('test/a.test.js'));
 });
 
-test('TreeWatcher: un commit se ve como cambio de git', async (t) => {
+test('TreeWatcher: a commit shows up as a git change', async (t) => {
   const { dir, git } = makeRepo(t);
   const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();
   t.after(() => w.close());
@@ -157,7 +157,7 @@ test('TreeWatcher: un commit se ve como cambio de git', async (t) => {
   assert.equal((await batch).git, true);
 });
 
-test('MonitorService: estado inicial, refresco tras un cambio y eventos del plano 2', async (t) => {
+test('MonitorService: initial state, refresh after a change and plane 2 events', async (t) => {
   const cfg = mkTmpDir('mon-cfg');
   const prev = process.env.XDG_CONFIG_HOME;
   process.env.XDG_CONFIG_HOME = cfg;
@@ -178,7 +178,7 @@ test('MonitorService: estado inicial, refresco tras un cambio y eventos del plan
   assert.equal(state.dirty, true);
   assert.equal(state.files[0].path, 'src/a.js');
 
-  // .env esta en .gitignore, pero en la lista por defecto del plano 2
+  // .env is in .gitignore, but in the default plane 2 watchlist
   const created = waitFor(mon, 'watch_event');
   fs.writeFileSync(path.join(dir, '.env'), 'A=1\n');
   const ev = await created;
@@ -190,7 +190,7 @@ test('MonitorService: estado inicial, refresco tras un cambio y eventos del plan
   assert.equal(mon.recentWatchEvents('p1').length, 2);
 });
 
-test('diff: hunks con numeros de linea, fichero nuevo sin seguimiento y modo completo', async (t) => {
+test('diff: hunks with line numbers, a new untracked file and full mode', async (t) => {
   const { getDiff, parseUnifiedDiff, safeRel } = require('../../server/monitor/diff');
   const { dir } = makeRepo(t);
   fs.writeFileSync(path.join(dir, 'src', 'a.js'), 'uno\nDOS\ntres\n');
@@ -218,7 +218,7 @@ test('diff: hunks con numeros de linea, fichero nuevo sin seguimiento y modo com
   assert.equal(parseUnifiedDiff('').length, 0);
 });
 
-test('listCommits: commits con ficheros y lineas', async (t) => {
+test('listCommits: commits with files and lines', async (t) => {
   const { listCommits } = require('../../server/monitor/diff');
   const { dir, git } = makeRepo(t);
   fs.writeFileSync(path.join(dir, 'b.txt'), '1\n2\n');
@@ -232,7 +232,7 @@ test('listCommits: commits con ficheros y lineas', async (t) => {
   assert.match(commits[0].sha, /^[0-9a-f]{40}$/);
 });
 
-test('isTransient: ignora escrituras atómicas y ficheros de editores, no los normales', () => {
+test('isTransient: ignores atomic writes and editor files, not regular ones', () => {
   const { isTransient } = require('../../server/monitor/treeWatcher');
   for (const p of ['README.md.tmp.147857.98b65491f150', 'src/.a.js.swp', 'a.txt~', 'src/.#notas.md', '4913'])
     assert.equal(isTransient(p), true, p);

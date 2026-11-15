@@ -1,6 +1,6 @@
-// Ajustes > Agentes: catalogo de agentes (modelo, motor, effort, acceso, prompt),
-// que agente hace cada etapa de los pipelines y alta de agentes propios. Cada
-// cambio se guarda al momento en el ambito elegido (este proyecto o todos).
+// Settings > Agents: agent catalog (model, engine, effort, access, prompt), which agent runs each
+// pipeline stage and creation of custom agents. Every change is saved at once in the chosen scope
+// (this repo or all of them).
 
 import { api, projectApi } from './api.js';
 import { h, clear, toast } from './dom.js';
@@ -8,7 +8,7 @@ import { currentProjectId } from './workbenches.js';
 
 let data = null;
 let localModels = [];
-// Ámbito compartido con el resto de Ajustes ("Todos los repos" / "Solo este repo").
+// Scope shared with the rest of Settings ("Todos los repos" / "Solo este repo").
 let scope = window.optimiaSettingsScope === 'project' ? 'project' : 'global';
 window.addEventListener('optimia:settings-scope', (e) => {
   scope = e.detail === 'project' ? 'project' : 'global';
@@ -154,7 +154,7 @@ function renderAgent(agent) {
     access: agent.access,
     prompt: agent.prompt,
     description: agent.description,
-    // Como en los Ajustes de macOS, cada cambio se aplica al momento.
+    // As in macOS Settings, every change applies at once.
     save: (fields) => mutate(() => api.patch(url(`/${agent.id}`), { scope, ...fields }), `${agent.name}: guardado`)
   };
   const card = h('div', { class: `agent-card${agent.enabled ? '' : ' disabled'}`, dataset: { agent: agent.id } });
@@ -193,7 +193,7 @@ function renderAgent(agent) {
       onchange: (e) => {
         draft.engine = e.target.value;
         draft.model = draft.engine === 'claude' ? 'default' : localModels[0]?.name || '';
-        // Sin modelo local no hay nada que guardar todavía: primero hay que elegirlo.
+        // Without a local model there is nothing to save yet: one has to be chosen first.
         if (draft.engine === 'claude' || draft.model) draft.save({ engine: draft.engine, model: draft.model });
         else {
           modelSlot.replaceChildren(modelControl(agent, draft));
@@ -250,7 +250,7 @@ function renderAgent(agent) {
           rows: 6,
           'aria-label': `Prompt de rol de ${agent.name}`,
           oninput: (e) => (draft.prompt = e.target.value),
-          // El prompt se guarda al salir del campo (no en cada tecla).
+          // The prompt is saved when leaving the field (not on every keystroke).
           onchange: () => draft.save({ prompt: draft.prompt })
         },
         draft.prompt
@@ -380,8 +380,8 @@ async function open() {
 
 document.querySelector('.settings-nav-item[data-pane="agents"]')?.addEventListener('click', open);
 
-// Agentes y Supervision guardan cada cambio al momento: el "Guardar" general del
-// pie solo confundiria ahi, asi que se oculta mientras esos paneles estan abiertos.
+// Agents and Supervision save every change at once: a general "Guardar" in the footer would only
+// confuse there, so it is hidden while those panes are open.
 document.querySelectorAll('.settings-nav-item').forEach((item) =>
   item.addEventListener('click', () => {
     const footer = document.querySelector('#settings-overlay .settings-footer');

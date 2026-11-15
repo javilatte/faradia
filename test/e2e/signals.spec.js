@@ -1,5 +1,5 @@
 'use strict';
-/* global window */ // addInitScript y evaluate se ejecutan dentro del navegador
+/* global window */ // addInitScript and evaluate run inside the browser
 
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
@@ -7,10 +7,10 @@ const path = require('path');
 const { e2eTmp, trackErrors } = require('./helpers');
 
 const demo = () => path.join(e2eTmp(), 'repos', 'demo');
-// Secreto de mentira construido por partes: este fichero no contiene uno literal.
+// Fake secret built in pieces: this file does not contain one literally.
 const FAKE_GITHUB_TOKEN = 'ghp_' + 'x'.repeat(36);
 
-// Sustituye la API de notificaciones por una que solo las apunta (permiso concedido).
+// Replaces the notifications API with one that only records them (permission granted).
 async function captureNotifications(page) {
   await page.addInitScript(() => {
     window.__notifications = [];
@@ -25,7 +25,7 @@ async function captureNotifications(page) {
   });
 }
 
-test('un secreto en un fichero commiteable avisa en el dashboard y notifica', async ({ page }) => {
+test('a secret in a committable file shows up on the dashboard and notifies', async ({ page }) => {
   const errors = trackErrors(page);
   await captureNotifications(page);
   await page.goto('/?token=e2e-token#/dashboard');
@@ -39,12 +39,12 @@ test('un secreto en un fichero commiteable avisa en el dashboard y notifica', as
     .poll(() => page.evaluate(() => window.__notifications.map((n) => n.body).join('\n')))
     .toContain('config.js:1');
 
-  // Una clave que git NO ignora: aviso de fichero sensible expuesto y de secreto
+  // A key git does NOT ignore: exposed sensitive file signal and secret signal
   fs.writeFileSync(path.join(demo(), 'deploy.key'), `TOKEN=${FAKE_GITHUB_TOKEN}\n`);
   await expect(panel).toContainText('deploy.key (git NO lo ignora: se commitearía)', { timeout: 10_000 });
   await expect(panel).toContainText('Posible token de GitHub en deploy.key:1');
 
-  // Ignorada por git: sigue siendo sensible, pero su contenido no se escanea
+  // Ignored by git: still sensitive, but its content is not scanned
   fs.writeFileSync(path.join(demo(), '.gitignore'), 'secretos.pem\n');
   fs.writeFileSync(path.join(demo(), 'secretos.pem'), `TOKEN=${FAKE_GITHUB_TOKEN}\n`);
   await expect(panel).toContainText('Ha cambiado un fichero sensible: secretos.pem', { timeout: 10_000 });
@@ -55,7 +55,7 @@ test('un secreto en un fichero commiteable avisa en el dashboard y notifica', as
   expect(errors).toEqual([]);
 });
 
-test('Ajustes > Avisos y vigilancia: reglas, umbrales y lista de vigilancia', async ({ page }) => {
+test('Settings > Signals and watchlist: rules, thresholds and watchlist', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?token=e2e-token');
   await page.locator('#settings-button').click();
@@ -69,7 +69,7 @@ test('Ajustes > Avisos y vigilancia: reglas, umbrales y lista de vigilancia', as
   await page.getByRole('button', { name: 'Guardar lista' }).click();
   await expect(page.locator('.toast').last()).toContainText('Lista de vigilancia guardada');
 
-  // La regla nueva se aplica: un fichero de build/ (ignorado por git) se vigila
+  // The new rule applies: a file in build/ (ignored by git) is watched
   fs.appendFileSync(path.join(demo(), '.gitignore'), 'build/\n');
   fs.mkdirSync(path.join(demo(), 'build'), { recursive: true });
   await page.locator('#settings-close').click();
@@ -79,7 +79,7 @@ test('Ajustes > Avisos y vigilancia: reglas, umbrales y lista de vigilancia', as
   expect(errors).toEqual([]);
 });
 
-test('el modo compacto muestra una linea por repo y se actualiza en vivo', async ({ page }) => {
+test('the glance window shows one line per repo and updates live', async ({ page }) => {
   await page.goto('/?token=e2e-token');
   const [popup] = await Promise.all([page.waitForEvent('popup'), page.locator('#glance-button').click()]);
   await expect(popup.locator('.glance-line', { hasText: 'demo' })).toBeVisible();

@@ -24,10 +24,10 @@ function setup(t) {
   return { repo, ops: require('../../server/fs/fileOps') };
 }
 
-test('resolveRepoPath: nunca sale del repo ni toca .git', (t) => {
+test('resolveRepoPath: never leaves the repo or touches .git', (t) => {
   const { repo } = setup(t);
   assert.equal(resolveRepoPath(repo, 'src/a.js').rel, 'src/a.js');
-  assert.equal(resolveRepoPath(repo, '/src/a.js/').rel, 'src/a.js'); // barras de sobra
+  assert.equal(resolveRepoPath(repo, '/src/a.js/').rel, 'src/a.js'); // extra slashes
   assert.throws(() => resolveRepoPath(repo, '../fuera'), /sale del repo/);
   assert.throws(() => resolveRepoPath(repo, 'src/../../fuera'), /sale del repo/);
   assert.throws(() => resolveRepoPath(repo, '.git/config', { mustExist: false }), /\.git/);
@@ -38,7 +38,7 @@ test('resolveRepoPath: nunca sale del repo ni toca .git', (t) => {
   assert.throws(() => resolveRepoPath(repo, 'etc-link'), /fuera del repo/);
 });
 
-test('listDir y preview: carpetas primero, sin .git ni .optimia, y tipos de vista previa', (t) => {
+test('listDir and preview: folders first, without .git or .optimia, and preview kinds', (t) => {
   const { repo } = setup(t);
   fs.mkdirSync(path.join(repo, '.optimia'));
   const { entries } = listDir(repo, '');
@@ -76,11 +76,11 @@ test('rename, move y copy no sobrescriben y devuelven su deshacer', (t) => {
   assert.equal(ops.copy(repo, 'src/a.js', 'src').path, 'src/a (copia 2).js');
   const c = ops.copy(repo, 'src', '');
   assert.equal(c.path, 'src (copia)');
-  ops.undo(repo, c.undo); // deshacer una copia la manda a la papelera
+  ops.undo(repo, c.undo); // undoing a copy sends it to the trash
   assert.ok(!fs.existsSync(path.join(repo, 'src (copia)')));
 });
 
-test('papelera: borrar, listar, restaurar (sin pisar nada) y vaciar', (t) => {
+test('trash: delete, list, restore (without overwriting) and empty', (t) => {
   const { repo, ops } = setup(t);
   const { trashId, undo } = ops.trash(repo, 'src', { projectId: 'p' });
   assert.ok(!fs.existsSync(path.join(repo, 'src')));
@@ -102,7 +102,7 @@ test('papelera: borrar, listar, restaurar (sin pisar nada) y vaciar', (t) => {
   assert.throws(() => ops.restore('nope'), /papelera/);
 });
 
-test('moveAcross: si rename falla entre discos (EXDEV), copia y borra', (t) => {
+test('moveAcross: if rename fails across disks (EXDEV), copies and deletes', (t) => {
   const { repo, ops } = setup(t);
   const original = fs.renameSync;
   t.after(() => {

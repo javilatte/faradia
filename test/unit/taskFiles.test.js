@@ -8,7 +8,7 @@ const { execFileSync } = require('child_process');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 const { listFilesModifiedSince, resolveInside, readPreview, openWithSystem } = require('../../server/bridge/taskFiles');
 
-test('listFilesModifiedSince: incluye ficheros ignorados por git y omite dependencias', (t) => {
+test('listFilesModifiedSince: includes files ignored by git and skips dependencies', (t) => {
   const dir = mkTmpDir('taskfiles-list');
   t.after(() => rmTmpDir(dir));
   const since = Date.now() - 1000;
@@ -19,7 +19,7 @@ test('listFilesModifiedSince: incluye ficheros ignorados por git y omite depende
   assert.deepEqual(listFilesModifiedSince(dir, since), ['docs/seo.docx']);
 });
 
-test('resolveInside: no permite salir del worktree', (t) => {
+test('resolveInside: does not allow leaving the worktree', (t) => {
   const dir = mkTmpDir('taskfiles-resolve');
   t.after(() => rmTmpDir(dir));
   fs.writeFileSync(path.join(dir, 'a.md'), 'hola');
@@ -29,7 +29,7 @@ test('resolveInside: no permite salir del worktree', (t) => {
   assert.equal(resolveInside(dir, 'no-existe.md'), null);
 });
 
-test('readPreview: texto plano y html; tipos sin soporte se indican', (t) => {
+test('readPreview: plain text and html; unsupported types are flagged', (t) => {
   const dir = mkTmpDir('taskfiles-preview');
   t.after(() => rmTmpDir(dir));
   fs.writeFileSync(path.join(dir, 'a.md'), '# hola');
@@ -40,7 +40,7 @@ test('readPreview: texto plano y html; tipos sin soporte se indican', (t) => {
   assert.equal(readPreview(path.join(dir, 'c.bin')).kind, 'unsupported');
 });
 
-test('readPreview: extrae el texto de un docx', (t) => {
+test('readPreview: extracts the text of a docx', (t) => {
   const dir = mkTmpDir('taskfiles-docx');
   t.after(() => rmTmpDir(dir));
   fs.mkdirSync(path.join(dir, 'word'));
@@ -58,6 +58,6 @@ test('readPreview: extrae el texto de un docx', (t) => {
   assert.match(preview.content, /Hola & adios/);
 });
 
-test('openWithSystem: plataformas sin soporte fallan con mensaje claro', async () => {
+test('openWithSystem: unsupported platforms fail with a clear message', async () => {
   await assert.rejects(openWithSystem('/tmp/x', { platform: 'win32' }), /no hay forma de abrir ficheros en win32/);
 });

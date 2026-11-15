@@ -1,6 +1,6 @@
 'use strict';
 
-// Reloj, layout, mensajes del chat, adjuntos y eventos de Claude.
+// Clock, layout, chat messages, attachments and Claude events.
 
 let clockFormat = 'datetime';
 
@@ -16,8 +16,8 @@ function tickClock() {
   clockEl.textContent = `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${day}\u00A0\u00A0${time}`;
 }
 
-// Aplica tema y formato de reloj. "system" quita el atributo para seguir al sistema.
-// Texto que no cabe en una linea se desplaza de lado a lado al pasar el raton.
+// Applies the theme and clock format. "system" removes the attribute to follow the system. Text
+// that does not fit on one line scrolls side to side on hover.
 const marqueeFrames = new Map();
 
 function marqueeStart(el) {
@@ -55,7 +55,7 @@ document.addEventListener('mouseout', (e) => {
   if (el && !el.contains(e.relatedTarget)) marqueeStop(el);
 });
 
-// Separador entre chat y tareas: arrastrar cambia el ancho del chat y se recuerda en este navegador.
+// Divider between chat and tasks: dragging changes the chat width, remembered in this browser.
 const layoutEl = document.querySelector('.layout');
 const layoutSplitter = document.getElementById('layout-splitter');
 const chatPanelEl = document.getElementById('chat-panel');
@@ -70,7 +70,7 @@ try {
   const saved = Number(localStorage.getItem('optimia:chat-width'));
   if (saved >= CHAT_MIN) setChatWidth(saved);
 } catch {
-  /* sin localStorage: ancho por defecto */
+  /* no localStorage: default width */
 }
 
 layoutSplitter.addEventListener('pointerdown', (e) => {
@@ -88,7 +88,7 @@ layoutSplitter.addEventListener('pointerdown', (e) => {
     try {
       localStorage.setItem('optimia:chat-width', String(Math.round(chatPanelEl.getBoundingClientRect().width)));
     } catch {
-      /* sin persistencia */
+      /* no persistence */
     }
   };
   layoutSplitter.addEventListener('pointermove', onMove);
@@ -100,7 +100,7 @@ layoutSplitter.addEventListener('dblclick', () => {
   try {
     localStorage.removeItem('optimia:chat-width');
   } catch {
-    /* sin persistencia */
+    /* no persistence */
   }
 });
 

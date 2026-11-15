@@ -1,8 +1,8 @@
 'use strict';
 
-// Proyecto activo: el de ?p=<id> en la URL o, sin el, el proyecto desde el que se
-// lanzo optimia. Toda la vista de proyecto (chat, agentes, ajustes, terminal) habla
-// con la API de ese proyecto, y cambiar de proyecto recarga la vista con otro ?p=.
+// Active project: the one in ?p=<id> in the URL or, without it, the project optimia was launched
+// from. The whole project view (chat, agents, settings, terminal) talks to that project's API, and
+// switching projects reloads the view with another ?p=.
 const currentProjectId = new URLSearchParams(location.search).get('p') || null;
 let defaultProjectId = null;
 function apiPath(p) {
@@ -11,7 +11,7 @@ function apiPath(p) {
 function wsPayload(obj) {
   return JSON.stringify(currentProjectId ? { ...obj, projectId: currentProjectId } : obj);
 }
-// Un mensaje del servidor es de este proyecto si no lleva projectId o si coincide.
+// A server message belongs to this project if it has no projectId or if it matches.
 function isForThisProject(msg) {
   if (!msg.projectId) return true;
   const mine = currentProjectId || defaultProjectId;
@@ -77,8 +77,8 @@ async function populateChatModelSelect(settings) {
   }
 }
 
-// Cambio rápido desde el compositor: se guarda donde vive ese valor ahora (en el
-// repo si este lo cambia; si no, para todos los repos) y se dice dónde.
+// Quick change from the composer: stored where the value lives now (in the repo if it overrides it;
+// otherwise for all repos), and the user is told where.
 async function setAiField(field, value) {
   const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
   const own = (settings.layers?.overrides || []).includes(`ai.${field}`);
@@ -103,8 +103,8 @@ const connectionStatus = document.getElementById('connection-status');
 const modeLabel = document.getElementById('mode-label');
 const projectLabel = document.getElementById('project-label');
 
-// Un punto de color con el texto en tooltip: el estado de conexion no ocupa
-// espacio en la barra superior, solo aparece como texto si el usuario lo busca.
+// A colored dot with the text in a tooltip: the connection state takes no room in the toolbar and
+// only shows as text when the user looks for it.
 function setConnectionState(connected, label) {
   connectionStatus.classList.toggle('offline', !connected);
   connectionStatus.title = label;
@@ -154,8 +154,8 @@ const tasks = new Map();
 // per chat so a reload doesn't resurrect a dismissed card via replay).
 const chatAgents = new Map();
 
-// Pinta markdown saneado si el modulo ya cargo (web/js/app/markdown.js); si no,
-// texto plano. Guarda el texto original para poder anadir trozos despues.
+// Paints sanitized markdown if the module has loaded (web/js/app/markdown.js); otherwise plain
+// text. Keeps the original text so more chunks can be appended later.
 const pendingMarkdown = new Set();
 function paintMarkdown(el, text) {
   el._raw = text;

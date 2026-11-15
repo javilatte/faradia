@@ -1,6 +1,6 @@
 'use strict';
 
-// Arranque de la vista de proyecto.
+// Boot of the project view.
 
 loadInitialSettings();
 loadInitialTasks();

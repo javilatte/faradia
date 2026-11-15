@@ -10,7 +10,7 @@ function trackErrors(page) {
   return errors;
 }
 
-test('la vista de proyecto carga sin errores y conecta', async ({ page }) => {
+test('the project view loads without errors and connects', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?token=e2e-token');
   await expect(page.locator('#connection-status')).toHaveAttribute('title', 'Conectado', { timeout: 10_000 });
@@ -18,7 +18,7 @@ test('la vista de proyecto carga sin errores y conecta', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('el chat envia un mensaje y muestra la respuesta del agente', async ({ page }) => {
+test("the chat sends a message and shows the agent's answer", async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?token=e2e-token');
   await waitForChatReady(page);

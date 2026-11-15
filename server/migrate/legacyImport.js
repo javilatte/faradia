@@ -51,7 +51,7 @@ function readLegacyDefaults(projectRoot) {
   };
 }
 
-// Lo antiguo se importa como instrucciones y prohibiciones de ESTE repo.
+// Old settings are imported as THIS repo's instructions and no-go rules.
 function buildMigrationPreview(projectRoot) {
   const current = loadProjectLayer(projectRoot);
   const legacy = readLegacyDefaults(projectRoot);

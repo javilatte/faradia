@@ -38,8 +38,8 @@ function isGitRepo(dir) {
   }
 }
 
-// Excluye rutas de git en .git/info/exclude (local, sin versionar): optimia no
-// toca el .gitignore del repo, que es un fichero del proyecto y del equipo.
+// Excludes paths from git in .git/info/exclude (local, unversioned): optimia never touches the
+// repo's .gitignore, which belongs to the project and the team.
 function excludeFromGit(dir, entries) {
   let gitDir;
   try {
@@ -62,14 +62,14 @@ function excludeFromGit(dir, entries) {
   fs.writeFileSync(exclude, content);
 }
 
-// Crea .optimia/ (estado local de optimia, excluido de git).
+// Creates .optimia/ (optimia's local state, excluded from git).
 function ensureProjectDir(dir) {
   fs.mkdirSync(path.join(dir, '.optimia'), { recursive: true });
   if (isGitRepo(dir)) excludeFromGit(dir, ['/.optimia']);
 }
 
-// CodeGraph espera su base de datos en <repo>/.codegraph: se enlaza a
-// .optimia/.codegraph solo si el usuario activa CodeGraph.
+// CodeGraph expects its database in <repo>/.codegraph: it is linked to .optimia/.codegraph only
+// when the user enables CodeGraph.
 function ensureCodegraphLink(dir) {
   const codegraphLink = path.join(dir, '.codegraph');
   const codegraphReal = path.join(dir, '.optimia', '.codegraph');
@@ -183,7 +183,7 @@ async function main() {
   await setupCodegraph(projectRoot);
 
   const { start } = require('../server/index.js');
-  // OPTIMIA_NO_OPEN=1: no abrir el navegador (tests, servidores remotos por SSH).
+  // OPTIMIA_NO_OPEN=1: do not open the browser (tests, remote servers over SSH).
   await start({ projectRoot, port, open: !process.env.OPTIMIA_NO_OPEN });
 }
 

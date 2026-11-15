@@ -18,7 +18,7 @@ module.exports = defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'node test/e2e/serve.js',
-    // Sin token la API responde 401; la pagina estatica basta para saber que arranco.
+    // Without a token the API answers 401; the static page is enough to know it started.
     url: `http://127.0.0.1:${PORT}/`,
     env: { E2E_PORT: String(PORT) },
     reuseExistingServer: false,

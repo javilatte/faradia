@@ -1,8 +1,9 @@
-/* Capa de diseño según las Human Interface Guidelines de Apple para macOS.
-   Se carga la última: unifica ventana, barra lateral, barra de herramientas y
-   controles (botones push, menús desplegables, campos, controles segmentados)
-   sobre los tokens semánticos de styles.css. Las reglas llevan :root delante
-   para ganar a los estilos antiguos de cada contexto sin !important. */
+/*
+ * Design layer following Apple's Human Interface Guidelines for macOS. Loaded last: it unifies the
+ * window, sidebar, toolbar and controls (push buttons, pop-up menus, text fields, segmented
+ * controls) on top of the semantic tokens of styles.css. Rules are prefixed with :root to win over
+ * the older per-context styles without !important.
+ */
 
 /* ---------- Ventana ---------- */
 
@@ -40,7 +41,7 @@ body {
   background: var(--content-bg);
 }
 
-/* ---------- Barra lateral (material translúcido) ---------- */
+/* ---------- Sidebar (translucent material) ---------- */
 
 .sidebar {
   display: flex;
@@ -112,7 +113,7 @@ body {
 }
 :root .sidebar-item svg {
   flex-shrink: 0;
-  color: var(--accent); /* los iconos de la barra lateral siguen el color de acento */
+  color: var(--accent); /* sidebar icons follow the accent color */
 }
 .sidebar-item-label {
   min-width: 0;
@@ -154,7 +155,7 @@ body {
   color: var(--secondary-label);
 }
 
-/* ---------- Barra de herramientas ---------- */
+/* ---------- Toolbar ---------- */
 
 :root .toolbar {
   display: flex;
@@ -209,7 +210,7 @@ body {
   background: var(--red);
 }
 
-/* Botones sin borde de la barra de herramientas */
+/* Borderless toolbar buttons */
 :root .icon-button {
   width: 30px;
   height: 28px;
@@ -277,7 +278,7 @@ body {
   ):not(.segmented button):not(.primary):not(:disabled):active {
   background: var(--pressed-bg);
 }
-/* Botón por defecto: acento de fondo, uno por vista */
+/* Default button: accent background, one per view */
 :root
   :is(
     button.primary,
@@ -313,7 +314,7 @@ body {
   box-shadow: none;
 }
 
-/* Enlaces con forma de botón (acciones secundarias dentro del texto) */
+/* Button-shaped links (secondary actions inside text) */
 :root :is(.link-button, button.link) {
   border: none;
   background: none;
@@ -324,7 +325,7 @@ body {
   cursor: pointer;
 }
 
-/* ---------- Campos de texto y menús desplegables ---------- */
+/* ---------- Text fields and pop-up menus ---------- */
 
 :root
   :is(
@@ -357,7 +358,7 @@ body {
   border: 0.5px solid var(--control-border);
   border-radius: var(--radius-control);
   background-color: var(--control-bg);
-  /* Flechas de los menús desplegables de macOS */
+  /* macOS pop-up menu arrows */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23007aff'/%3E%3Cpath d='M5 6.5 8 4l3 2.5M5 9.5 8 12l3-2.5' fill='none' stroke='white' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 4px center;
@@ -372,7 +373,7 @@ body {
   opacity: 0.5;
 }
 
-/* Anillo de foco de macOS (teclado) */
+/* macOS focus ring (keyboard) */
 :root :is(button, select, a, [tabindex], summary):focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 0;
@@ -435,7 +436,7 @@ body {
   }
 }
 
-/* ---------- Vista "Chat y agentes": vista dividida, sin tarjetas flotantes ---------- */
+/* ---------- "Chat y agentes" view: a split view, no floating cards ---------- */
 
 :root .layout {
   padding: 0;
@@ -446,7 +447,7 @@ body {
   background: var(--separator);
   position: relative;
 }
-/* Zona de arrastre más ancha que la línea visible */
+/* Drag area wider than the visible line */
 :root .layout-splitter::before {
   left: -4px;
   right: -4px;
@@ -507,7 +508,7 @@ body {
   color: var(--secondary-label);
 }
 
-/* Tarjetas de tarea: cajas agrupadas sobre el fondo de la columna */
+/* Task cards: grouped boxes on the column background */
 :root .task-card {
   background: var(--content-bg);
   border: 0.5px solid var(--control-border);
@@ -654,7 +655,7 @@ body {
   font-size: var(--text-subheadline);
 }
 
-/* ---------- Ajustes: ventana de ajustes de macOS ---------- */
+/* ---------- Settings: the macOS settings window ---------- */
 
 :root .modal-overlay {
   background: rgba(0, 0, 0, 0.22);
@@ -696,7 +697,7 @@ body {
   font-weight: 600;
   border-bottom: 1px solid var(--separator);
 }
-/* Cada ajuste es una fila de un grupo, como en Ajustes del Sistema */
+/* Each setting is a row of a group, as in System Settings */
 :root .settings-pane > .settings-field,
 :root #general-pane > .settings-field {
   background: var(--group-bg);
@@ -716,13 +717,13 @@ body {
   color: var(--secondary-label);
 }
 
-/* ---------- Vistas (dashboard, cambios, timeline, archivos) ---------- */
+/* ---------- Views (dashboard, changes, timeline, files) ---------- */
 
 :root .view {
   background: var(--content-bg);
 }
 :root .view-header > h2:first-child {
-  /* La barra de herramientas ya muestra el título de la vista (HIG: un solo título) */
+  /* The toolbar already shows the view title (HIG: a single title) */
   position: absolute;
   width: 1px;
   height: 1px;
@@ -747,7 +748,7 @@ body {
   color: var(--secondary-label);
 }
 
-/* Listas: la fila seleccionada usa el color de selección con texto blanco */
+/* Lists: the selected row uses the selection color with white text */
 :root :is(.ch-file.active, .ch-file.selected, .fx-row.selected, .fx-row.active, .tl-commit.active) {
   background: var(--selection-bg);
   color: #fff;
@@ -756,7 +757,7 @@ body {
   color: inherit;
 }
 
-/* ---------- Barras de desplazamiento finas (estilo overlay) ---------- */
+/* ---------- Thin scrollbars (overlay style) ---------- */
 
 :root ::-webkit-scrollbar {
   width: 11px;
@@ -783,7 +784,7 @@ body {
   }
 }
 
-/* Ventanas estrechas: la barra lateral flota sobre el contenido */
+/* Narrow windows: the sidebar floats over the content */
 @media (max-width: 760px) {
   .app-window,
   .app-window.sidebar-hidden {
@@ -800,7 +801,7 @@ body {
   }
 }
 
-/* Columnas del tablero: una sola cuando el panel es estrecho */
+/* Board columns: a single one when the panel is narrow */
 #tasks-panel {
   container-type: inline-size;
 }
@@ -810,7 +811,7 @@ body {
   }
 }
 
-/* Ámbito de Ajustes: todos los repos / solo este repo */
+/* Settings scope: all repos / only this repo */
 :root .settings-content-header {
   display: flex;
   align-items: center;
@@ -872,7 +873,7 @@ body {
   min-width: 14em;
 }
 
-/* Tablero vacío y memoria del repo */
+/* Empty board and repo memory */
 .board-empty {
   display: flex;
   flex-direction: column;

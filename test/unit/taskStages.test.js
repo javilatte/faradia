@@ -33,7 +33,7 @@ test('firstStage: documentacion investiga primero, codigo planifica', () => {
   assert.equal(firstStage(undefined), 'plan');
 });
 
-test('validateDocOptions: exige formato valido y ruta relativa segura para editar', () => {
+test('validateDocOptions: requires a valid format and a safe relative path to edit', () => {
   assert.equal(validateDocOptions({ mode: 'new', format: 'md' }), null);
   assert.equal(validateDocOptions({ mode: 'new', format: 'pdf' }), 'formato no válido (md, html o docx)');
   assert.match(validateDocOptions({ mode: 'edit', format: 'md' }), /ruta relativa/);
@@ -44,7 +44,7 @@ test('validateDocOptions: exige formato valido y ruta relativa segura para edita
   assert.match(validateDocOptions({ mode: 'weird', format: 'md' }), /modo/);
 });
 
-test('canRun: una tarea pendiente puede lanzar plan o investigacion', () => {
+test('canRun: a pending task can start plan or research', () => {
   assert.equal(canRun(base, 'plan'), null);
   assert.equal(
     canRun({ ...base, status: 'in_progress' }, 'plan'),
@@ -52,7 +52,7 @@ test('canRun: una tarea pendiente puede lanzar plan o investigacion', () => {
   );
 });
 
-test('canRun: revision y commit solo cuando esta lista para revisar', () => {
+test('canRun: review and commit only when ready for review', () => {
   assert.equal(canRun({ ...base, status: 'ready_to_test' }, 'review'), null);
   assert.equal(canRun({ ...base, status: 'ready_to_test' }, 'commit'), null);
   assert.match(canRun(base, 'review'), /lista para revisar/);
@@ -65,7 +65,7 @@ test('canRun: responder exige pregunta de implementacion pendiente y texto no va
   assert.match(canRun(base, 'implement', { answer: 'hola' }), /no hay preguntas pendientes/);
 });
 
-test('canRun: redactar exige opciones de documento validas, o reintentar con las guardadas', () => {
+test('canRun: writing requires valid document options, or retrying with the stored ones', () => {
   const awaiting = { ...base, status: 'awaiting_input', pendingQuestion: { kind: 'doc-options', text: '' } };
   assert.equal(canRun(awaiting, 'write', { docOptions: { mode: 'new', format: 'html' } }), null);
   assert.match(canRun(awaiting, 'write', { docOptions: { mode: 'edit', format: 'md' } }), /ruta relativa/);
@@ -73,7 +73,7 @@ test('canRun: redactar exige opciones de documento validas, o reintentar con las
   assert.match(canRun(base, 'write', { docOptions: { mode: 'new', format: 'md' } }), /elegir antes/);
 });
 
-test('buildStagePrompt: implementacion incluye el plan y el aviso de bloqueo', () => {
+test('buildStagePrompt: implementation includes the plan and the blocking notice', () => {
   const task = { ...base, stageOutputs: { plan: 'PASO 1: crear el boton' } };
   const prompt = buildStagePrompt(task, 'implement');
   assert.match(prompt, /PASO 1: crear el boton/);
@@ -81,14 +81,14 @@ test('buildStagePrompt: implementacion incluye el plan y el aviso de bloqueo', (
   assert.match(prompt, /No hagas git commit/);
 });
 
-test('buildStagePrompt: redaccion en modo fragmentos no toca el documento existente', () => {
+test('buildStagePrompt: writing in fragments mode does not touch the existing document', () => {
   const prompt = buildStagePrompt({ ...base, type: 'documentation' }, 'write', {
     docOptions: { mode: 'fragments', format: 'md', targetPath: 'docs/guia.md' }
   });
   assert.match(prompt, /NO modifiques docs\/guia\.md/);
 });
 
-test('buildStagePrompt: revision y commit prohiben modificar el repositorio', () => {
+test('buildStagePrompt: review and commit forbid changing the repository', () => {
   assert.match(buildStagePrompt(base, 'review'), /No modifiques/);
   const commit = buildStagePrompt(base, 'commit');
   assert.match(commit, /No ejecutes git add, git commit/);
@@ -102,14 +102,14 @@ test('decideAfterStage: plan encadena implementacion automaticamente', () => {
   assert.equal(patch.stageOutputs.plan, 'plan final');
 });
 
-test('decideAfterStage: plan sin texto no encadena y deja error', () => {
+test('decideAfterStage: a plan without text does not chain and leaves an error', () => {
   const { patch, next } = decideAfterStage(base, 'plan', { text: '   ' });
   assert.equal(next, null);
   assert.equal(patch.status, 'pending');
   assert.match(patch.error, /no devolvio texto/);
 });
 
-test('decideAfterStage: implementacion bloqueada pasa a awaiting_input con la pregunta', () => {
+test('decideAfterStage: a blocked implementation moves to awaiting_input with the question', () => {
   const { patch, next } = decideAfterStage(base, 'implement', {
     text: 'Necesito el color?',
     hasChanges: false,
@@ -120,38 +120,38 @@ test('decideAfterStage: implementacion bloqueada pasa a awaiting_input con la pr
   assert.deepEqual(patch.pendingQuestion, { kind: 'implement-details', text: 'Necesito el color?' });
 });
 
-test('decideAfterStage: implementacion con cambios encadena la verificacion', () => {
+test('decideAfterStage: an implementation with changes chains the verification', () => {
   const { patch, next } = decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, phaseStatus: 'done' });
   assert.equal(next, 'verify');
   assert.equal(patch.status, 'pending');
   assert.equal(patch.error, null);
 });
 
-test('decideAfterStage: con el Verificador desactivado, la implementacion queda lista para revisar', () => {
+test('decideAfterStage: with the Verifier disabled, the implementation becomes ready for review', () => {
   const { patch, next } = decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, skip: ['verify'] });
   assert.equal(next, null);
   assert.equal(patch.status, 'ready_to_test');
 });
 
-test('decideAfterStage: implementacion sin cambios vuelve a pendiente con motivo', () => {
+test('decideAfterStage: an implementation without changes goes back to pending with a reason', () => {
   const { patch } = decideAfterStage(base, 'implement', { text: 'nada', hasChanges: false });
   assert.equal(patch.status, 'pending');
   assert.match(patch.error, /no se detectaron cambios/);
 });
 
-test('decideAfterStage: investigacion pide opciones de documento al usuario', () => {
+test('decideAfterStage: research asks the user for document options', () => {
   const { patch, next } = decideAfterStage(base, 'research', { text: 'notas' });
   assert.equal(next, null);
   assert.equal(patch.status, 'awaiting_input');
   assert.equal(patch.pendingQuestion.kind, 'doc-options');
 });
 
-test('decideAfterStage: redaccion termina lista para revisar', () => {
+test('decideAfterStage: writing ends ready for review', () => {
   const { patch } = decideAfterStage(base, 'write', { text: 'documento', hasChanges: false });
   assert.equal(patch.status, 'ready_to_test');
 });
 
-test('decideAfterStage: revision y commit no sacan la tarea de lista para revisar, aunque fallen', () => {
+test('decideAfterStage: review and commit keep the task ready for review, even if they fail', () => {
   const ok = decideAfterStage(base, 'review', { text: 'sin hallazgos' });
   assert.equal(ok.patch.status, 'ready_to_test');
   const failed = decideAfterStage(base, 'commit', { text: '', isError: true });
@@ -159,14 +159,14 @@ test('decideAfterStage: revision y commit no sacan la tarea de lista para revisa
   assert.match(failed.patch.error, /error/);
 });
 
-test('decideAfterStage: error de una etapa deja la tarea pendiente para reintentar', () => {
+test('decideAfterStage: a stage error leaves the task pending to retry', () => {
   const { patch, next } = decideAfterStage(base, 'plan', { text: 'x', isError: true });
   assert.equal(next, null);
   assert.equal(patch.status, 'pending');
   assert.match(patch.error, /reintentar/);
 });
 
-test('canRun: responder vale para plan e investigacion si la pregunta es de esa etapa', () => {
+test('canRun: answering works for plan and research if the question belongs to that stage', () => {
   const planQ = { ...base, status: 'awaiting_input', pendingQuestion: { kind: 'plan-details', text: '?' } };
   assert.equal(canRun(planQ, 'plan', { answer: 'el color es azul' }), null);
   assert.match(canRun(planQ, 'implement', { answer: 'hola' }), /no hay preguntas pendientes/);
@@ -175,45 +175,45 @@ test('canRun: responder vale para plan e investigacion si la pregunta es de esa 
   assert.match(canRun(researchQ, 'plan', { answer: 'x' }), /no hay preguntas pendientes/);
 });
 
-test('decideAfterStage: plan bloqueado pregunta al usuario y no encadena implementacion', () => {
+test('decideAfterStage: a blocked plan asks the user and does not chain the implementation', () => {
   const { patch, next } = decideAfterStage(base, 'plan', { text: 'Que proveedor de pagos?', phaseStatus: 'blocked' });
   assert.equal(next, null);
   assert.equal(patch.status, 'awaiting_input');
   assert.deepEqual(patch.pendingQuestion, { kind: 'plan-details', text: 'Que proveedor de pagos?' });
 });
 
-test('decideAfterStage: investigacion bloqueada pregunta antes de pedir opciones de documento', () => {
+test('decideAfterStage: blocked research asks before requesting document options', () => {
   const { patch } = decideAfterStage(base, 'research', { text: 'Para quien es el manual?', phaseStatus: 'blocked' });
   assert.equal(patch.status, 'awaiting_input');
   assert.equal(patch.pendingQuestion.kind, 'research-details');
 });
 
-test('answerPrompt: cada etapa recibe la continuacion que le corresponde', () => {
+test('answerPrompt: each stage gets its own continuation', () => {
   assert.match(answerPrompt('azul', 'plan'), /planificación/);
   assert.match(answerPrompt('azul', 'research'), /investigación/);
   assert.match(answerPrompt('azul', 'implement'), /implementación/);
   assert.match(answerPrompt('azul', 'plan'), /Respuesta del usuario/);
 });
 
-test('buildStagePrompt: planificacion e investigacion pueden preguntar con fase blocked', () => {
+test('buildStagePrompt: planning and research can ask with the blocked phase', () => {
   assert.match(buildStagePrompt(base, 'plan'), /"blocked"/);
   assert.match(buildStagePrompt({ ...base, type: 'documentation' }, 'research'), /"blocked"/);
 });
 
-test('stageTools: las etapas de lectura no pueden editar ni ejecutar npm', () => {
+test('stageTools: read stages can neither edit nor run npm', () => {
   const plan = stageTools('plan');
   assert.ok(plan.includes('Read'));
   assert.ok(!plan.includes('Edit') && !plan.includes('Write'));
   assert.ok(!plan.some((t) => t.startsWith('Bash(npm')));
 });
 
-test('stageTools: implementacion puede editar y usar Bash sin pedir permiso por comando', () => {
+test('stageTools: implementation can edit and use Bash without asking per command', () => {
   const impl = stageTools('implement');
   assert.ok(impl.includes('Edit') && impl.includes('Write'));
   assert.ok(impl.includes('Bash'));
 });
 
-test('stageDisallowed: bloquea commits, pushes y acciones destructivas, tambien con git -c', () => {
+test('stageDisallowed: blocks commits, pushes and destructive actions, also with git -c', () => {
   const deny = stageDisallowed();
   for (const rule of [
     'Bash(git commit*)',
@@ -226,7 +226,7 @@ test('stageDisallowed: bloquea commits, pushes y acciones destructivas, tambien 
   }
 });
 
-test('stageTools: las etapas de lectura pueden consultar tokensave pero no editarlo', () => {
+test('stageTools: read stages can query tokensave but not edit it', () => {
   const plan = stageTools('plan');
   assert.ok(plan.includes('mcp__tokensave__tokensave_context'));
   assert.ok(
@@ -234,7 +234,7 @@ test('stageTools: las etapas de lectura pueden consultar tokensave pero no edita
   );
 });
 
-test('approvalRule: Bash se aprueba solo para el comando literal', () => {
+test('approvalRule: Bash is approved only for the literal command', () => {
   assert.equal(approvalRule('Bash', 'git ls-files src'), 'Bash(git ls-files src)');
   assert.equal(approvalRule('Bash', 'rm -rf *'), null);
   assert.equal(
@@ -246,24 +246,24 @@ test('approvalRule: Bash se aprueba solo para el comando literal', () => {
   assert.equal(approvalRule('Bash', undefined), null);
 });
 
-test('approvalRule: herramientas no Bash y MCP usan su nombre; nombres raros se rechazan', () => {
+test('approvalRule: non-Bash and MCP tools use their name; odd names are rejected', () => {
   assert.equal(approvalRule('WebSearch'), 'WebSearch');
   assert.equal(approvalRule('mcp__tokensave__tokensave_context'), 'mcp__tokensave__tokensave_context');
   assert.equal(approvalRule('Bash)(x'), null);
   assert.equal(approvalRule('../etc'), null);
 });
 
-test('stageTools: etapa desconocida no concede nada', () => {
+test('stageTools: an unknown stage grants nothing', () => {
   assert.deepEqual(stageTools('nope'), []);
 });
 
-test('buildStagePrompt: todas las etapas prohiben redirigir a /dev/null', () => {
+test('buildStagePrompt: every stage forbids redirecting to /dev/null', () => {
   for (const stage of ['plan', 'implement', 'review', 'commit']) {
     assert.match(buildStagePrompt(base, stage), /2>&1/);
   }
 });
 
-test('ensureGitGuardHooks: los hooks de commit y push fallan siempre', () => {
+test('ensureGitGuardHooks: the commit and push hooks always fail', () => {
   const dir = mkTmpDir('gitguard');
   try {
     const hooksDir = ensureGitGuardHooks(dir);
@@ -319,7 +319,7 @@ test('stageDisallowed: read-only stages block the edit tools, edit stages do not
   assert.ok(stageDisallowed('plan').includes('Bash(git commit*)'));
 });
 
-test('onboard: estudio de solo lectura, informe, fuera del selector y sin datos de la sesión', () => {
+test('onboard: read-only study, report, hidden from the selector and without session details', () => {
   const { TASK_TYPES, buildStagePrompt, stageDisallowed } = require('../../server/bridge/taskStages');
   assert.equal(TASK_TYPES.onboard.internal, true);
   assert.equal(TASK_TYPES.onboard.reportOnly, true);

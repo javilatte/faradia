@@ -41,14 +41,13 @@ function localDefaults(ai) {
 }
 
 /**
- * `agent` (opcional): el agente del catalogo que ejecuta esta sesion (ver
- * server/agents/catalog.js). Si se pasa, su motor, modelo, effort y prompt de rol
- * mandan sobre los ajustes generales de IA, que quedan para el chat.
+ * `agent` (optional): the catalog agent that runs this session (see server/agents/catalog.js). When
+ * given, its engine, model, effort and role prompt win over the general AI settings, which are left
+ * for the chat.
  *
- * Modelos locales: el CLI de claude actual (verificado con 2.1.x) envia a
- * ANTHROPIC_BASE_URL el nombre de modelo tal cual, tambien nombres de Ollama como
- * "qwen2.5-coder:7b", asi que ya no hace falta el alias de ensureOllamaAlias y
- * cada agente puede usar un modelo local distinto a la vez.
+ * Local models: the current claude CLI (verified with 2.1.x) sends the model name as is to
+ * ANTHROPIC_BASE_URL, Ollama names like "qwen2.5-coder:7b" included, so the ensureOllamaAlias alias
+ * is no longer needed and each agent can use a different local model at the same time.
  */
 function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;
@@ -56,14 +55,14 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
   if (fs.existsSync(mcpConfigPath)) opts.mcpConfigPath = mcpConfigPath;
-  // Permisos de optimia (lista "Prohibido" global + del repo), sin escribir en el
-  // repo. Se regeneran en cada sesión: un cambio global llega a todos los repos.
+  // optimia's permissions (the global + repo "Prohibido" list), without writing to the repo.
+  // Regenerated on every session: a global change reaches every repo.
   if (Array.isArray(settings.preferences?.noGo)) syncClaudeSettings(projectRoot, settings.preferences.noGo);
   const settingsPath = taskId ? agentClaudeSettingsPath(projectRoot) : optimiaClaudeSettingsPath(projectRoot);
   if (fs.existsSync(settingsPath)) opts.settingsPath = settingsPath;
   if (taskId) {
-    // Una tarea no hereda los conectores de claude.ai del usuario, solo el MCP de
-    // optimia y el .mcp.json del repo (ver claudeProcess.js).
+    // A task does not inherit the user's claude.ai connectors, only optimia's MCP server and the
+    // repo's .mcp.json (see claudeProcess.js).
     opts.strictMcpConfig = true;
     const projectMcp = path.join(cwd, '.mcp.json');
     if (fs.existsSync(projectMcp)) opts.extraMcpConfigPaths = [projectMcp];
@@ -71,8 +70,8 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const parts = [];
   if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);
-  // Instrucciones de flujo de trabajo comunes a todos los repos y, después, las de
-  // este repo (que mandan si contradicen a las comunes).
+  // Workflow instructions shared by all repos and then this repo's (which win if they contradict
+  // the shared ones).
   const prefs = settings.preferences || {};
   if (prefs.globalInstructions !== undefined || prefs.projectInstructions !== undefined) {
     if (prefs.globalInstructions) parts.push(`## Instrucciones para todos los repos\n${prefs.globalInstructions}`);

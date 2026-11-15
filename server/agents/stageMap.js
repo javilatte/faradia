@@ -5,9 +5,9 @@ const path = require('path');
 const { STAGES } = require('../bridge/taskStages');
 const { loadAgents, globalAgentsDir, projectAgentsDir } = require('./catalog');
 
-// Que agente hace cada etapa. Por defecto, el de la tabla STAGES; se puede cambiar
-// para todos los proyectos (~/.config/optimia/agents/stages.json) o solo para uno
-// (<proyecto>/.optimia/agents/stages.json). El proyecto gana.
+// Which agent runs each stage. By default, the one in the STAGES table; it can be changed for every
+// project (~/.config/optimia/agents/stages.json) or for one
+// (<project>/.optimia/agents/stages.json). The project wins.
 
 const MAPPABLE = Object.keys(STAGES).filter((s) => STAGES[s].agent);
 
@@ -40,8 +40,8 @@ function loadStageMap(projectRoot) {
 }
 
 /**
- * Cambia el agente de una o varias etapas en un ambito. `null` vuelve al valor
- * heredado. Una etapa que edita no puede asignarse a un agente de solo lectura.
+ * Changes the agent of one or more stages in a scope. `null` goes back to the inherited value. A
+ * stage that edits cannot be assigned to a read-only agent.
  */
 function saveStageMap(projectRoot, scope, changes) {
   const agents = new Map(loadAgents(projectRoot).map((a) => [a.id, a]));
@@ -65,7 +65,7 @@ function saveStageMap(projectRoot, scope, changes) {
   return loadStageMap(projectRoot);
 }
 
-/** Agente que ejecuta `stage` de `task` en este proyecto (o null si no hay ninguno valido). */
+/** Agent that runs `stage` of `task` in this project (or null if there is no valid one). */
 function resolveStageAgent(projectRoot, task, stage) {
   const agents = loadAgents(projectRoot);
   if (stage === 'custom') return agents.find((a) => a.id === task.agentId) || null;
@@ -73,7 +73,7 @@ function resolveStageAgent(projectRoot, task, stage) {
   return agents.find((a) => a.id === id) || agents.find((a) => a.id === STAGES[stage]?.agent) || null;
 }
 
-/** Etapas opcionales que se saltan porque su agente esta desactivado. */
+/** Optional stages skipped because their agent is disabled. */
 function skippedStages(projectRoot) {
   const map = loadStageMap(projectRoot);
   const agents = new Map(loadAgents(projectRoot).map((a) => [a.id, a]));

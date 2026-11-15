@@ -2,15 +2,15 @@
 
 const { loadTasks } = require('../store/taskStore');
 
-// Metricas ligeras por repo, sin persistir: lineas +/- (del estado git), frecuencia
-// de cambios (lotes de ficheros por hora en las ultimas 24 h) y sesiones de agentes
-// (ficheros tocados y coste de cada etapa, de tasks.json).
+// Lightweight per-repo metrics, not persisted: +/- lines (from the git state), change frequency
+// (file batches per hour in the last 24 h) and agent sessions (files touched and cost of each
+// stage, from tasks.json).
 
 const HOUR = 60 * 60 * 1000;
 
 class Metrics {
   constructor() {
-    this.buckets = new Map(); // projectId -> Map(hourStartMs -> ficheros cambiados)
+    this.buckets = new Map(); // projectId -> Map(hourStartMs -> changed files)
   }
 
   recordActivity({ projectId, paths, at }) {
@@ -22,7 +22,7 @@ class Metrics {
     for (const k of b.keys()) if (k < hour - 24 * HOUR) b.delete(k);
   }
 
-  /** 24 valores: ficheros cambiados en cada una de las ultimas 24 horas (la ultima, la actual). */
+  /** 24 values: files changed in each of the last 24 hours (the last one is the current hour). */
   hourly(projectId, now = Date.now()) {
     const b = this.buckets.get(projectId) || new Map();
     const current = Math.floor(now / HOUR) * HOUR;

@@ -1,6 +1,6 @@
-// Timeline: feed cronologico de todo lo que pasa en los repos del workbench activo
-// (ficheros, commits, ramas, lista de vigilancia, agentes, avisos, cambios
-// huerfanos), con filtros, y el historial de commits de cada repo.
+// Timeline: chronological feed of everything that happens in the active workbench's repos (files,
+// commits, branches, watchlist, agents, signals, orphaned changes), with filters, and each repo's
+// commit history.
 
 import { api } from './api.js';
 import { h, clear, formatBytes } from './dom.js';
@@ -18,7 +18,7 @@ const KINDS = {
   signal: 'Avisos',
   orphan: 'Huérfanos'
 };
-// Etiqueta de una entrada suelta (los filtros usan el plural de KINDS).
+// Label of a single entry (filters use the plural from KINDS).
 const KIND_ONE = {
   files: 'Ficheros',
   commit: 'Commit',
@@ -78,7 +78,7 @@ function matches(e) {
     const paths = e.paths || (e.path ? [e.path] : []);
     if (!paths.some((p) => exts.includes(p.split('.').pop().toLowerCase()))) return false;
   }
-  return !filters.until; // con fecha final fija, lo nuevo no entra
+  return !filters.until; // with a fixed end date, new entries do not come in
 }
 
 function dayLabel(iso) {
@@ -350,7 +350,7 @@ function render() {
 
 on('timeline_entry', ({ entry }) => {
   if (!root) return;
-  // Un commit nuevo tambien entra en el historial del repo que se esta viendo.
+  // A new commit also goes into the history of the repo being viewed.
   if (entry.kind === 'commit' && entry.projectId === history.projectId) loadHistory();
   if (!matches(entry)) return;
   const i = entries.findIndex((e) => e.id === entry.id);

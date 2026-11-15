@@ -6,11 +6,10 @@ const crypto = require('crypto');
 const { dataDir } = require('../store/globalPaths');
 const { FsError, resolveRepoPath } = require('./explorer');
 
-// Operaciones de ficheros que pide el usuario (nunca el monitor): renombrar, copiar,
-// mover y borrar. Ninguna sobrescribe nada y todas se pueden deshacer:
-//   - borrar mueve a la papelera de optimia (~/.local/share/optimia/trash), con
-//     manifiesto para restaurar; nada se elimina de verdad hasta vaciarla;
-//   - cada operacion devuelve la operacion inversa (`undo`) para el boton Deshacer.
+// File operations requested by the user (never by the monitor): rename, copy, move and delete. None
+// overwrites anything and all can be undone:
+//   - delete moves to optimia's trash (~/.local/share/optimia/trash), with a manifest to restore; nothing is really removed until the trash is emptied;
+//   - every operation returns its inverse operation (`undo`) for the Undo button.
 
 function trashDir() {
   return path.join(dataDir(), 'trash');
@@ -35,8 +34,8 @@ function saveManifest(items) {
   fs.renameSync(tmp, manifestPath());
 }
 
-// rename que funciona entre discos distintos (el repo y la papelera pueden no estar
-// en el mismo sistema de ficheros): si falla con EXDEV, copia y borra.
+// rename that works across disks (the repo and the trash may not be on the same filesystem): on
+// EXDEV it copies and deletes.
 function moveAcross(from, to) {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   try {
@@ -77,7 +76,7 @@ function rename(root, rel, newName) {
   return { path: dest.rel, undo: { op: 'move', from: dest.rel, to: src.rel } };
 }
 
-/** Mueve `rel` dentro de la carpeta `destDir` (relativa; "" = raiz). */
+/** Moves `rel` into the folder `destDir` (relative; "" = root). */
 function move(root, rel, destDir) {
   const src = resolveRepoPath(root, rel, { allowRoot: false });
   const dir = resolveRepoPath(root, destDir || '');
@@ -91,7 +90,7 @@ function move(root, rel, destDir) {
   return { path: dest.rel, undo: { op: 'move', from: dest.rel, to: src.rel } };
 }
 
-/** Copia `rel` dentro de `destDir`; si el nombre existe, anade " (copia)", " (copia 2)"... */
+/** Copies `rel` into `destDir`; if the name exists, appends " (copia)", " (copia 2)"... */
 function copy(root, rel, destDir) {
   const src = resolveRepoPath(root, rel, { allowRoot: false });
   const dir = resolveRepoPath(root, destDir || '');
@@ -111,7 +110,7 @@ function copy(root, rel, destDir) {
   return { path: dest.rel, undo: { op: 'trash', path: dest.rel } };
 }
 
-/** Borra moviendo a la papelera de optimia. Devuelve el id del elemento en la papelera. */
+/** Deletes by moving to optimia's trash. Returns the id of the trash item. */
 function trash(root, rel, { projectId } = {}) {
   const src = resolveRepoPath(root, rel, { allowRoot: false });
   const id = crypto.randomUUID();
@@ -137,7 +136,10 @@ function listTrash({ repoRoot } = {}) {
     .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
 }
 
-/** Devuelve un elemento a su sitio; si alli ya hay algo, lo deja al lado con " (restaurado)". */
+/**
+ * Puts an item back where it was; if something is already there, it is placed next to it with "
+ * (restaurado)".
+ */
 function restore(trashId) {
   const items = loadManifest();
   const item = items.find((i) => i.id === trashId);
@@ -158,7 +160,7 @@ function restore(trashId) {
   return { path: dest.rel, repoRoot: item.repoRoot, undo: { op: 'trash', path: dest.rel } };
 }
 
-/** Elimina de verdad elementos de la papelera (todos, o los de un repo). */
+/** Really removes items from the trash (all of them, or a repo's). */
 function purge({ ids, repoRoot } = {}) {
   const items = loadManifest();
   const gone = items.filter((i) => (ids ? ids.includes(i.id) : !repoRoot || i.repoRoot === path.resolve(repoRoot)));
@@ -167,7 +169,7 @@ function purge({ ids, repoRoot } = {}) {
   return gone.length;
 }
 
-/** Aplica la operacion inversa que devolvio una operacion anterior. */
+/** Applies the inverse operation returned by an earlier operation. */
 function undo(root, descriptor, { projectId } = {}) {
   if (!descriptor || typeof descriptor !== 'object') throw new FsError(400, 'nada que deshacer');
   if (descriptor.op === 'move') {

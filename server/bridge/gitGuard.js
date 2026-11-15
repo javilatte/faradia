@@ -3,9 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-// Los commits y pushes los hace siempre el usuario. Las reglas de permiso
-// comparan texto, asi que un `git -c ... commit` se les escapa; estos hooks se
-// ejecutan siempre que git commitee o empuje, sea cual sea la sintaxis.
+// Commits and pushes are always the user's. Permission rules compare text, so a `git -c ... commit`
+// slips past them; these hooks run whenever git commits or pushes, whatever the syntax.
 const HOOKS = ['pre-commit', 'pre-merge-commit', 'pre-rebase', 'pre-push'];
 const MESSAGE = 'optimia: los commits, merges y pushes los hace el usuario, no un agente de tarea.';
 

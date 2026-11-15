@@ -7,7 +7,7 @@ const path = require('path');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 const store = require('../../server/store/settingsStore');
 
-// Cada test con su propia configuración global (además de setup.mjs).
+// Each test with its own global configuration (on top of setup.mjs).
 function isolated(t) {
   const cfg = mkTmpDir('settings-global');
   const repo = mkTmpDir('settings-repo');
@@ -23,7 +23,7 @@ function isolated(t) {
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 
-test('sin ficheros: los ajustes efectivos son los de por defecto y no se escribe nada', (t) => {
+test('no files: the effective settings are the defaults and nothing is written', (t) => {
   const repo = isolated(t);
   const s = store.loadSettings(repo);
   const d = store.defaultSettings();
@@ -35,7 +35,7 @@ test('sin ficheros: los ajustes efectivos son los de por defecto y no se escribe
   assert.equal(fs.existsSync(store.globalSettingsPath()), false);
 });
 
-test('un cambio global llega a todos los repos que no lo cambian', (t) => {
+test('a global change reaches every repo that does not override it', (t) => {
   const repo = isolated(t);
   const other = mkTmpDir('settings-repo2');
   t.after(() => rmTmpDir(other));
@@ -45,19 +45,19 @@ test('un cambio global llega a todos los repos que no lo cambian', (t) => {
   assert.equal(store.loadSettings(other).ui.theme, 'dark');
 });
 
-test('un repo cambia solo lo suyo; igualarlo al global, restablecer o pasarlo a todos lo quita', (t) => {
+test('a repo only changes its own; matching the global value, resetting or promoting removes the override', (t) => {
   const repo = isolated(t);
   store.saveGlobalSettings({ ai: { claude: { model: 'sonnet', effort: 'medium' } } });
 
   store.saveProjectSettings(repo, { ai: { claude: { model: 'opus' } } });
   let layers = store.loadSettingsLayers(repo);
   assert.equal(layers.effective.ai.claude.model, 'opus');
-  assert.equal(layers.effective.ai.claude.effort, 'medium', 'lo demás se hereda');
+  assert.equal(layers.effective.ai.claude.effort, 'medium', 'everything else is inherited');
   assert.deepEqual(layers.overrides, ['ai.claude.model']);
   assert.deepEqual(readJson(store.settingsPath(repo)).ai, { claude: { model: 'opus' } });
 
   store.saveProjectSettings(repo, { ai: { claude: { model: 'sonnet' } } });
-  assert.deepEqual(store.loadSettingsLayers(repo).overrides, [], 'igual al global = deja de ser un cambio');
+  assert.deepEqual(store.loadSettingsLayers(repo).overrides, [], 'equal to the global value = no longer an override');
 
   store.saveProjectSettings(repo, { ai: { claude: { effort: 'max' } } });
   store.saveProjectSettings(repo, {}, { reset: ['ai.claude.effort'] });
@@ -69,7 +69,7 @@ test('un repo cambia solo lo suyo; igualarlo al global, restablecer o pasarlo a 
   assert.deepEqual(store.loadSettingsLayers(repo).overrides, []);
 });
 
-test('instrucciones y "Prohibido" del repo se suman a las globales', (t) => {
+test('the repo\'s instructions and "Prohibido" rules are added to the global ones', (t) => {
   const repo = isolated(t);
   store.saveGlobalSettings({
     preferences: { instructions: 'Conventional Commits.', noGo: ['Read(**/.env*)'] }
@@ -84,7 +84,7 @@ test('instrucciones y "Prohibido" del repo se suman a las globales', (t) => {
   assert.deepEqual(p.noGo, ['Read(**/.env*)', 'Bash(rm -rf *)']);
 });
 
-test('un settings.json antiguo (copia completa) se migra: solo queda lo que difiere de lo por defecto', (t) => {
+test('an old settings.json (full copy) is migrated: only what differs from the defaults stays', (t) => {
   const repo = isolated(t);
   fs.mkdirSync(path.join(repo, '.optimia'), { recursive: true });
   const legacy = store.defaultSettings();
@@ -95,14 +95,14 @@ test('un settings.json antiguo (copia completa) se migra: solo queda lo que difi
   fs.writeFileSync(store.settingsPath(repo), JSON.stringify(legacy));
 
   const layers = store.loadSettingsLayers(repo);
-  assert.deepEqual(layers.overrides, ['ai.claude.model'], 'effort high era el valor por defecto: no es un cambio');
+  assert.deepEqual(layers.overrides, ['ai.claude.model'], 'effort high was the default: not an override');
   assert.equal(layers.project.preferences.instructions, 'Solo en este repo.');
   assert.deepEqual(layers.project.preferences.approvedTools, ['WebFetch']);
-  assert.equal(store.loadGlobalSettings().ui.theme, 'dark', 'la apariencia pasa a la capa global');
+  assert.equal(store.loadGlobalSettings().ui.theme, 'dark', 'the appearance moves to the global layer');
   assert.equal(readJson(store.settingsPath(repo)).version, 2);
 });
 
-test('PUT de compatibilidad: devolver los ajustes efectivos no copia lo global dentro del repo', (t) => {
+test('compatibility PUT: sending back the effective settings does not copy the global ones into the repo', (t) => {
   const repo = isolated(t);
   store.saveGlobalSettings({ preferences: { instructions: 'Global.', noGo: ['Read(**/.env*)'] } });
   store.saveProjectSettings(repo, { preferences: { instructions: 'Repo.' } });
@@ -115,7 +115,7 @@ test('PUT de compatibilidad: devolver los ajustes efectivos no copia lo global d
   assert.deepEqual(layers.overrides, ['ai.claude.effort']);
 });
 
-test('valores no válidos se descartan', (t) => {
+test('invalid values are dropped', (t) => {
   const repo = isolated(t);
   store.saveGlobalSettings({ ui: { theme: 'neon' }, ai: { mode: 'gpt' } });
   store.saveProjectSettings(repo, { preferences: { noGo: 'no-es-lista' } });

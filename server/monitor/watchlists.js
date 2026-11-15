@@ -4,9 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const { configDir } = require('../store/globalPaths');
 
-// Plano 2: por repo, patrones de ficheros que se vigilan aunque git los ignore
-// (secretos, configuraciones generadas, builds). Se guarda fuera de los repos, en
-// ~/.config/optimia/watchlists.json, indexado por la ruta real del repo.
+// Plane 2: per repo, file patterns watched even if git ignores them (secrets, generated
+// configuration, builds). Stored outside the repos, in ~/.config/optimia/watchlists.json, keyed by
+// the repo's real path.
 
 const DEFAULT_PATTERNS = ['.env', '.env.*', '*.pem', '*.key', '.npmrc'];
 

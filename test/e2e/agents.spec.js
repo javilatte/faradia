@@ -3,14 +3,14 @@
 const { test, expect } = require('@playwright/test');
 const { claudeCalls, argAfter, trackErrors, openProject, waitForChatReady } = require('./helpers');
 
-test('cada etapa usa el modelo de su agente, y el modelo se puede cambiar por proyecto', async ({ page }) => {
+test("each stage uses its agent's model, and the model can be changed per repo", async ({ page }) => {
   const errors = trackErrors(page);
   await openProject(page);
 
-  // Ajustes > Agentes: el Planificador pasa de opus a haiku solo en este proyecto
+  // Settings > Agents: the Planner goes from opus to haiku in this repo only
   await page.locator('#settings-button').click();
   await page.locator('.settings-nav-item[data-pane="agents"]').click();
-  // Solo este repo: el cambio no afecta a los demás
+  // Only this repo: the change does not affect the others
   await page.locator('#settings-scope [data-scope="project"]').click();
   const planner = page.locator('.agent-card[data-agent="planner"]');
   await expect(planner).toBeVisible();
@@ -18,7 +18,7 @@ test('cada etapa usa el modelo de su agente, y el modelo se puede cambiar por pr
   await expect(planner.locator('.wb-badge', { hasText: 'cambiado en este repo' })).toBeVisible();
   await page.locator('#settings-close').click();
 
-  // Tarea de codigo: plan (Planificador) -> implement (Implementador) -> verify (Verificador)
+  // Coding task: plan (Planner) -> implement (Implementer) -> verify (Verifier)
   await page.locator('#chat-kind-select').selectOption('coding');
   await page.locator('#chat-input').fill('Anadir un boton de exportar');
   await page.locator('#chat-input').press('Enter');
@@ -43,7 +43,7 @@ test('cada etapa usa el modelo de su agente, y el modelo se puede cambiar por pr
   expect(errors).toEqual([]);
 });
 
-test('un agente propio aparece en el selector de modo y ejecuta su tarea de una etapa', async ({ page }) => {
+test('a custom agent shows in the mode selector and runs its single-stage task', async ({ page }) => {
   const errors = trackErrors(page);
   await openProject(page);
   await page.locator('#settings-button').click();
@@ -72,7 +72,10 @@ test('un agente propio aparece en el selector de modo y ejecuta su tarea de una 
   expect(errors).toEqual([]);
 });
 
-test('una acción prohibida no para la etapa: el agente sigue y la tarjeta lo registra', async ({ page, request }) => {
+test('a forbidden action does not stop the stage: the agent goes on and the card records it', async ({
+  page,
+  request
+}) => {
   const errors = trackErrors(page);
   await openProject(page);
   await page.locator('#chat-kind-select').selectOption('coding');

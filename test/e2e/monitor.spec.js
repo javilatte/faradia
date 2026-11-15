@@ -7,7 +7,7 @@ const { e2eTmp, trackErrors } = require('./helpers');
 
 const demo = () => path.join(e2eTmp(), 'repos', 'demo');
 
-test('el dashboard refleja en vivo un cambio hecho fuera de optimia', async ({ page }) => {
+test('the dashboard reflects live a change made outside optimia', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?token=e2e-token#/dashboard');
   const card = page.locator('.dash-card', { hasText: 'demo' });
@@ -17,12 +17,13 @@ test('el dashboard refleja en vivo un cambio hecho fuera de optimia', async ({ p
   fs.writeFileSync(path.join(demo(), 'README.md'), '# demo\n\nlinea nueva desde fuera\n');
   await expect(card).toContainText('1 modificados', { timeout: 10_000 });
   await expect(card.locator('.dash-lines .add')).toHaveText('+2');
-  // Otros tests comparten el repo y dejan ficheros nuevos: basta con que README.md este entre ellos.
+  // Other tests share the repo and leave new files around: it is enough that README.md is among
+  // them.
   await expect(card.locator('.dash-file', { hasText: 'README.md' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test('el visor de cambios muestra el diff y se actualiza solo', async ({ page }) => {
+test('the changes viewer shows the diff and refreshes by itself', async ({ page }) => {
   const errors = trackErrors(page);
   fs.writeFileSync(path.join(demo(), 'README.md'), '# demo\n\nprimera version\n');
   await page.goto('/?token=e2e-token#/dashboard');
@@ -31,18 +32,18 @@ test('el visor de cambios muestra el diff y se actualiza solo', async ({ page })
   const diff = page.locator('.diff-scroll');
   await expect(diff.locator('.dl-add')).toContainText(['primera version']);
 
-  // El cambio llega sin recargar
+  // The change arrives without reloading
   fs.writeFileSync(path.join(demo(), 'README.md'), '# demo\n\nsegunda version\n');
   await expect(diff.locator('.dl-add')).toContainText(['segunda version'], { timeout: 10_000 });
 
-  // Lado a lado y fichero entero
+  // Side by side and whole file
   await page.getByRole('button', { name: 'Lado a lado' }).click();
   await expect(page.locator('.dl-row').first()).toBeVisible();
   await page.getByRole('button', { name: 'Fichero entero' }).click();
   await expect(diff).toContainText('# demo');
   await expect(page.locator('.diff-ruler .ruler-mark').first()).toBeAttached();
 
-  // Fichero nuevo sin seguimiento: aparece en la lista con todo anadido
+  // New untracked file: listed with everything added
   fs.writeFileSync(path.join(demo(), 'nuevo.txt'), 'hola\n');
   await page.locator('.changes-file', { hasText: 'nuevo.txt' }).click({ timeout: 10_000 });
   await expect(diff.locator('.dl-add')).toContainText(['hola']);

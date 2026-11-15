@@ -1,6 +1,6 @@
-// Vistas principales. "project" es la vista clasica (chat + agentes, en
-// web/js/project/); el resto son modulos que se registran aqui y se montan la
-// primera vez que se abren. La vista actual va en el hash: #/dashboard, #/timeline...
+// Main views. "project" is the classic view (chat + agents, in web/js/project/); the others are
+// modules that register here and are mounted the first time they open. The current view goes in the
+// hash: #/dashboard, #/timeline...
 
 const registry = new Map(); // name -> { label, mount, show, hide, mounted, el }
 let current = null;

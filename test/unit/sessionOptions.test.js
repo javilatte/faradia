@@ -123,7 +123,7 @@ test('buildSessionOptions: a task session uses strict MCP config and keeps the r
   });
   const settings = defaultSettings();
   const chat = buildSessionOptions(settings, projectRoot);
-  assert.equal(chat.strictMcpConfig, undefined, 'el chat conserva los conectores del usuario');
+  assert.equal(chat.strictMcpConfig, undefined, "the chat keeps the user's connectors");
 
   const bare = buildSessionOptions(settings, worktree, projectRoot, 'task-1');
   assert.equal(bare.strictMcpConfig, true);
@@ -144,15 +144,15 @@ test('buildSessionOptions: chat and agents get their own optimia settings file v
   t.after(() => rmTmpDir(projectRoot));
   syncClaudeSettings(projectRoot, []);
   const settings = defaultSettings();
-  settings.preferences.noGo = ['Read(**/.env*)']; // la sesión regenera la lista con los ajustes efectivos
+  settings.preferences.noGo = ['Read(**/.env*)']; // the session regenerates the list from the effective settings
   assert.equal(buildSessionOptions(settings, projectRoot).settingsPath, optimiaClaudeSettingsPath(projectRoot));
   const task = buildSessionOptions(settings, projectRoot, projectRoot, 'task-1');
   assert.equal(task.settingsPath, agentClaudeSettingsPath(projectRoot));
   const agentFile = JSON.parse(require('fs').readFileSync(task.settingsPath, 'utf8'));
-  assert.deepEqual(agentFile.permissions, { deny: ['Read(**/.env*)'] }, 'sin allow ni defaultMode para los agentes');
+  assert.deepEqual(agentFile.permissions, { deny: ['Read(**/.env*)'] }, 'no allow list or defaultMode for agents');
 });
 
-test('buildSessionOptions: instrucciones de todos los repos y luego las del repo, en apartados', (t) => {
+test("buildSessionOptions: instructions for all repos and then the repo's own, in sections", (t) => {
   const dir = mkTmpDir('sessopts-layers');
   t.after(() => rmTmpDir(dir));
   const settings = defaultSettings();

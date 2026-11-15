@@ -4,26 +4,25 @@ const fs = require('fs');
 const path = require('path');
 const { configDir } = require('./globalPaths');
 
-// Ajustes en dos capas, para que todos los repos trabajen igual y cada uno pueda
-// tener lo suyo:
+// Settings in two layers, so every repo works the same way and each one can still have its own:
 //
-//   global  ~/.config/optimia/settings.json   apariencia, modelo/effort, IA local,
-//                                              instrucciones de flujo de trabajo y
-//                                              lista "Prohibido" comunes a todos
-//   repo    <repo>/.optimia/settings.json      solo lo que ese repo cambia (ai.*),
-//                                              sus instrucciones y prohibiciones
-//                                              propias (se SUMAN a las globales) y
-//                                              los permisos aprobados en sus tareas
+//   global  ~/.config/optimia/settings.json   appearance, model/effort, local AI,
+//                                              workflow instructions and the
+//                                              "Prohibido" list shared by all repos
+//   repo    <repo>/.optimia/settings.json      only what that repo changes (ai.*),
+//                                              its own instructions and no-go rules
+//                                              (ADDED to the global ones) and the
+//                                              permissions approved in its tasks
 //
-// loadSettings() devuelve los ajustes efectivos de un repo (lo que usan las
-// sesiones); loadSettingsLayers() devuelve además cada capa, para Ajustes.
+// loadSettings() returns a repo's effective settings (what sessions use); loadSettingsLayers() also
+// returns each layer, for Settings.
 
 const THEMES = ['system', 'light', 'dark'];
 const CLOCKS = ['datetime', 'time'];
 const MODES = ['claude', 'local'];
 const PROJECT_VERSION = 2;
 
-// Campos de `ai` que un repo puede cambiar (rutas con puntos).
+// Fields of `ai` a repo can override (dotted paths).
 const AI_FIELDS = ['mode', 'claude.model', 'claude.effort', 'localAi.url', 'localAi.model', 'localAi.authHeader'];
 
 function defaultSettings() {
@@ -36,11 +35,11 @@ function defaultSettings() {
     },
     preferences: {
       instructions: '',
-      // Patrones "deny" de Claude Code, p. ej. "Read(**/.env*)" o "Bash(rm -rf *)".
-      // Se pasan a las sesiones de optimia con --settings (claudeSettingsSync.js).
+      // Claude Code "deny" patterns, e.g. "Read(**/.env*)" or "Bash(rm -rf *)". Passed to optimia's
+      // sessions with --settings (claudeSettingsSync.js).
       noGo: [],
-      // Permisos que el usuario aprobo desde una tarjeta de tarea (ver
-      // approvalRule en taskStages.js). Siempre del repo.
+      // Permissions the user approved from a task card (see approvalRule in taskStages.js). Always
+      // per repo.
       approvedTools: []
     }
   };
@@ -86,7 +85,7 @@ function deletePath(obj, dotted) {
     parents.push(next);
   }
   delete parents[parents.length - 1][keys[keys.length - 1]];
-  // Quita los objetos que se hayan quedado vacios.
+  // Removes objects left empty.
   for (let i = parents.length - 1; i > 0; i--) {
     if (Object.keys(parents[i]).length === 0) delete parents[i - 1][keys[i - 1]];
   }
@@ -134,7 +133,7 @@ function loadGlobalSettings() {
   return sanitizeGlobal(readJson(globalSettingsPath()));
 }
 
-/** Cambia la capa global. `patch` puede traer ui, ai y preferences.{instructions,noGo}. */
+/** Changes the global layer. `patch` may carry ui, ai and preferences.{instructions,noGo}. */
 function saveGlobalSettings(patch = {}) {
   const current = loadGlobalSettings();
   const next = {
@@ -155,7 +154,7 @@ function saveGlobalSettings(patch = {}) {
   return clean;
 }
 
-// ---------- capa del repo ----------
+// ---------- repo layer ----------
 
 function settingsPath(projectRoot) {
   return path.join(projectRoot, '.optimia', 'settings.json');
@@ -179,10 +178,9 @@ function sanitizeProject(raw) {
   };
 }
 
-// Las versiones anteriores guardaban en cada repo una copia completa de todo. Al
-// leerla por primera vez se convierte: se queda como cambio del repo solo lo que
-// difiere de los valores por defecto, y la apariencia pasa a la capa global si
-// esta aun no existe.
+// Older versions stored a full copy of everything in each repo. On first read it is converted: only
+// what differs from the defaults stays as a repo override, and the appearance moves to the global
+// layer if that layer does not exist yet.
 function migrateLegacy(projectRoot, legacy) {
   const d = defaultSettings();
   const ai = {};
@@ -210,9 +208,9 @@ function loadProjectLayer(projectRoot) {
 }
 
 /**
- * Cambia la capa del repo. `patch.ai` crea cambios propios del repo; un valor
- * igual al global deja de ser un cambio (vuelve a heredarse). `reset` quita
- * cambios ("ai.claude.model", "preferences.instructions"...).
+ * Changes the repo layer. `patch.ai` creates repo overrides; a value equal to the global one stops
+ * being an override (it is inherited again). `reset` removes overrides ("ai.claude.model",
+ * "preferences.instructions"...).
  */
 function saveProjectSettings(projectRoot, patch = {}, { reset = [] } = {}) {
   const global = loadGlobalSettings();
@@ -236,7 +234,7 @@ function saveProjectSettings(projectRoot, patch = {}, { reset = [] } = {}) {
   return clean;
 }
 
-/** Pasa cambios del repo a la capa global (y deja de ser un cambio del repo). */
+/** Moves repo overrides to the global layer (they stop being repo overrides). */
 function promoteToGlobal(projectRoot, fields) {
   const project = loadProjectLayer(projectRoot);
   const ai = {};
@@ -267,7 +265,7 @@ function effectiveFrom(global, project) {
     ui: global.ui,
     ai,
     preferences: {
-      // Las instrucciones del repo se suman a las de todos los repos.
+      // The repo's instructions are added to those for all repos.
       instructions: [globalInstructions, projectInstructions].filter(Boolean).join('\n\n'),
       globalInstructions,
       projectInstructions,
@@ -288,17 +286,17 @@ function loadSettingsLayers(projectRoot) {
 }
 
 /**
- * Compatibilidad con clientes que envian los ajustes completos (PUT /api/settings):
- * la apariencia va a la capa global; ai se guarda como cambio del repo solo donde
- * difiere de la global; instrucciones y "Prohibido" son las del repo.
+ * Compatibility with clients that send the full settings (PUT /api/settings): appearance goes to
+ * the global layer; ai is stored as a repo override only where it differs from the global value;
+ * instructions and "Prohibido" are the repo's own.
  */
 function saveSettings(projectRoot, full) {
   if (full?.ui) saveGlobalSettings({ ui: full.ui });
   const { global, effective } = loadSettingsLayers(projectRoot);
   const patch = { ai: full?.ai, preferences: {} };
   const prefs = full?.preferences || {};
-  // Si devuelven los valores efectivos tal cual (globales + del repo), no se
-  // copian las globales dentro del repo.
+  // If they send back the effective values unchanged (global + repo), the global ones are not
+  // copied into the repo.
   if (prefs.instructions !== undefined && prefs.instructions !== effective.preferences.instructions) {
     patch.preferences.instructions = prefs.instructions;
   }

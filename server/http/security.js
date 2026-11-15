@@ -2,14 +2,14 @@
 
 const crypto = require('crypto');
 
-// optimia escucha solo en 127.0.0.1, pero eso no basta: cualquier web abierta en el
-// navegador puede intentar llamar a http://127.0.0.1:<puerto> (CSRF) o apuntar un
-// dominio propio a 127.0.0.1 (DNS rebinding). Con la API pudiendo leer, mover y
-// borrar ficheros de varios repos, cada peticion pasa tres controles:
-//   1. Host: solo 127.0.0.1, localhost o [::1] con el puerto real.
-//   2. Origin: si el navegador lo manda, tiene que ser el propio optimia.
-//   3. Token: un secreto por arranque, en cabecera (MCP, tests) o en una cookie
-//      SameSite=Strict que se fija al abrir el enlace con ?token= que imprime optimia.
+// optimia only listens on 127.0.0.1, but that is not enough: any web page open in the browser can
+// try to call http://127.0.0.1:<port> (CSRF) or point a domain of its own at 127.0.0.1 (DNS
+// rebinding). Since the API can read, move and delete files in several repos, every request passes
+// three checks:
+//   1. Host: only 127.0.0.1, localhost or [::1] with the real port.
+//   2. Origin: if the browser sends it, it must be optimia itself.
+//   3. Token: a per-run secret, in a header (MCP, tests) or in a SameSite=Strict
+//      cookie set when opening the ?token= link optimia prints.
 
 const TOKEN_HEADER = 'x-optimia-token';
 
@@ -17,7 +17,7 @@ function createToken() {
   return crypto.randomBytes(24).toString('base64url');
 }
 
-// Las cookies no distinguen puertos: dos optimia abiertos a la vez necesitan nombres distintos.
+// Cookies do not tell ports apart: two optimia instances open at once need different names.
 function cookieName(port) {
   return `optimia_${port}`;
 }
@@ -30,7 +30,7 @@ function hostAllowed(req, port) {
   return allowedHosts(port).has(String(req.headers.host || '').toLowerCase());
 }
 
-// Sin cabecera Origin (curl, el servidor MCP) se acepta: el token sigue siendo obligatorio.
+// No Origin header (curl, the MCP server) is accepted: the token is still required.
 function originAllowed(req, port) {
   const origin = req.headers.origin;
   if (!origin) return true;
@@ -68,8 +68,8 @@ function isAuthorized(req, { token, port }) {
 }
 
 /**
- * Comprueba una peticion a la API o al WebSocket. Devuelve null si pasa, o
- * { status, error } para responder.
+ * Checks a request to the API or the WebSocket. Returns null if it passes, or { status, error } to
+ * answer with.
  */
 function checkApiRequest(req, { token, port }) {
   if (!hostAllowed(req, port)) return { status: 421, error: 'host no permitido' };

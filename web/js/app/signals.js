@@ -1,6 +1,6 @@
-// Avisos pasivos: notificaciones del sistema (API de Notificaciones del navegador)
-// y Ajustes > Supervision: reglas, umbrales, que avisos notificar, minutos para
-// cambios huerfanos y la lista de vigilancia (plano 2) del repo actual.
+// Passive signals: system notifications (the browser's Notifications API) and Settings >
+// Supervision: rules, thresholds, which signals notify, minutes for orphaned changes and the
+// current repo's watchlist (plane 2).
 
 import { api } from './api.js';
 import { h, clear, toast } from './dom.js';
@@ -47,7 +47,7 @@ function notify(title, body, tag) {
       location.hash = '#/timeline';
     };
   } catch {
-    /* algunos navegadores solo permiten notificaciones desde un service worker */
+    /* some browsers only allow notifications from a service worker */
   }
 }
 

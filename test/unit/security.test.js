@@ -8,7 +8,7 @@ const PORT = 4321;
 const TOKEN = 'secret-token';
 const req = (headers) => ({ headers });
 
-test('hostAllowed: solo loopback con el puerto real', () => {
+test('hostAllowed: only loopback with the real port', () => {
   assert.equal(security.hostAllowed(req({ host: `127.0.0.1:${PORT}` }), PORT), true);
   assert.equal(security.hostAllowed(req({ host: `localhost:${PORT}` }), PORT), true);
   assert.equal(security.hostAllowed(req({ host: `[::1]:${PORT}` }), PORT), true);
@@ -17,7 +17,7 @@ test('hostAllowed: solo loopback con el puerto real', () => {
   assert.equal(security.hostAllowed(req({}), PORT), false);
 });
 
-test('originAllowed: sin Origin se acepta; con Origin solo el propio optimia', () => {
+test('originAllowed: no Origin is accepted; with Origin only optimia itself', () => {
   assert.equal(security.originAllowed(req({}), PORT), true);
   assert.equal(security.originAllowed(req({ origin: `http://127.0.0.1:${PORT}` }), PORT), true);
   assert.equal(security.originAllowed(req({ origin: 'https://evil.example' }), PORT), false);
@@ -25,7 +25,7 @@ test('originAllowed: sin Origin se acepta; con Origin solo el propio optimia', (
   assert.equal(security.originAllowed(req({ origin: 'null' }), PORT), false);
 });
 
-test('isAuthorized: token por cabecera o por la cookie de este puerto', () => {
+test("isAuthorized: token in a header or in this port's cookie", () => {
   const opts = { token: TOKEN, port: PORT };
   assert.equal(security.isAuthorized(req({ 'x-optimia-token': TOKEN }), opts), true);
   assert.equal(security.isAuthorized(req({ cookie: `a=1; optimia_${PORT}=${TOKEN}` }), opts), true);
@@ -34,7 +34,7 @@ test('isAuthorized: token por cabecera o por la cookie de este puerto', () => {
   assert.equal(security.isAuthorized(req({}), opts), false);
 });
 
-test('checkApiRequest: devuelve el primer control que falla', () => {
+test('checkApiRequest: returns the first check that fails', () => {
   const opts = { token: TOKEN, port: PORT };
   const ok = { host: `127.0.0.1:${PORT}`, 'x-optimia-token': TOKEN };
   assert.equal(security.checkApiRequest(req(ok), opts), null);
@@ -43,14 +43,14 @@ test('checkApiRequest: devuelve el primer control que falla', () => {
   assert.equal(security.checkApiRequest(req({ host: ok.host }), opts).status, 401);
 });
 
-test('sessionCookie: HttpOnly y SameSite=Strict, con el nombre del puerto', () => {
+test('sessionCookie: HttpOnly and SameSite=Strict, named after the port', () => {
   const cookie = security.sessionCookie(TOKEN, PORT);
   assert.match(cookie, new RegExp(`^optimia_${PORT}=`));
   assert.match(cookie, /HttpOnly/);
   assert.match(cookie, /SameSite=Strict/);
 });
 
-test('createToken: aleatorio y suficientemente largo', () => {
+test('createToken: random and long enough', () => {
   const a = security.createToken();
   const b = security.createToken();
   assert.notEqual(a, b);

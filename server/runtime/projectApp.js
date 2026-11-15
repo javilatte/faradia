@@ -1,7 +1,7 @@
 'use strict';
 
-// HTTP API de un proyecto (todo lo que cuelga de /api/projects/:id/...).
-// Recibe el proyecto como parametro: un mismo servidor sirve varios proyectos.
+// HTTP API of one project (everything under /api/projects/:id/...). Takes the project as a
+// parameter: one server serves several projects.
 const fs = require('fs');
 const path = require('path');
 const {
@@ -39,8 +39,7 @@ const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
 const { isKnownType, TASK_TYPES } = require('../bridge/taskStages');
 
-// Quita lo que no es la memoria: una envoltura ```markdown y un preámbulo antes
-// del primer apartado.
+// Strips what is not the memory: a ```markdown wrapper and any preamble before the first section.
 function memoryFromOutput(text) {
   let out = String(text || '').trim();
   const fenced = /^```(?:markdown|md)?\n([\s\S]*?)\n```$/.exec(out);
@@ -63,11 +62,11 @@ function createApp(
       return sendJson(res, 200, { ok: true, projectRoot, claude: claudeCheck });
     }
 
-    // Ajustes efectivos del repo (global + repo) y, en `layers`, cada capa y los
-    // campos que el repo cambia.
+    // The repo's effective settings (global + repo) and, in `layers`, each layer and the fields the
+    // repo overrides.
     const settingsView = () => {
       const { global, project, effective, overrides } = loadSettingsLayers(projectRoot);
-      // La lista "Prohibido" efectiva es la que reciben las sesiones de optimia.
+      // The effective "Prohibido" list is the one optimia's sessions receive.
       syncClaudeSettings(projectRoot, effective.preferences.noGo);
       return { ...effective, layers: { global, project, overrides } };
     };
@@ -76,7 +75,7 @@ function createApp(
       return sendJson(res, 200, settingsView());
     }
 
-    // Compatibilidad: ajustes completos (ver saveSettings en settingsStore.js).
+    // Compatibility: full settings (see saveSettings in settingsStore.js).
     if (url.pathname === '/api/settings' && req.method === 'PUT') {
       const body = await readJsonBody(req).catch(() => null);
       if (!body) return sendJson(res, 400, { error: 'invalid JSON body' });
@@ -84,9 +83,10 @@ function createApp(
       return sendJson(res, 200, settingsView());
     }
 
-    // PATCH /api/settings {scope: 'global'|'project', ui?, ai?, preferences?, reset?: [campo], promote?: [campo]}
-    //   global: cambia lo que comparten todos los repos
-    //   project: cambia solo este repo (reset vuelve a heredar; promote lo pasa a todos)
+    // PATCH /api/settings {scope: 'global'|'project', ui?, ai?, preferences?, reset?: [field],
+    // promote?: [field]}
+    //   global: changes what all repos share
+    //   project: changes only this repo (reset inherits again; promote applies it to all)
     if (url.pathname === '/api/settings' && req.method === 'PATCH') {
       const body = await readJsonBody(req).catch(() => null);
       if (!body || !['global', 'project'].includes(body.scope)) {
@@ -189,8 +189,8 @@ function createApp(
       return sendJson(res, 201, task);
     }
 
-    // POST /api/tasks/:id/run { stage, answer?, docOptions? } lanza una etapa
-    // (revision final, preparar commit, responder una pregunta, redactar...).
+    // POST /api/tasks/:id/run { stage, answer?, docOptions? } starts a stage (final review, commit
+    // message, answering a question, writing...).
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/run') && req.method === 'POST') {
       const taskId = url.pathname.split('/')[3];
       const body = await readJsonBody(req).catch(() => null);
@@ -276,8 +276,8 @@ function createApp(
       return sendJson(res, 200, listLocalBranches(projectRoot));
     }
 
-    // "Conocer este repo": la memoria que propuso el agente pasa a ser la del repo
-    // (la anterior queda en .optimia/memory.prev.md por si hay que recuperarla).
+    // "Conocer este repo": the memory the agent proposed becomes the repo's memory (the previous
+    // one stays in .optimia/memory.prev.md in case it is needed).
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/apply-memory') && req.method === 'POST') {
       const taskId = url.pathname.split('/')[3];
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
@@ -293,7 +293,7 @@ function createApp(
       return sendJson(res, 200, updateTask(projectRoot, taskId, { memoryApplied: new Date().toISOString() }));
     }
 
-    // Commit y fusion son acciones del usuario (desde su tarjeta), nunca de un agente.
+    // Commit and merge are user actions (from the task card), never an agent's.
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/commit') && req.method === 'POST') {
       const taskId = url.pathname.split('/')[3];
       const body = await readJsonBody(req).catch(() => null);
@@ -305,7 +305,7 @@ function createApp(
       if (!message) return sendJson(res, 400, { error: 'el mensaje de commit no puede estar vacío' });
       let sha;
       try {
-        // Solo los ficheros ignorados que el usuario marco, y solo si son de la tarea.
+        // Only the ignored files the user ticked, and only if they belong to the task.
         const outputs = new Set(task.outputFiles || []);
         const includeIgnored = (Array.isArray(body?.includeIgnored) ? body.includeIgnored : []).filter((f) =>
           outputs.has(f)
@@ -336,7 +336,7 @@ function createApp(
       }
       const files = filesChangedBy(projectRoot, merge.sha, merge.before);
       log.info('task.merge', { taskId, into: task.baseBranch, sha: merge.sha, fastForward: merge.fastForward, files });
-      // Ya integrada: fuera el worktree y la rama, como "Delete branch" tras un PR.
+      // Already merged: remove the worktree and the branch, like "Delete branch" after a PR.
       onTaskDeleted?.(taskId);
       let cleaned = true;
       try {

@@ -1,10 +1,10 @@
 'use strict';
 
-// Compositor: modo chat/tarea, ramas y pestanas de chats.
+// Composer: chat/task mode, branches and chat tabs.
 
-// Modo del chat: "chat" es una conversacion normal; el resto convierte cada
-// mensaje en una tarea con su pipeline de agentes (ver server/bridge/taskStages.js).
-// "custom:<id>" lanza una tarea de una sola etapa con un agente propio.
+// Chat mode: "chat" is a normal conversation; every other mode turns each message into a task with
+// its agent pipeline (see server/bridge/taskStages.js). "custom:<id>" starts a single-stage task
+// with a custom agent.
 const CHAT_KIND_LABEL = {
   coding: 'de código',
   bugfix: 'de bug',
@@ -15,7 +15,7 @@ const CHAT_KIND_LABEL = {
 const chatKindSelect = document.getElementById('chat-kind-select');
 chatKindSelect.value = localStorage.getItem('optimia:chat-kind') || 'chat';
 
-// Rellena el selector de modo con los tipos de tarea y los agentes propios activos.
+// Fills the mode selector with the task types and the enabled custom agents.
 async function loadTaskKinds() {
   const data = await fetch(apiPath('/api/agents')).then((r) => r.json());
   setAgentCatalog(data);
@@ -64,7 +64,7 @@ async function loadTaskBranches() {
   taskBaseSelect.value = branches.includes(saved) ? saved : current;
 }
 
-// Antes de enviar: que etapas tendra la tarea y que agente y modelo hara cada una.
+// Before sending: which stages the task will have and which agent and model will run each one.
 const taskPlanRow = document.getElementById('task-plan-row');
 function renderTaskPlan() {
   taskPlanRow.replaceChildren();
@@ -154,7 +154,7 @@ async function createTaskFromChat(kind, text) {
   );
 }
 
-// Avisa en la conversacion cuando una tarea lanzada desde ella necesita al usuario.
+// Tells the conversation when a task started from it needs the user.
 function notifyTaskInChat(task, prevStatus) {
   if (!task.chatId || task.chatId !== currentChatId || prevStatus === task.status) return;
   if (task.status === 'awaiting_input') {

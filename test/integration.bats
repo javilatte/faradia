@@ -6,7 +6,7 @@
 OPTIMIA_BIN="${BATS_TEST_DIRNAME}/../bin/optimia"
 
 setup() {
-    # Estado global de optimia (workbenches, timeline) en una carpeta temporal, nunca en el HOME real.
+    # optimia's global state (workbenches, timeline) in a temporary folder, never in the real HOME.
     export XDG_CONFIG_HOME=$(mktemp -d)
     export XDG_DATA_HOME=$(mktemp -d)
     export OPTIMIA_NO_UPDATE_CHECK=1
@@ -72,14 +72,14 @@ teardown() {
     [[ "$output" == "true" ]]
 }
 
-@test "API sin token: responde 401" {
+@test "API without a token: answers 401" {
     [ -n "$PORT" ]
     run node -e "fetch('http://127.0.0.1:$PORT/api/settings').then(r=>console.log(r.status))"
     [ "$status" -eq 0 ]
     [[ "$output" == "401" ]]
 }
 
-@test "API con un Host ajeno (DNS rebinding): responde 421" {
+@test "API with a foreign Host (DNS rebinding): answers 421" {
     [ -n "$PORT" ]
     run curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example:1234' -H 'X-Optimia-Token: bats-token' "http://127.0.0.1:$PORT/api/settings"
     [ "$status" -eq 0 ]

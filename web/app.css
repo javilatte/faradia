@@ -1,5 +1,7 @@
-/* Estilos de la carcasa (workbenches, navegacion) y de las vistas nuevas.
-   Usa los mismos tokens que styles.css (--bg, --panel, --accent...). */
+/*
+ * Styles of the shell (workbenches, navigation) and the new views. Uses the same tokens as
+ * styles.css (--bg, --panel, --accent...).
+ */
 
 :root {
   --ok: var(--green);
@@ -20,12 +22,12 @@
   }
 }
 
-/* Varias clases fijan display (grid, flex): el atributo hidden debe ganar siempre. */
+/* Several classes set display (grid, flex): the hidden attribute must always win. */
 [hidden] {
   display: none !important;
 }
 
-/* ---- barra superior: selector de workbench/repo y navegacion ---- */
+/* ---- workbench/repo selector and navigation ---- */
 
 .wb-switcher {
   display: flex;
@@ -73,7 +75,7 @@
   outline-offset: 1px;
 }
 
-/* ---- contenedor de vistas ---- */
+/* ---- views container ---- */
 
 .views {
   display: contents;
@@ -106,7 +108,7 @@
   font-size: 13px;
 }
 
-/* ---- botones genericos de las vistas nuevas ---- */
+/* ---- generic buttons of the new views ---- */
 
 .view button,
 .wb-modal button,
@@ -171,7 +173,7 @@
   color: var(--danger);
 }
 
-/* ---- gestor de workbenches ---- */
+/* ---- workbench manager ---- */
 
 .wb-modal {
   width: min(820px, 94vw);
@@ -658,7 +660,7 @@
   margin-right: auto;
 }
 
-/* ---- Cambios (visor de diffs) ---- */
+/* ---- Changes (diff viewer) ---- */
 
 .view-changes {
   display: flex;
@@ -756,7 +758,7 @@
   display: flex;
 }
 .diff-scroll {
-  position: relative; /* offsetTop de las lineas relativo a este contenedor (mapa de cambios) */
+  position: relative; /* line offsetTop relative to this container (change map) */
   flex: 1;
   overflow: auto;
   font-family: var(--mono);
@@ -821,7 +823,7 @@
 .dl-empty {
   background: repeating-linear-gradient(135deg, transparent 0 6px, var(--panel) 6px 7px);
 }
-/* Colores de Shiki: una variable por tema, elegida con el tema de optimia. */
+/* Shiki colors: one variable per theme, picked with optimia's theme. */
 .dl-code span {
   color: var(--shiki-light);
 }
@@ -1091,7 +1093,7 @@
   }
 }
 
-/* ---- Avisos, actividad y modo compacto ---- */
+/* ---- Signals, activity and glance mode ---- */
 
 .dash-signals {
   background: var(--group-bg);

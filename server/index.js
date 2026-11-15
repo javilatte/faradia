@@ -20,10 +20,10 @@ const { git } = require('./monitor/gitState');
 const { loadPrefs, savePrefs } = require('./store/globalPrefs');
 const { ensureLaunchRepo } = require('./store/workbenchStore');
 
-// Rutas de la API:
-//   /api/health, /api/projects            globales
-//   /api/projects/:id/<resto>              API del proyecto :id (ver runtime/projectApp.js)
-//   /api/<resto>                           compatibilidad: API del proyecto de arranque
+// API routes:
+//   /api/health, /api/projects            global
+//   /api/projects/:id/<rest>               API of project :id (see runtime/projectApp.js)
+//   /api/<rest>                            compatibility: API of the launch project
 const PROJECT_ROUTE = /^\/api\/projects\/([a-f0-9]{12})(\/.*)$/;
 
 function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {}) {
@@ -36,12 +36,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   let signals = null;
   let metrics = null;
   let orphanTimer = null;
-  const taskStatus = new Map(); // taskId -> ultimo estado visto (para el timeline)
+  const taskStatus = new Map(); // taskId -> last state seen (for the timeline)
   let defaultProjectId = null;
   let actualPort = null;
 
   function sendToClients(payload) {
-    // Las tareas que cambian de estado tambien van al timeline.
+    // Tasks that change state go to the timeline too.
     if (payload.type === 'task_updated' && payload.task && timeline) {
       const prev = taskStatus.get(payload.task.id);
       taskStatus.set(payload.task.id, payload.task.status);
@@ -53,7 +53,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     }
   }
 
-  // Pasa la peticion a la API de un proyecto con la URL que esa API espera (/api/...).
+  // Hands the request to a project's API with the URL that API expects (/api/...).
   function forwardToProject(id, rest, req, res) {
     const rt = registry.runtime(id);
     if (!rt) return sendJson(res, 404, { error: 'proyecto desconocido' });
@@ -176,7 +176,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       res.writeHead(421, { 'Content-Type': 'text/plain' });
       return res.end('host no permitido');
     }
-    // El enlace que imprime optimia lleva ?token=: se guarda en una cookie y se quita de la URL.
+    // The link optimia prints carries ?token=: it is stored in a cookie and removed from the URL.
     const given = url.searchParams.get('token');
     if (given !== null) {
       const headers = { Location: url.pathname };
@@ -217,8 +217,8 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     });
   });
 
-  // Vigilancia (solo lectura) de los repos del workbench activo. Sus eventos van
-  // por el mismo WebSocket con tipos monitor_*; la vista de proyecto los ignora.
+  // Read-only supervision of the active workbench's repos. Its events go over the same WebSocket
+  // with monitor_* types; the project view ignores them.
   function activeRepos() {
     const view = workbenchesView(registry);
     const wb = view.workbenches.find((w) => w.id === view.activeWorkbenchId) || view.workbenches[0];
@@ -242,7 +242,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       metrics.recordActivity(e);
       const entry = monitor.entry(e.projectId);
       const root = e.taskId ? entry?.worktrees.get(e.taskId)?.path : entry?.path;
-      // Solo se buscan secretos en lo que git commitearia (no en ficheros ignorados como .env).
+      // Secrets are only searched for in what git would commit (not in ignored files such as .env).
       const committable = async (rel) => {
         try {
           await git(root, ['check-ignore', '-q', '--', rel]);

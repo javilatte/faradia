@@ -1,4 +1,4 @@
-// Utilidades minimas de DOM para las vistas nuevas, sin framework.
+// Minimal DOM helpers for the new views, no framework.
 
 // h('div', { class: 'x', onclick: fn }, 'texto', otroNodo)
 export function h(tag, attrs = {}, ...children) {
@@ -24,7 +24,7 @@ export function clear(el) {
   return el;
 }
 
-// "hace 3 min", "hace 2 h", o la fecha si es antiguo.
+// "hace 3 min", "hace 2 h", or the date if it is old.
 export function timeAgo(iso) {
   const t = typeof iso === 'number' ? iso : Date.parse(iso);
   if (!Number.isFinite(t)) return '';
@@ -42,7 +42,7 @@ export function formatBytes(n) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-// Aviso breve en la esquina; con `action` muestra un boton (p. ej. Deshacer).
+// Short notice in the corner; with `action` it shows a button (e.g. Undo).
 export function toast(message, { action, onAction, kind = 'info', ms = 5000 } = {}) {
   let host = document.getElementById('toast-host');
   if (!host) {

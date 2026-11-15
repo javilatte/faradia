@@ -61,11 +61,11 @@ test('checkForUpdate: no request when disabled, last good answer when offline', 
   const offline = await checkForUpdate({
     force: true,
     fetcher: async () => {
-      throw new Error('sin red');
+      throw new Error('offline');
     }
   });
   assert.equal(offline.latest, '99.0.0');
-  assert.equal(offline.error, 'sin red');
+  assert.equal(offline.error, 'offline');
   const older = await checkForUpdate({ force: true, fetcher: async () => '0.1.0' });
   assert.equal(older.updateAvailable, false);
 });

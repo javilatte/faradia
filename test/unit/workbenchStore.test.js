@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 
-// Cada test usa su propio XDG_CONFIG_HOME: nunca se toca el ~/.config real.
+// Each test uses its own XDG_CONFIG_HOME: the real ~/.config is never touched.
 function freshStore(t) {
   const cfg = mkTmpDir('wb-cfg');
   const prev = process.env.XDG_CONFIG_HOME;
@@ -24,7 +24,7 @@ function makeRepo(parent, rel) {
   return fs.realpathSync(dir);
 }
 
-test('ensureLaunchRepo: crea "Por defecto" con el repo y lo deja activo', (t) => {
+test('ensureLaunchRepo: creates "Por defecto" with the repo and makes it active', (t) => {
   const wb = freshStore(t);
   const repo = mkTmpDir('wb-launch');
   t.after(() => rmTmpDir(repo));
@@ -33,11 +33,11 @@ test('ensureLaunchRepo: crea "Por defecto" con el repo y lo deja activo', (t) =>
   assert.equal(store.workbenches[0].name, wb.DEFAULT_NAME);
   assert.deepEqual(store.workbenches[0].repos, [fs.realpathSync(repo)]);
   assert.equal(store.activeWorkbenchId, store.workbenches[0].id);
-  // Lanzar otra vez desde el mismo repo no lo duplica
+  // Launching again from the same repo does not duplicate it
   assert.equal(wb.ensureLaunchRepo(repo).workbenches[0].repos.length, 1);
 });
 
-test('crear, renombrar, activar y borrar workbenches', (t) => {
+test('create, rename, activate and delete workbenches', (t) => {
   const wb = freshStore(t);
   const a = wb.createWorkbench('Trabajo');
   const b = wb.createWorkbench('  Cliente X  ');
@@ -54,7 +54,7 @@ test('crear, renombrar, activar y borrar workbenches', (t) => {
   assert.throws(() => wb.renameWorkbench('nope', 'x'), /no encontrado/);
 });
 
-test('addRepos/removeRepo: sin duplicados, y un repo puede estar en varios workbenches', (t) => {
+test('addRepos/removeRepo: no duplicates, and a repo can be in several workbenches', (t) => {
   const wb = freshStore(t);
   const root = mkTmpDir('wb-repos');
   t.after(() => rmTmpDir(root));
@@ -73,15 +73,15 @@ test('addRepos/removeRepo: sin duplicados, y un repo puede estar en varios workb
   assert.throws(() => wb.addRepos(a.id, [path.join(root, 'no-existe')]), /no existe/);
 });
 
-test('scanForRepos: encuentra repos, no entra en ellos ni en carpetas pesadas, respeta la profundidad', (t) => {
+test('scanForRepos: finds repos, does not go into them or into heavy folders, respects the depth', (t) => {
   const wb = freshStore(t);
   const root = mkTmpDir('wb-scan');
   t.after(() => rmTmpDir(root));
   const a = makeRepo(root, 'a');
   const b = makeRepo(root, 'grupo/b');
   makeRepo(root, 'a/dentro'); // dentro de otro repo: no cuenta
-  makeRepo(root, 'node_modules/paquete'); // carpeta pesada: no se recorre
-  makeRepo(root, 'x/y/z/w/muy-hondo'); // mas alla de maxDepth=3
+  makeRepo(root, 'node_modules/paquete'); // heavy folder: not walked
+  makeRepo(root, 'x/y/z/w/muy-hondo'); // beyond maxDepth=3
   assert.deepEqual(wb.scanForRepos(root, { maxDepth: 3 }), [a, b].sort());
   assert.throws(() => wb.scanForRepos(path.join(root, 'nada')), /no existe/);
 });

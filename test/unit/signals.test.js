@@ -18,8 +18,8 @@ function prefsDir(t) {
   });
 }
 
-// Secretos de mentira construidos por partes: este fichero nunca contiene uno literal
-// (asi no salta el escaner de secretos del propio repo).
+// Fake secrets built in pieces: this file never contains one literally (so the repo's own secret
+// scanner does not fire).
 const fake = {
   aws: 'AKIA' + 'ABCDEFGHIJKLMNOP',
   github: 'ghp_' + 'a'.repeat(36),
@@ -27,7 +27,7 @@ const fake = {
   pem: '-----BEGIN RSA ' + 'PRIVATE KEY-----'
 };
 
-test('scanText: encuentra secretos conocidos con su linea y nunca devuelve el valor', () => {
+test('scanText: finds known secrets with their line and never returns the value', () => {
   const text = [
     'const a = 1;',
     `const key = "${fake.aws}";`,
@@ -46,11 +46,11 @@ test('scanText: encuentra secretos conocidos con su linea y nunca devuelve el va
     ]
   );
   assert.ok(!JSON.stringify(found).includes(fake.aws));
-  assert.equal(scanText('const password = "corta";').length, 0); // menos de 12 caracteres
+  assert.equal(scanText('const password = "corta";').length, 0); // fewer than 12 characters
   assert.equal(scanText('const apiKey = "abcdefghijklmnop";')[0].rule, 'generic-secret');
 });
 
-test('sensitiveRule y TEST_FILES', () => {
+test('sensitiveRule and TEST_FILES', () => {
   assert.equal(sensitiveRule('.env').severity, 'high');
   assert.equal(sensitiveRule('apps/api/.env.production').severity, 'high');
   assert.equal(sensitiveRule('.github/workflows/ci.yml').severity, 'medium');
@@ -60,7 +60,7 @@ test('sensitiveRule y TEST_FILES', () => {
   assert.ok(!TEST_FILES('src/testing.js'));
 });
 
-test('onActivity: sensible, tests y secretos solo en ficheros que git commitearia', async (t) => {
+test('onActivity: sensitive files, tests, and secrets only in files git would commit', async (t) => {
   prefsDir(t);
   const root = mkTmpDir('sig-root');
   t.after(() => rmTmpDir(root));
@@ -75,7 +75,7 @@ test('onActivity: sensible, tests y secretos solo en ficheros que git commiteari
     taskId: 'task-1',
     paths: ['.env', 'config.js', 'test/a.test.js'],
     root,
-    committable: async (rel) => rel !== '.env' // .env esta ignorado por git
+    committable: async (rel) => rel !== '.env' // .env is ignored by git
   });
   const rules = got.map((s) => `${s.rule}:${s.path}`).sort();
   assert.deepEqual(rules, ['secret:config.js', 'sensitive:.env', 'tests:test/a.test.js']);
@@ -85,20 +85,20 @@ test('onActivity: sensible, tests y secretos solo en ficheros que git commiteari
   assert.ok(!JSON.stringify(got).includes(fake.aws));
   const sensitive = got.find((s) => s.rule === 'sensitive');
   assert.match(sensitive.message, /agente/);
-  assert.equal(sensitive.exposed, false); // .env esta ignorado
+  assert.equal(sensitive.exposed, false); // .env is ignored
 
-  // Un .env que git NO ignora se marca como expuesto
+  // A .env that git does NOT ignore is flagged as exposed
   await engine.onActivity({ projectId: 'q', name: 'r', paths: ['.env'], root, committable: async () => true });
   const exposed = got.find((s) => s.projectId === 'q' && s.rule === 'sensitive');
   assert.equal(exposed.exposed, true);
   assert.match(exposed.message, /git NO lo ignora/);
 
-  // El mismo aviso no se repite enseguida
+  // The same signal is not repeated right away
   await engine.onActivity({ projectId: 'p', name: 'r', paths: ['.env'], root, committable: async () => false });
   assert.equal(got.filter((s) => s.rule === 'sensitive' && s.projectId === 'p').length, 1);
 });
 
-test('onState: borrado grande frente al estado anterior', (t) => {
+test('onState: large delete compared with the previous state', (t) => {
   prefsDir(t);
   const engine = new SignalEngine();
   const got = [];
@@ -117,7 +117,7 @@ test('onState: borrado grande frente al estado anterior', (t) => {
   assert.equal(got[1].severity, 'high');
 });
 
-test('preferencias: una regla desactivada no avisa', async (t) => {
+test('preferences: a disabled rule does not signal', async (t) => {
   prefsDir(t);
   const { savePrefs } = require('../../server/store/globalPrefs');
   savePrefs({ signals: { sensitive: false } });
@@ -128,7 +128,7 @@ test('preferencias: una regla desactivada no avisa', async (t) => {
   assert.equal(got.length, 0);
 });
 
-test('Metrics: frecuencia por hora y sesiones de agentes', (t) => {
+test('Metrics: hourly frequency and agent sessions', (t) => {
   const repoDir = mkTmpDir('met');
   t.after(() => rmTmpDir(repoDir));
   fs.mkdirSync(path.join(repoDir, '.optimia'));

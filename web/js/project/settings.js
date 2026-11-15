@@ -1,6 +1,6 @@
 'use strict';
 
-// Panel de ajustes, registro y cuenta de Claude.
+// Settings panel, log and Claude account.
 
 // The effort selector tunes the real `--effort` flag the bridge already
 // supports (server/bridge/claudeProcess.js) — not a model-name picker, since
@@ -59,9 +59,9 @@ const skillAddButton = document.getElementById('skill-add');
 
 let currentSettings = null;
 
-// "Ayuda con IA" buttons in Settings: ask the real `claude` CLI for a short
-// suggestion and drop it into the field, never auto-saved — the user still
-// reviews/edits it and clicks Guardar/Anadir/Crear themselves.
+// "Ayuda con IA" buttons in Settings: ask the real `claude` CLI for a short suggestion and drop it
+// into the field; the field then saves itself like any other edit, so the user can still review or
+// change it.
 document.querySelectorAll('.ai-assist-button').forEach((button) => {
   const row = button.closest('.ai-assist-row');
   const promptInput = row.querySelector('.ai-assist-prompt');
@@ -95,8 +95,8 @@ document.querySelectorAll('.ai-assist-button').forEach((button) => {
   });
 });
 
-// "Prohibido": la lista del ámbito elegido; en "Solo este repo" se ven también,
-// sin poder tocarlas, las de todos los repos (se suman).
+// "Prohibido": the list of the chosen scope; in "Solo este repo" the lists for all repos are shown
+// too, read-only (they add up).
 function nogoLayer() {
   return settingsScope === 'global'
     ? currentSettings.layers.global.preferences.noGo
@@ -230,7 +230,7 @@ skillAddButton.addEventListener('click', async () => {
   });
 });
 
-// Campos de IA que un repo puede cambiar: elemento -> ruta en los ajustes.
+// AI fields a repo can override: element -> path in the settings.
 const AI_INPUTS = [
   [claudeModelSelect, 'claude.model'],
   [claudeEffortSelect, 'claude.effort'],
@@ -246,8 +246,8 @@ const aiPatch = (dotted, value) => {
   return out;
 };
 
-// Debajo de cada campo: de dónde viene el valor y, si este repo lo cambia,
-// cómo volver a heredarlo o pasarlo a todos los repos.
+// Under each field: where the value comes from and, if this repo overrides it, how to inherit it
+// again or apply it to all repos.
 function renderFieldOrigin(el, dotted) {
   const field = el.closest('.settings-field');
   let note = field.querySelector('.field-origin');
@@ -258,7 +258,7 @@ function renderFieldOrigin(el, dotted) {
   }
   note.replaceChildren();
   const own = currentSettings.layers.overrides.includes(`ai.${dotted}`);
-  // El valor con la etiqueta que ve el usuario en el menú ("Alto", no "high").
+  // The value with the label the user sees in the menu ("Alto", not "high").
   const show = (v) => {
     if (v === '' || v === undefined) return '(vacío)';
     const opt = el.tagName === 'SELECT' ? [...el.options].find((o) => o.value === v) : null;
@@ -295,8 +295,8 @@ function populateSettingsForm() {
   const { layers } = currentSettings;
   uiThemeSelect.value = layers.global.ui?.theme || 'system';
   uiClockSelect.value = layers.global.ui?.clock || 'datetime';
-  // En "Todos los repos" se ve y se edita la capa global; en "Solo este repo",
-  // el valor efectivo (heredado o propio).
+  // In "Todos los repos" the global layer is shown and edited; in "Solo este repo", the effective
+  // value (inherited or own).
   const source = settingsScope === 'global' ? layers.global.ai : currentSettings.ai;
   for (const [el, dotted] of AI_INPUTS) {
     el.value = getIn(source, dotted) ?? '';
@@ -344,14 +344,14 @@ async function refreshAccountInfo() {
 }
 
 async function openSettings() {
-  // Se abre en el último apartado visitado (HIG: "Restore the most recently viewed pane").
+  // Opens on the last visited pane (HIG: "Restore the most recently viewed pane").
   if (!settingsOverlay.dataset.opened) {
     settingsOverlay.dataset.opened = '1';
     let last = null;
     try {
       last = localStorage.getItem('optimia:settings-pane');
     } catch {
-      /* sin persistencia */
+      /* no persistence */
     }
     if (last) showSettingsPane(last);
   }
@@ -361,9 +361,9 @@ async function openSettings() {
   claudeAccountInfo.textContent = 'Comprobando...';
   claudeAccountSwitchNote.hidden = true;
 
-  // La cuenta (claude auth status) tarda: va aparte para que no retrase el
-  // formulario. Mientras carga, los campos no se pueden editar, asi lo que
-  // escribas no lo pisa la carga.
+  // The account check (claude auth status) is slow: it runs separately so it does not delay the
+  // form. While loading, the fields cannot be edited, so loading never overwrites what is being
+  // typed.
   fetch(apiPath('/api/claude-auth'))
     .then((r) => r.json())
     .then(renderAccountInfo)
@@ -408,7 +408,7 @@ claudeAccountRefresh.addEventListener('click', refreshAccountInfo);
 function closeSettings() {
   flushSettingsSave();
   settingsOverlay.hidden = true;
-  // Los agentes se editan en Ajustes: el compositor y las tarjetas se ponen al dia.
+  // Agents are edited in Settings: the composer and the cards catch up.
   loadTaskKinds().catch(() => {});
 }
 
@@ -417,7 +417,7 @@ function showSettingsPane(pane) {
   item?.click();
 }
 
-// Abre Ajustes directamente en un apartado (por ejemplo "agents" desde el compositor).
+// Opens Settings directly on a pane (for example "agents" from the composer).
 function openSettingsPane(pane) {
   settingsOverlay.dataset.opened = '1';
   showSettingsPane(pane);
@@ -443,7 +443,7 @@ settingsNavItems.forEach((item) => {
     try {
       localStorage.setItem('optimia:settings-pane', pane);
     } catch {
-      /* sin persistencia */
+      /* no persistence */
     }
     if (pane === 'registro') loadLogPane();
   });
@@ -518,9 +518,9 @@ document.querySelectorAll('#log-chips .log-chip').forEach((chip) => {
 });
 logRefresh.addEventListener('click', loadLogPane);
 
-// Como en los Ajustes de macOS, los cambios se aplican al momento: no hay botón
-// Guardar. Los menús guardan al cambiar; los campos de texto, al dejar de escribir
-// o al salir del campo. Cada cambio va a la capa elegida (todos los repos o este).
+// As in macOS Settings, changes apply at once: there is no Save button. Menus save on change; text
+// fields when typing stops or when leaving the field. Each change goes to the chosen layer (all
+// repos or this one).
 let settingsLoading = false;
 let saveChain = Promise.resolve();
 const pendingText = new Map(); // elemento -> temporizador
@@ -603,16 +603,16 @@ for (const el of [localUrlInput, localModelInput, localAuthInput, instructionsTe
   });
 }
 
-// ---- ámbito: todos los repos / solo este repo ----
+// ---- scope: all repos / only this repo ----
 
-// Qué apartados admiten los dos ámbitos y cuáles son de uno solo.
+// Which panes support both scopes and which only one.
 const SCOPED_PANES = new Set(['claude', 'local-ai', 'instructions', 'nogo', 'agents']);
 const GLOBAL_PANES = new Set(['general', 'appearance', 'monitor']);
 let settingsScope = 'global';
 try {
   settingsScope = localStorage.getItem('optimia:settings-scope') === 'project' ? 'project' : 'global';
 } catch {
-  /* sin persistencia */
+  /* no persistence */
 }
 window.optimiaSettingsScope = settingsScope;
 const scopeControl = document.getElementById('settings-scope');
@@ -646,7 +646,7 @@ function setSettingsScope(scope) {
   try {
     localStorage.setItem('optimia:settings-scope', scope);
   } catch {
-    /* sin persistencia */
+    /* no persistence */
   }
   renderScope();
   if (currentSettings) populateSettingsForm();
@@ -657,7 +657,7 @@ for (const b of scopeControl.querySelectorAll('button')) {
   b.addEventListener('click', () => setSettingsScope(b.dataset.scope));
 }
 
-// ---- "Conocer este repo": un agente estudia el repo y propone su memoria ----
+// ---- "Conocer este repo": an agent studies the repo and proposes its memory ----
 
 const onboardButton = document.getElementById('onboard-button');
 async function startOnboarding() {

@@ -49,7 +49,7 @@ test('createTaskWorktree: creates a real git worktree on its own branch and copi
   assert.equal(wtDir, worktreeDir(dir, 'task-123'));
   assert.equal(branch, 'optimia/task-task-123'); // taskId.slice(0, 8) of "task-123" is "task-123" itself (8 chars)
   assert.equal(fs.existsSync(path.join(wtDir, 'README.md')), true);
-  // Un .claude/ sin seguimiento del repo no se copia: acabaria en el commit de la tarea.
+  // An untracked .claude/ of the repo is not copied: it would end up in the task's commit.
   assert.equal(fs.existsSync(path.join(wtDir, '.claude', 'settings.json')), false);
 
   const branches = execFileSync('git', ['branch', '--list', branch], { cwd: dir, encoding: 'utf8' });
@@ -92,7 +92,7 @@ test('stageForReview: reports hasChanges false on a clean worktree and true afte
   assert.equal(stageForReview(wtDir).hasChanges, true);
 });
 
-test('removeTaskWorktree: quita el worktree con cambios sin commitear y su rama', (t) => {
+test('removeTaskWorktree: removes the worktree with uncommitted changes and its branch', (t) => {
   const dir = mkTmpDir('worktree-remove');
   t.after(() => rmTmpDir(dir));
 
@@ -108,14 +108,14 @@ test('removeTaskWorktree: quita el worktree con cambios sin commitear y su rama'
   assert.equal(branches.trim(), '');
 });
 
-test('removeTaskWorktree: una tarea sin worktree ni rama no falla', (t) => {
+test('removeTaskWorktree: a task without worktree or branch does not fail', (t) => {
   const dir = mkTmpDir('worktree-remove-empty');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);
   assert.doesNotThrow(() => removeTaskWorktree(dir, { worktreePath: null, branch: null }));
 });
 
-test('tareas: salen de la rama base elegida, con su propia rama, y se fusionan en la base', (t) => {
+test('tasks: start from the chosen base branch, with their own branch, and merge into the base', (t) => {
   const dir = mkTmpDir('worktree-flow');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);
@@ -152,12 +152,12 @@ test('tareas: salen de la rama base elegida, con su propia rama, y se fusionan e
   assert.match(committed, /docs\/botones\.docx/);
 
   const merge = mergeTaskBranch(dir, branch, 'fix/rebranding');
-  assert.equal(merge.sha, sha, 'la base no avanzo: fast-forward al commit de la tarea');
+  assert.equal(merge.sha, sha, 'the base did not move: fast-forward to the task commit');
   assert.equal(merge.fastForward, true);
   assert.ok(fs.existsSync(path.join(dir, 'boton.css')));
 });
 
-test('mergeTaskBranch: fusiona aunque el checkout principal este en otra rama, y no lo cambia', (t) => {
+test('mergeTaskBranch: merges even if the main checkout is on another branch, and does not change it', (t) => {
   const dir = mkTmpDir('worktree-merge-temp');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);
@@ -176,7 +176,7 @@ test('mergeTaskBranch: fusiona aunque el checkout principal este en otra rama, y
   assert.ok(execFileSync('git', ['show', 'fix/base:x.txt'], { cwd: dir, encoding: 'utf8' }).includes('x'));
 });
 
-test('mergeTaskBranch: se niega si la base esta checkeada con cambios sin commitear', (t) => {
+test('mergeTaskBranch: refuses if the base is checked out with uncommitted changes', (t) => {
   const dir = mkTmpDir('worktree-merge-dirty');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);
@@ -190,7 +190,7 @@ test('mergeTaskBranch: se niega si la base esta checkeada con cambios sin commit
   assert.throws(() => mergeTaskBranch(dir, 'fix/tarea-y', 'fix/base'), /cambios sin commitear/);
 });
 
-test('filesChangedBy y changedFiles: listan los ficheros de un commit y los pendientes', (t) => {
+test('filesChangedBy and changedFiles: list the files of a commit and the pending ones', (t) => {
   const dir = mkTmpDir('worktree-files');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);
@@ -205,7 +205,7 @@ test('filesChangedBy y changedFiles: listan los ficheros de un commit y los pend
   assert.deepEqual(changedFiles(dir), ['c.txt']);
 });
 
-test('mergeTaskBranch: si la base avanzo, merge con el mensaje estandar de git', (t) => {
+test("mergeTaskBranch: if the base moved on, merges with git's standard message", (t) => {
   const dir = mkTmpDir('worktree-merge-diverged');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);
@@ -225,7 +225,7 @@ test('mergeTaskBranch: si la base avanzo, merge con el mensaje estandar de git',
   assert.deepEqual(filesChangedBy(dir, merge.sha, merge.before), ['z.txt']);
 });
 
-test('commitTaskWorktree respeta .gitignore salvo lo marcado, e ignoredAmong los detecta', (t) => {
+test('commitTaskWorktree respects .gitignore except for ticked files, and ignoredAmong detects them', (t) => {
   const dir = mkTmpDir('worktree-ignored');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);

@@ -6,14 +6,14 @@ const ops = require('../fs/fileOps');
 const { openWithSystem } = require('../bridge/taskFiles');
 const { sendJson, readJsonBody } = require('./util');
 
-// Explorador de ficheros (por proyecto, con ?projectId= o en el cuerpo):
-//   GET  /api/fs/list?path=          GET /api/fs/preview?path=      GET /api/fs/raw?path=  (con Range)
+// File explorer (per project, with ?projectId= or in the body):
+//   GET  /api/fs/list?path=          GET /api/fs/preview?path=      GET /api/fs/raw?path=  (with Range)
 //   POST /api/fs/rename {path, name} POST /api/fs/move {path, dest} POST /api/fs/copy {path, dest}
 //   POST /api/fs/delete {path}       POST /api/fs/undo {undo}       POST /api/fs/open {path, reveal}
 //   GET  /api/fs/trash               POST /api/fs/trash/restore {id} POST /api/fs/trash/purge {ids?}
 
-// Lo que se sirve en bruto nunca puede ejecutar nada en el origen de optimia
-// (un .svg o un .html del repo con scripts): CSP sandbox y sin "sniffing".
+// What is served raw can never run anything on optimia's origin (an .svg or .html with scripts from
+// the repo): sandbox CSP and no sniffing.
 const RAW_HEADERS = {
   'Content-Security-Policy':
     "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox",

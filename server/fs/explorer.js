@@ -4,10 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const { readPreview } = require('../bridge/taskFiles');
 
-// Explorador de ficheros de un repo. Toda ruta llega relativa al repo y se resuelve
-// dentro de el: nada de rutas absolutas, "..", ni enlaces simbolicos que salgan del
-// repo. Las carpetas .git y .optimia (estado interno de optimia: tareas, chats,
-// worktrees de los agentes) no se listan ni se tocan.
+// File explorer of a repo. Every path arrives relative to the repo and is resolved inside it: no
+// absolute paths, ".." or symlinks leading out of the repo. The .git and .optimia folders
+// (optimia's internal state: tasks, chats, agent worktrees) are never listed or touched.
 
 const HIDDEN = new Set(['.git', '.optimia']);
 const MAX_ENTRIES = 2000;
@@ -46,8 +45,8 @@ function isInside(root, abs) {
 }
 
 /**
- * Ruta absoluta dentro del repo para `rel` ("" = la raiz). Lanza FsError si sale
- * del repo, toca .git o (con mustExist) no existe.
+ * Absolute path inside the repo for `rel` ("" = the root). Throws FsError if it leaves the repo,
+ * touches .git or (with mustExist) does not exist.
  */
 function resolveRepoPath(root, rel, { mustExist = true, allowRoot = true } = {}) {
   const clean = typeof rel === 'string' ? rel.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') : null;
@@ -59,7 +58,7 @@ function resolveRepoPath(root, rel, { mustExist = true, allowRoot = true } = {})
     throw new FsError(403, 'las carpetas .git y .optimia no se pueden tocar desde el explorador');
   if (mustExist) {
     if (!fs.existsSync(abs)) throw new FsError(404, 'no existe');
-    // Un enlace simbolico no puede llevar fuera del repo.
+    // A symlink cannot lead out of the repo.
     if (!isInside(fs.realpathSync(root), fs.realpathSync(abs)))
       throw new FsError(403, 'el enlace apunta fuera del repo');
   }
@@ -97,7 +96,7 @@ function mimeFor(p) {
   return MIME[path.extname(p).toLowerCase()] || 'application/octet-stream';
 }
 
-/** Que hay que mostrar para un fichero: markdown, texto, imagen, audio, video o nada. */
+/** What to show for a file: markdown, text, image, audio, video or nothing. */
 function preview(root, rel) {
   const { abs } = resolveRepoPath(root, rel);
   const stat = fs.statSync(abs);

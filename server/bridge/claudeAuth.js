@@ -29,7 +29,7 @@ const LINUX_TERMINALS = [
 
 const MANUAL_HINT = 'Ejecuta "claude auth login" en una terminal.';
 
-// Lanza un comando y resuelve true si el proceso arranca, false si el ejecutable no existe.
+// Runs a command and resolves true if the process starts, false if the executable does not exist.
 function trySpawn(cmd, args) {
   return new Promise((resolve) => {
     const child = execFile(cmd, args, () => {});

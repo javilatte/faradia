@@ -4,15 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const { configDir } = require('./globalPaths');
 
-// Preferencias globales de la supervision (no de un proyecto):
+// Global supervision preferences (not tied to a project):
 // ~/.config/optimia/preferences.json
 
 const DEFAULTS = {
-  // Cambios sin commitear y sin tocar durante este tiempo = cambios huerfanos.
+  // Uncommitted changes untouched for this long = orphaned changes.
   orphanMinutes: 30,
   signals: {
-    largeDeleteLines: 200, // borrar mas lineas que esto en un lote es un borrado grande
-    largeDeleteFiles: 5, // o borrar mas ficheros que esto
+    largeDeleteLines: 200, // deleting more lines than this in one batch is a large delete
+    largeDeleteFiles: 5, // or deleting more files than this
     sensitive: true,
     secrets: true,
     tests: true,
@@ -28,7 +28,7 @@ function mergeDeep(base, over) {
   if (!over || typeof over !== 'object' || Array.isArray(over)) return base;
   const out = { ...base };
   for (const [k, v] of Object.entries(over)) {
-    if (!(k in base)) continue; // solo claves conocidas
+    if (!(k in base)) continue; // known keys only
     out[k] = base[k] && typeof base[k] === 'object' && !Array.isArray(base[k]) ? mergeDeep(base[k], v) : v;
   }
   return out;

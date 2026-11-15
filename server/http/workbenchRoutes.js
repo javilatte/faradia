@@ -5,15 +5,15 @@ const path = require('path');
 const wbStore = require('../store/workbenchStore');
 const { sendJson, readJsonBody } = require('./util');
 
-// Rutas globales de workbenches:
-//   GET    /api/workbenches                       todos, con sus repos ya registrados como proyectos
+// Global workbench routes:
+//   GET    /api/workbenches                       all, with their repos already registered as projects
 //   POST   /api/workbenches {name}
 //   PATCH  /api/workbenches/:id {name}
 //   DELETE /api/workbenches/:id
 //   PUT    /api/workbenches/active {id}
 //   POST   /api/workbenches/:id/repos {paths: []}
 //   DELETE /api/workbenches/:id/repos {path}
-//   POST   /api/scan {root, maxDepth}             busca repos git bajo una carpeta
+//   POST   /api/scan {root, maxDepth}             looks for git repos under a folder
 
 function repoView(registry, repo) {
   const exists = fs.existsSync(repo);
@@ -95,7 +95,7 @@ async function handleWorkbenchRoutes(req, res, url, { registry, onChange }) {
   } catch (err) {
     return fail(err);
   }
-  return null; // no es una ruta de workbenches
+  return null; // not a workbench route
 }
 
 module.exports = { handleWorkbenchRoutes, workbenchesView };

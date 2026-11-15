@@ -1,6 +1,6 @@
-// Canal de eventos globales (workbenches, vigilancia de repos, timeline, avisos).
-// Usa su propia conexion WebSocket, independiente de la del chat del proyecto,
-// y reconecta sola. Las vistas se suscriben por tipo de mensaje.
+// Global events channel (workbenches, repo supervision, timeline, signals). Uses its own WebSocket
+// connection, separate from the project chat's, and reconnects by itself. Views subscribe by
+// message type.
 
 const listeners = new Map(); // type -> Set<fn>
 let socket = null;
@@ -35,7 +35,7 @@ export function connectEvents() {
     try {
       emit(JSON.parse(raw.data));
     } catch {
-      /* mensaje no JSON: se ignora */
+      /* non-JSON message: ignored */
     }
   });
   socket.addEventListener('close', () => {

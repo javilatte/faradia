@@ -23,34 +23,34 @@ const task = (type, extra = {}) => ({
   ...extra
 });
 
-test('pipelines: cada tipo empieza por su primera etapa', () => {
+test('pipelines: each type starts with its first stage', () => {
   assert.equal(firstStage('coding'), 'plan');
   assert.equal(firstStage('bugfix'), 'diagnose');
   assert.equal(firstStage('tests'), 'plan');
   assert.equal(firstStage('documentation'), 'research');
   assert.equal(firstStage('audit'), 'audit');
   assert.equal(firstStage('custom'), 'custom');
-  assert.equal(firstStage(undefined), 'plan'); // tareas antiguas sin tipo = codigo
+  assert.equal(firstStage(undefined), 'plan'); // old tasks without a type = coding
 });
 
-test('nextStage: sigue el pipeline y salta solo etapas opcionales desactivadas', () => {
+test('nextStage: follows the pipeline and only skips disabled optional stages', () => {
   assert.equal(nextStage('bugfix', 'diagnose'), 'implement');
   assert.equal(nextStage('bugfix', 'implement'), 'verify');
   assert.equal(nextStage('bugfix', 'implement', { skip: ['verify'] }), null);
   assert.equal(nextStage('tests', 'plan'), 'write-tests');
-  assert.equal(nextStage('tests', 'plan', { skip: ['write-tests'] }), 'write-tests'); // no es opcional
+  assert.equal(nextStage('tests', 'plan', { skip: ['write-tests'] }), 'write-tests'); // not optional
   assert.equal(nextStage('audit', 'audit'), null);
 });
 
-test('bugfix: el diagnostico encadena la implementacion, que recibe el diagnostico', () => {
+test('bugfix: the diagnosis chains the implementation, which receives the diagnosis', () => {
   const { patch, next } = decideAfterStage(task('bugfix'), 'diagnose', { text: 'causa: null en login.js:12' });
   assert.equal(next, 'implement');
   const prompt = buildStagePrompt({ ...task('bugfix'), stageOutputs: patch.stageOutputs }, 'implement');
   assert.match(prompt, /Diagnóstico:\ncausa: null en login\.js:12/);
-  assert.match(prompt, /Encargo original del usuario[^\n]*\n/, 'el implementador ve también el encargo');
+  assert.match(prompt, /Encargo original del usuario[^\n]*\n/, 'the implementer also sees the request');
 });
 
-test('verify: guarda el veredicto y deja la tarea lista para revisar', () => {
+test('verify: stores the verdict and leaves the task ready for review', () => {
   const ok = decideAfterStage(task('coding'), 'verify', { text: 'tests en verde\nVEREDICTO: OK' });
   assert.equal(ok.patch.status, 'ready_to_test');
   assert.equal(ok.patch.verification.ok, true);
@@ -60,12 +60,12 @@ test('verify: guarda el veredicto y deja la tarea lista para revisar', () => {
   assert.equal(decideAfterStage(task('coding'), 'verify', { text: 'sin veredicto' }).patch.verification, null);
 });
 
-test('parseVerdict: reconoce OK y FALLA en cualquier linea', () => {
+test('parseVerdict: recognizes OK and FALLA on any line', () => {
   assert.deepEqual(parseVerdict('a\nveredicto: ok\n'), { ok: true, line: 'veredicto: ok' });
   assert.equal(parseVerdict('nada'), null);
 });
 
-test('audit: entrega un informe sin cambios y la tarea queda como solo informe', () => {
+test('audit: delivers a report without changes and the task is marked report-only', () => {
   const { patch, next } = decideAfterStage(task('audit'), 'audit', { text: '## Hallazgos\n1. critica: ...' });
   assert.equal(next, null);
   assert.equal(patch.status, 'ready_to_test');
@@ -73,7 +73,7 @@ test('audit: entrega un informe sin cambios y la tarea queda como solo informe',
   assert.match(decideAfterStage(task('audit'), 'audit', { text: ' ' }).patch.error, /informe/);
 });
 
-test('custom: el acceso del agente decide herramientas y resultado', () => {
+test("custom: the agent's access decides tools and outcome", () => {
   const reader = { access: 'read' };
   const editor = { access: 'edit' };
   assert.ok(!stageTools('custom', reader).includes('Edit'));
@@ -90,7 +90,7 @@ test('custom: el acceso del agente decide herramientas y resultado', () => {
   );
 });
 
-test('canRun: etapas fuera del pipeline del tipo, custom sin agente y re-verificar', () => {
+test("canRun: stages outside the type's pipeline, custom without an agent and re-verifying", () => {
   assert.match(canRun(task('documentation'), 'implement'), /no es de este tipo/);
   assert.match(canRun(task('custom'), 'custom'), /no tiene agente/);
   assert.equal(canRun(task('custom', { agentId: 'a' }), 'custom'), null);
@@ -98,7 +98,7 @@ test('canRun: etapas fuera del pipeline del tipo, custom sin agente y re-verific
   assert.equal(canRun(task('bugfix'), 'diagnose'), null);
 });
 
-test('TASK_TYPES: todos los tipos tienen etiqueta y pipeline', () => {
+test('TASK_TYPES: every type has a label and a pipeline', () => {
   for (const [type, def] of Object.entries(TASK_TYPES)) {
     assert.ok(def.label, type);
     assert.ok(def.pipeline.length > 0, type);

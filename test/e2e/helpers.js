@@ -4,12 +4,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-// Carpeta temporal de esta ejecucion: serve.js la anota en un fichero fijo por puerto.
+// Temporary folder of this run: serve.js writes it to a fixed file per port.
 function e2eTmp(port = 47321) {
   return fs.readFileSync(path.join(os.tmpdir(), `optimia-e2e-current-${port}.txt`), 'utf8').trim();
 }
 
-// Llamadas registradas por el claude simulado.
+// Calls recorded by the fake claude.
 function claudeCalls() {
   const file = path.join(e2eTmp(), 'claude-calls.jsonl');
   if (!fs.existsSync(file)) return [];
@@ -37,8 +37,8 @@ async function openProject(page) {
   await waitForChatReady(page);
 }
 
-// El compositor ignora Enter hasta que hay conexion y un chat activo (en un repo
-// nuevo el primer chat se crea de forma asincrona).
+// The composer ignores Enter until there is a connection and an active chat (in a new repo the
+// first chat is created asynchronously).
 async function waitForChatReady(page) {
   const { expect } = require('@playwright/test');
   await expect(page.locator('#connection-status')).toHaveAttribute('title', 'Conectado', { timeout: 10_000 });

@@ -1,6 +1,5 @@
-// Se carga antes de cada fichero de tests unitarios (--import): la configuración
-// global de optimia (~/.config/optimia) y sus datos van a carpetas temporales, así
-// ningún test toca la del usuario.
+// Loaded before every unit test file (--import): optimia's global configuration (~/.config/optimia)
+// and data go to temporary folders, so no test touches the user's.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

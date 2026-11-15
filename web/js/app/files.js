@@ -1,7 +1,6 @@
-// Archivos: explorador de los repos del workbench, con arbol (que recuerda lo
-// plegado), vista previa (markdown, codigo, imagen, audio, video, pdf), copiar la
-// ruta, portapapeles de ficheros y operaciones con Deshacer. Borrar manda a la
-// papelera de optimia, de donde se puede restaurar.
+// Files: explorer of the workbench's repos, with a tree (that remembers what is collapsed), preview
+// (markdown, code, image, audio, video, pdf), copy path, a file clipboard and operations with Undo.
+// Deleting sends to optimia's trash, where it can be restored from.
 
 import { api } from './api.js';
 import { h, clear, toast, formatBytes, timeAgo } from './dom.js';
@@ -14,7 +13,7 @@ import { renderMarkdown } from './markdown.js';
 
 let root = null;
 let projectId = null;
-const listings = new Map(); // ruta de carpeta -> entradas
+const listings = new Map(); // folder path -> entries
 let expanded = new Set(['']);
 let selected = null; // { path, dir }
 let previewData = null;
@@ -28,7 +27,7 @@ function saveExpanded() {
   try {
     localStorage.setItem(storageKey(), JSON.stringify([...expanded]));
   } catch {
-    /* sin almacenamiento */
+    /* no storage */
   }
 }
 
@@ -46,7 +45,7 @@ async function loadDir(dir) {
     listings.set(dir, entries);
   } catch {
     listings.delete(dir);
-    expanded.delete(dir); // la carpeta ya no existe
+    expanded.delete(dir); // the folder no longer exists
   }
 }
 
@@ -78,7 +77,7 @@ async function toggle(entry) {
   render();
 }
 
-// ---- operaciones con deshacer ----
+// ---- operations with undo ----
 
 async function runOp(url, body, message) {
   try {
@@ -434,7 +433,7 @@ async function setProject(id) {
   render();
 }
 
-// Cambios en disco (de un agente, de otro editor...): se recargan las carpetas abiertas.
+// Changes on disk (from an agent, another editor...): open folders are reloaded.
 on('monitor_activity', (e) => {
   if (!root || root.hidden || e.projectId !== projectId || e.taskId) return;
   clearTimeout(refreshTimer);

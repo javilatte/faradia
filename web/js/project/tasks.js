@@ -1,6 +1,6 @@
 'use strict';
 
-// Panel de agentes: tarjetas de tareas, etapas, permisos, commit y fusion.
+// Agents panel: task cards, stages, permissions, commit and merge.
 
 function dismissedAgentsKey(chatId) {
   return `optimia:dismissed-agents:${chatId}`;
@@ -35,7 +35,7 @@ function stepLabelFor(event) {
   return null;
 }
 
-// Lo que hace cada agente de tarea, linea a linea, desde que la pestaña esta abierta.
+// What each task agent does, line by line, since the tab was opened.
 const taskLogs = new Map();
 const openTaskLogs = new Set();
 const TASK_LOG_MAX = 200;
@@ -68,9 +68,8 @@ function logTaskEvent(taskId, event) {
   taskLogs.set(taskId, log);
 }
 
-// Catalogo de agentes del proyecto (GET /api/agents): etapas, pipelines y que
-// agente hace cada etapa. Lo carga composer.js; hasta entonces las tarjetas
-// muestran solo lo que ya se ha ejecutado.
+// The project's agent catalog (GET /api/agents): stages, pipelines and which agent runs each stage.
+// composer.js loads it; until then the cards only show what has already run.
 let agentCatalog = null;
 
 function setAgentCatalog(data) {
@@ -87,16 +86,16 @@ function modelText(engine, model) {
   return !model || model === 'default' ? 'modelo por defecto' : model;
 }
 
-// Agente que hara una etapa que aun no ha empezado (segun el mapa etapa -> agente).
+// Agent that will run a stage that has not started yet (from the stage -> agent map).
 function plannedAgent(task, stage) {
   if (!agentCatalog) return null;
   const id = stage === 'custom' ? task.agentId : agentCatalog.stageMap?.[stage];
   return agentCatalog.agents.find((a) => a.id === id) || null;
 }
 
-// Una fila con el pipeline de la tarea: cada etapa con su estado y el agente y
-// modelo que la hizo (o que la hara). Sustituye a las fases autoinformadas y al
-// rastro de agentes, que contaban lo mismo por separado.
+// One row with the task's pipeline: each stage with its state and the agent and model that ran it
+// (or will run it). Replaces the self-reported phases and the agent trail, which told the same
+// thing separately.
 function renderPipeline(task) {
   const runs = task.stageRuns || [];
   const pipeline = agentCatalog?.taskTypes?.[task.type]?.pipeline || [];
@@ -110,7 +109,7 @@ function renderPipeline(task) {
     const current = task.stage === stage && task.status !== 'ready_to_test';
     let state = 'todo';
     if (run) state = run.status || 'running';
-    // Una etapa que preguntó y tras la que ya corrió otra quedó respondida y hecha.
+    // A stage that asked and was followed by another one was answered and is done.
     const later = run && runs.indexOf(run) < runs.length - 1;
     if (later && (state === 'asked' || state === 'running')) state = 'done';
     if (current && task.status === 'in_progress') state = 'running';
@@ -183,7 +182,7 @@ function dismissChatAgent(taskId) {
   renderTasks();
 }
 
-// Respaldo hasta que llega el catalogo (las etiquetas buenas vienen del servidor).
+// Fallback until the catalog arrives (the proper labels come from the server).
 const STAGE_LABELS = {
   plan: 'Planificación',
   research: 'Investigación',
@@ -198,9 +197,8 @@ const STAGE_LABELS = {
   custom: 'Agente propio'
 };
 
-// Valores de los formularios de las tarjetas, por `${taskId}:${campo}`. El
-// tablero se re-renderiza en cada evento del agente; sin esto se perderia lo
-// que el usuario estaba escribiendo.
+// Values of the card forms, by `${taskId}:${field}`. The board re-renders on every agent event;
+// without this, what the user was typing would be lost.
 const cardDrafts = new Map();
 
 function keepDraft(el, key, initial) {
@@ -275,9 +273,9 @@ async function runTaskStage(taskId, body) {
   renderTasks();
 }
 
-// La respuesta HTTP de una accion y el task_updated por WebSocket pueden llegar
-// en cualquier orden. La respuesta HTTP es un snapshot anterior al evento: no
-// debe pisar una version mas nueva que ya estuviera en el tablero.
+// The HTTP response of an action and the task_updated WebSocket event can arrive in any order. The
+// HTTP response is a snapshot older than the event: it must not overwrite a newer version already
+// on the board.
 function applyTaskFromServer(task) {
   const entry = tasks.get(task.id);
   if (entry && entry.task.updatedAt >= task.updatedAt) return;
@@ -303,8 +301,8 @@ function taskStepText(task, lastStep) {
   }
 }
 
-// Preguntas que puede hacer una etapa, y la etapa que se reanuda al responder.
-// Las preguntas de una etapa llegan como "<etapa>-details" (ver QUESTION_KIND en taskStages.js).
+// Questions a stage can ask, and the stage that resumes when answered. A stage's questions arrive
+// as "<stage>-details" (see QUESTION_KIND in taskStages.js).
 const QUESTION_STAGE = new Proxy(
   {},
   {
@@ -323,8 +321,8 @@ const TASK_TYPE_LABEL = {
   onboard: 'Conocer el repo'
 };
 
-// Acciones que la politica de agentes denego en la etapa actual: el agente siguio
-// por otro camino, pero conviene saberlo (y verlo si se repite).
+// Actions the agent policy denied in the current stage: the agent took another path, but it is
+// worth knowing (and seeing if it repeats).
 function renderBlockedCommands(task) {
   const list = (task.blockedCommands || []).filter((b) => b.stage === task.stage);
   if (!list.length || task.status !== 'in_progress') return null;
@@ -345,7 +343,7 @@ function stripVerdict(text) {
   return text.replace(/^\s*VEREDICTO:.*$/gim, '').trim();
 }
 
-// Veredicto del verificador: una linea corta; el motivo, al desplegar.
+// The verifier's verdict: one short line; the reason when expanded.
 function renderVerification(task) {
   if (!task.verification) return null;
   const el = document.createElement('div');
@@ -442,7 +440,7 @@ const DOC_FORMATS = [
 function renderDocOptions(taskId, task) {
   const form = document.createElement('div');
   form.className = 'task-form';
-  // Lo que encontro la investigacion, a mano para decidir formato y destino.
+  // What the research found, at hand to choose the format and target.
   const research = task.stageOutputs?.research;
   if (research) {
     const notes = document.createElement('details');
@@ -484,8 +482,8 @@ function renderDocOptions(taskId, task) {
   format.value = cardDrafts.get(`${taskId}:format`) || task.docOptions?.format || 'md';
   form.appendChild(labeledField('Formato', format));
 
-  // Documento nuevo: se propone docs/<titulo>.<formato>, que sigue al formato
-  // mientras no escribas otra ruta.
+  // New document: suggests docs/<title>.<format>, which follows the format until another path is
+  // typed.
   const suggested = () => `docs/${slugify(task.title)}.${format.value}`;
   const targetKey = `${taskId}:target`;
   const target = keepDraft(document.createElement('input'), targetKey, task.docOptions?.targetPath || suggested());
@@ -533,7 +531,7 @@ function renderCommitAndMerge(taskId, task) {
   if (!task.lastCommit) {
     const row = document.createElement('div');
     row.className = 'task-file';
-    // La propuesta de "Preparar commit" sustituye al borrador mientras no lo edites.
+    // The "Preparar commit" proposal replaces the draft as long as it has not been edited.
     const suggestion = task.suggestedCommit || `feat: ${task.title}`.slice(0, 72);
     const draftKey = `${taskId}:commit`;
     if (cardDrafts.get(`${draftKey}:from`) !== suggestion) {
@@ -560,7 +558,7 @@ function renderCommitAndMerge(taskId, task) {
     );
     box.appendChild(row);
     if (ignored.length) {
-      // Git los ignora: no entran en el commit salvo que los marques.
+      // Git ignores them: they stay out of the commit unless ticked.
       const list = document.createElement('div');
       list.className = 'ignored-outputs';
       const note = document.createElement('div');
@@ -755,7 +753,7 @@ function openFilePreview(taskId, rel) {
         pre.textContent = data.content;
         body.appendChild(pre);
       } else if (data.kind === 'html') {
-        // Sin scripts ni acceso al origen: el HTML generado no puede ejecutar nada.
+        // No scripts and no access to the origin: the generated HTML cannot run anything.
         const frame = document.createElement('iframe');
         frame.setAttribute('sandbox', '');
         frame.srcdoc = data.content;
@@ -773,7 +771,7 @@ function buildTaskCard(taskId, task, lastStep) {
   const ready = task.status === 'ready_to_test';
   const card = document.createElement('div');
   card.className = 'task-card' + (ready ? ' ready' : '') + (task.status === 'awaiting_input' ? ' awaiting' : '');
-  // Tambien en curso: borrar la tarea mata su sesion de Claude (ver DELETE en server/index.js).
+  // Also while running: deleting the task kills its Claude session (see DELETE in server/index.js).
   card.appendChild(renderDeleteButton(() => deleteRealTask(taskId)));
 
   const title = document.createElement('div');
@@ -808,7 +806,7 @@ function buildTaskCard(taskId, task, lastStep) {
   if (text) {
     const output = document.createElement('div');
     output.className = 'task-output';
-    // El veredicto ya sale arriba (renderVerification): no se repite en el informe.
+    // The verdict is already shown above (renderVerification): not repeated in the report.
     paintMarkdown(output, task.verification ? stripVerdict(text) : text);
     card.appendChild(output);
   }
@@ -828,7 +826,7 @@ function buildTaskCard(taskId, task, lastStep) {
   } else if (ready && task.type === 'onboard') {
     card.appendChild(renderMemoryProposal(taskId, task));
   } else if (ready && task.reportOnly) {
-    // Auditorias y agentes de solo lectura: entregan un informe, no hay nada que commitear.
+    // Audits and read-only agents: they deliver a report, there is nothing to commit.
     const note = document.createElement('div');
     note.className = 'task-meta';
     note.textContent = 'Informe entregado: esta tarea no cambia ficheros.';
@@ -847,8 +845,8 @@ function buildTaskCard(taskId, task, lastStep) {
   return card;
 }
 
-// Tarea ya fusionada: no queda nada que revisar. Tarjeta compacta con el
-// resultado, el commit y como verlo; el worktree y la rama ya se borraron.
+// Task already merged: nothing left to review. Compact card with the result, the commit and how to
+// see it; the worktree and the branch are already gone.
 function buildDoneCard(taskId, task) {
   const card = document.createElement('div');
   card.className = 'task-card done-card';
@@ -884,7 +882,7 @@ function buildDoneCard(taskId, task) {
   return card;
 }
 
-// Quita del tablero una tarea ya fusionada (su worktree y su rama ya no existen).
+// Removes a merged task from the board (its worktree and branch no longer exist).
 async function archiveTask(taskId) {
   const res = await fetch(apiPath(`/api/tasks/${taskId}`), { method: 'DELETE' });
   if (!res.ok) {
@@ -896,8 +894,8 @@ async function archiveTask(taskId) {
   renderTasks();
 }
 
-// "Conocer el repo": la memoria propuesta se guarda con un clic (y se puede
-// revisar o editar después en Ajustes > Memoria).
+// "Conocer el repo": the proposed memory is saved with one click (and can be reviewed or edited
+// later in Settings > Memory).
 function renderMemoryProposal(taskId, task) {
   const row = document.createElement('div');
   row.className = 'task-actions';
@@ -931,7 +929,7 @@ function renderMemoryProposal(taskId, task) {
   return row;
 }
 
-// Tablero vacío: qué hacer primero. Si el repo aún no tiene memoria, conocerlo.
+// Empty board: what to do first. If the repo has no memory yet, learn it.
 let memoryKnown = null;
 function renderEmptyBoard() {
   const box = document.createElement('div');

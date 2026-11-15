@@ -63,8 +63,8 @@ rl.on('line', (line) => {
     const file = path.join(process.cwd(), 'e2e-agent-output.txt');
     fs.appendFileSync(file, `cambio del agente (${model})\n`);
   }
-  // "[e2e:denegar]" en el encargo: el agente intenta un comando prohibido, recibe
-  // la denegacion (como con --permission-prompts none) y sigue trabajando.
+  // "[e2e:denegar]" in the request: the agent tries a forbidden command, gets the denial (as with
+  // --permission-prompts none) and keeps working.
   if (/\[e2e:denegar\]/.test(text) && /IMPLEMENTACION/.test(text)) {
     const id = `toolu_${Date.now()}`;
     emit({

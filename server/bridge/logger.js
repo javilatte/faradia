@@ -5,10 +5,9 @@ const path = require('path');
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-// Un evento por línea en <proyecto>/.optimia/logs/optimia.log. No guardar texto de
-// mensajes, instrucciones ni contenido de ficheros: solo ids, estados y tamaños.
-// Cada proyecto abierto tiene su propia instancia (createLogger); el API de módulo
-// (initLogger/info/warn/error/readRecent) usa una instancia por defecto.
+// One event per line in <project>/.optimia/logs/optimia.log. Never store message text, instructions
+// or file contents: only ids, states and sizes. Each open project has its own instance
+// (createLogger); the module API (initLogger/info/warn/error/readRecent) uses a default instance.
 function createLogger(projectRoot) {
   let logFile = null;
   if (projectRoot) {
@@ -22,7 +21,7 @@ function createLogger(projectRoot) {
       if (fs.statSync(logFile).size < MAX_BYTES) return;
       fs.renameSync(logFile, `${logFile}.1`);
     } catch {
-      /* aún no existe o no se puede rotar: seguimos escribiendo */
+      /* does not exist yet or cannot be rotated: keep writing */
     }
   }
 
@@ -33,13 +32,13 @@ function createLogger(projectRoot) {
         rotateIfNeeded();
         fs.appendFileSync(logFile, line + '\n');
       } catch {
-        /* disco lleno o permisos: el registro nunca tumba el servidor */
+        /* disk full or permissions: the log never brings the server down */
       }
     }
     if (level === 'warn' || level === 'error') process.stderr.write(line + '\n');
   }
 
-  // Entradas más recientes primero, leyendo el fichero actual y, si hace falta, el rotado.
+  // Newest entries first, reading the current file and, if needed, the rotated one.
   function readRecent(limit = 200) {
     if (!logFile) return [];
     const lines = [];
@@ -47,7 +46,7 @@ function createLogger(projectRoot) {
       try {
         lines.push(...fs.readFileSync(file, 'utf8').split('\n').filter(Boolean));
       } catch {
-        /* aún no existe */
+        /* does not exist yet */
       }
     }
     const out = [];
@@ -55,7 +54,7 @@ function createLogger(projectRoot) {
       try {
         out.push(JSON.parse(lines[i]));
       } catch {
-        /* línea corrupta: se omite */
+        /* corrupt line: skipped */
       }
     }
     return out;

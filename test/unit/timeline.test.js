@@ -24,19 +24,19 @@ function setup(t) {
 
 const iso = (msAgo = 0) => new Date(Date.now() - msAgo).toISOString();
 
-test('recordFiles: agrupa lotes seguidos del mismo repo en una entrada', (t) => {
+test('recordFiles: merges consecutive batches of the same repo into one entry', (t) => {
   const { tl } = setup(t);
   const a = tl.recordFiles({ projectId: 'p', name: 'r', paths: ['a.js'], at: iso() });
   const b = tl.recordFiles({ projectId: 'p', name: 'r', paths: ['b.js', 'a.js'], at: iso() });
   assert.equal(a.id, b.id);
-  assert.deepEqual(b.paths, ['b.js', 'a.js']); // lo mas reciente primero
+  assert.deepEqual(b.paths, ['b.js', 'a.js']); // newest first
   assert.equal(b.count, 2);
   // Otro repo u otro worktree: entrada distinta
   assert.notEqual(tl.recordFiles({ projectId: 'p', taskId: 't1', name: 'r', paths: ['c.js'], at: iso() }).id, a.id);
   assert.equal(tl.query({ kinds: ['files'] }).length, 2);
 });
 
-test('recordState: detecta commits nuevos y cambios de rama', (t) => {
+test('recordState: detects new commits and branch switches', (t) => {
   const { tl } = setup(t);
   const prev = { branch: 'main', lastCommit: { sha: 'a1' }, dirty: true };
   const next = { branch: 'feat', lastCommit: { sha: 'b2', subject: 'feat: x', author: 'yo' }, dirty: false };
@@ -46,17 +46,17 @@ test('recordState: detecta commits nuevos y cambios de rama', (t) => {
   assert.equal(tl.query({ kinds: ['commit'] })[0].subject, 'feat: x');
 });
 
-test('checkOrphans: avisa una vez de cambios sin tocar desde hace N minutos', (t) => {
+test('checkOrphans: reports once changes untouched for N minutes', (t) => {
   const { tl } = setup(t);
   const repo = { projectId: 'p', name: 'r', lastActivity: iso(45 * 60000), state: { dirty: true, files: [{}, {}] } };
   const found = tl.checkOrphans([repo]);
   assert.equal(found.length, 1);
   assert.equal(found[0].files, 2);
-  assert.equal(tl.checkOrphans([repo]).length, 0); // no se repite
+  assert.equal(tl.checkOrphans([repo]).length, 0); // not repeated
   assert.equal(tl.checkOrphans([{ ...repo, lastActivity: iso(5 * 60000) }]).length, 0);
 });
 
-test('query: filtra por repo, tipo, extension y fechas', (t) => {
+test('query: filters by repo, kind, extension and dates', (t) => {
   const { tl } = setup(t);
   tl.recordFiles({ projectId: 'a', name: 'a', paths: ['x.css'], at: iso() });
   tl.recordFiles({ projectId: 'b', name: 'b', paths: ['y.js'], at: iso() });
@@ -68,7 +68,7 @@ test('query: filtra por repo, tipo, extension y fechas', (t) => {
   assert.equal(tl.query({ kinds: ['watch'] })[0].change, 'created');
 });
 
-test('persistencia: las entradas sobreviven a un reinicio', (t) => {
+test('persistence: entries survive a restart', (t) => {
   const { tl, Timeline, timelineFile } = setup(t);
   tl.recordSignal({ projectId: 'p', name: 'r', rule: 'secret', severity: 'high', message: 'posible secreto' });
   tl.recordTask('p', 'r', { id: 't', title: 'x', status: 'ready_to_test' }, 'in_progress');

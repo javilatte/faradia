@@ -5,13 +5,12 @@ const path = require('path');
 const { EventEmitter } = require('events');
 const { git } = require('./gitState');
 
-// Vigila un repo (o el worktree de una tarea) sin fs.watch recursivo: en Linux ese
-// modo pone un watch de inotify en CADA subcarpeta, node_modules incluido, y con
-// varios repos agota el limite del sistema. Aqui solo se vigilan las carpetas que
-// importan: las que tienen ficheros versionados o nuevos no ignorados, las de la
-// lista de vigilancia (plano 2) y los metadatos de git (HEAD, index, ramas).
-// Los cambios se agrupan (debounce) y se emiten como un lote:
-//   'change' { paths: [rutas relativas], git: boolean (cambio en HEAD/index/refs) }
+// Watches a repo (or a task worktree) without a recursive fs.watch: on Linux that mode puts an
+// inotify watch on EVERY subfolder, node_modules included, and with several repos it exhausts the
+// system limit. Only the folders that matter are watched: those with tracked or new non-ignored
+// files, those of the watchlist (plane 2) and the git metadata (HEAD, index, refs). Changes are
+// debounced and emitted as a batch:
+//   'change' { paths: [relative paths], git: boolean (change in HEAD/index/refs) }
 
 const SELF_DIRS = ['.optimia', '.codegraph'];
 
@@ -19,14 +18,14 @@ function isSelf(rel) {
   return SELF_DIRS.some((d) => rel === d || rel.startsWith(`${d}/`));
 }
 
-// Ficheros efímeros de editores y de escrituras atómicas (se crean y se renombran
-// al momento): no son cambios que nadie quiera ver en el timeline ni en los avisos.
+// Ephemeral files from editors and atomic writes (created and renamed right away): changes nobody
+// wants to see in the timeline or in the signals.
 const TRANSIENT = [
-  /\.tmp\.\d+\.[0-9a-f]+$/i, // escritura atómica (fichero.tmp.<pid>.<hash>)
+  /\.tmp\.\d+\.[0-9a-f]+$/i, // atomic write (file.tmp.<pid>.<hash>)
   /\.(swp|swo|swx)$/, // vim
-  /~$/, // copias de seguridad
+  /~$/, // backup copies
   /(^|\/)\.#/, // emacs
-  /(^|\/)4913$/, // prueba de escritura de vim
+  /(^|\/)4913$/, // vim's write test
   /\.crswap$/ // Chrome
 ];
 
@@ -63,8 +62,8 @@ function walkDirs(root, rel, out, limit) {
 
 class TreeWatcher extends EventEmitter {
   /**
-   * extraDirs: carpetas (relativas) a vigilar enteras aunque git las ignore,
-   * p. ej. "dist" para un patron "dist/**" del plano 2.
+   * extraDirs: folders (relative) watched entirely even if git ignores them, e.g. "dist" for a
+   * plane 2 pattern "dist/**".
    */
   constructor(root, { extraDirs = [], maxDirs = 4000, debounceMs = 300, watchGitMeta = true } = {}) {
     super();
@@ -90,7 +89,7 @@ class TreeWatcher extends EventEmitter {
         .split('\0')
         .filter(Boolean);
     } catch {
-      /* no es un repo git: solo la raiz */
+      /* not a git repo: only the root */
     }
     const dirs = dirsOf([...tracked, ...untracked].filter((f) => !isSelf(f)));
     for (const extra of this.extraDirs) {
@@ -110,7 +109,7 @@ class TreeWatcher extends EventEmitter {
   watchGit() {
     const gitDir = path.join(this.root, '.git');
     try {
-      if (!fs.statSync(gitDir).isDirectory()) return; // worktree: .git es un fichero
+      if (!fs.statSync(gitDir).isDirectory()) return; // worktree: .git is a file
     } catch {
       return;
     }
@@ -126,7 +125,7 @@ class TreeWatcher extends EventEmitter {
         w.on('error', () => w.close());
         this.watchers.set(`\0git:${abs}`, w);
       } catch {
-        /* carpeta desaparecida */
+        /* folder vanished */
       }
     };
     watch(gitDir);
@@ -139,7 +138,7 @@ class TreeWatcher extends EventEmitter {
         for (const e of fs.readdirSync(dir, { withFileTypes: true }))
           if (e.isDirectory()) stack.push(path.join(dir, e.name));
       } catch {
-        /* sin ramas aun */
+        /* no branches yet */
       }
     }
   }
@@ -155,7 +154,7 @@ class TreeWatcher extends EventEmitter {
       });
       this.watchers.set(rel, w);
     } catch {
-      /* desaparecio entre el listado y el watch */
+      /* vanished between the listing and the watch */
     }
   }
 
@@ -164,7 +163,7 @@ class TreeWatcher extends EventEmitter {
     const rel = dirRel ? `${dirRel}/${name}` : String(name);
     if (rel === '.git' || rel.startsWith('.git/') || isSelf(rel)) return;
     this.pending.add(rel);
-    // Carpeta nueva: se vigila si git no la ignora (o si es de la lista del plano 2).
+    // New folder: watched unless git ignores it (or it is in the plane 2 watchlist).
     if (event === 'rename' && !this.watchers.has(rel)) this.maybeWatchNewDir(rel);
     this.schedule();
   }
@@ -175,23 +174,23 @@ class TreeWatcher extends EventEmitter {
     try {
       stat = fs.statSync(abs);
     } catch {
-      return; // era un borrado
+      return; // it was a deletion
     }
     if (!stat.isDirectory() || this.watchers.size >= this.maxDirs) return;
     const extra = this.extraDirs.some((d) => rel === d || rel.startsWith(`${d}/`));
     if (!extra) {
       try {
         await git(this.root, ['check-ignore', '-q', rel]);
-        return; // ignorada por git
+        return; // ignored by git
       } catch {
-        /* exit 1 = no ignorada: se vigila */
+        /* exit 1 = not ignored: watch it */
       }
     }
     const dirs = new Set();
     walkDirs(this.root, rel, dirs, this.maxDirs - this.watchers.size);
     for (const d of dirs) this.watchDir(d);
-    // Lo que se escribio dentro antes de que el watch estuviera puesto (p. ej. mkdir y
-    // un fichero justo despues) no genero evento: se informa ahora.
+    // Whatever was written inside before the watch was in place (e.g. mkdir and a file right after)
+    // produced no event: it is reported now.
     let reported = 0;
     for (const d of dirs) {
       let entries = [];

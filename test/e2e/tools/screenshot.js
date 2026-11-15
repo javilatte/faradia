@@ -1,7 +1,7 @@
 'use strict';
 
-// Herramienta de desarrollo: arranca optimia como en los e2e y guarda capturas.
-//   node test/e2e/tools/screenshot.js <salida-dir> [ruta#vista ...]
+// Development tool: starts optimia as in the e2e tests and saves screenshots.
+//   node test/e2e/tools/screenshot.js <output-dir> [route#view ...]
 const path = require('path');
 const { spawn } = require('child_process');
 const { chromium } = require('@playwright/test');

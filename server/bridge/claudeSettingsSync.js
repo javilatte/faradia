@@ -39,34 +39,33 @@ const DEFAULT_ALLOW = [
 ];
 const DEFAULT_MODE = 'acceptEdits';
 
-// Ajustes de Claude Code que optimia aplica SOLO a sus propios procesos (chat,
-// agentes y terminal), con `claude --settings <fichero>`. Antes se escribian en
-// .claude/settings.json del repo: eso cambiaba la configuracion compartida (y
-// versionada) del proyecto, afectaba a las sesiones normales de claude del
-// usuario y de su equipo, y sustituia la lista deny que el repo ya tuviera. Con
-// --settings el repo no se toca y las reglas deny del repo siguen sumandose
-// (verificado con el binario real: deny, defaultMode y enableAllProjectMcpServers
-// se aplican desde --settings y el MCP de optimia conecta).
+// Claude Code settings that optimia applies ONLY to its own processes (chat, agents and terminal),
+// with `claude --settings <file>`. They used to be written to the repo's .claude/settings.json:
+// that changed the project's shared (and versioned) configuration, affected the user's and their
+// team's normal claude sessions, and replaced whatever deny list the repo already had. With
+// --settings the repo is untouched and the repo's own deny rules still add up (verified against the
+// real binary: deny, defaultMode and enableAllProjectMcpServers apply from --settings and optimia's
+// MCP server connects).
 function optimiaClaudeSettingsPath(projectRoot) {
   return path.join(projectRoot, '.optimia', 'claude-settings.json');
 }
 
-// Variante para los agentes de las tareas: solo las prohibiciones y la aprobacion
-// del MCP. Sin allow ni defaultMode: cada etapa recibe sus herramientas con
-// --allowedTools y una etapa de solo lectura no debe heredar acceptEdits.
+// Variant for task agents: only the deny list and the MCP approval. No allow list and no
+// defaultMode: each stage gets its tools through --allowedTools, and a read-only stage must not
+// inherit acceptEdits.
 function agentClaudeSettingsPath(projectRoot) {
   return path.join(projectRoot, '.optimia', 'claude-settings-agents.json');
 }
 
-// Ruta del .claude/settings.json del repo (solo para leer/importar o limpiar).
+// Path of the repo's .claude/settings.json (only to read, import or clean up).
 function claudeSettingsPath(projectRoot) {
   return path.join(projectRoot, '.claude', 'settings.json');
 }
 
 function buildClaudeSettings(noGo) {
   return {
-    // Cargar un servidor MCP por --mcp-config necesita esta aprobacion, ademas de
-    // los permisos de herramientas (verificado con el binario real).
+    // Loading an MCP server through --mcp-config needs this approval on top of the tool permissions
+    // (verified against the real binary).
     enableAllProjectMcpServers: true,
     permissions: {
       allow: [...DEFAULT_ALLOW],
@@ -77,8 +76,8 @@ function buildClaudeSettings(noGo) {
 }
 
 /**
- * Regenera .optimia/claude-settings.json a partir de la lista "prohibido" del
- * usuario (settings.preferences.noGo). Devuelve la ruta para --settings.
+ * Regenerates .optimia/claude-settings.json from the user's "Prohibido" list
+ * (settings.preferences.noGo). Returns the path for --settings.
  */
 function syncClaudeSettings(projectRoot, noGo) {
   const file = optimiaClaudeSettingsPath(projectRoot);
@@ -94,10 +93,10 @@ function syncClaudeSettings(projectRoot, noGo) {
   return file;
 }
 
-// Versiones anteriores dejaban .claude/settings.json en el repo. Se borra solo si
-// lo genero optimia (sus claves y su lista allow, nada mas), git no lo sigue y su
-// lista deny ya esta en la de optimia (si no, el aviso de importacion de Ajustes
-// la ofrece primero). Si el usuario lo ha cambiado o versionado, se deja tal cual.
+// Older versions left .claude/settings.json in the repo. It is removed only if optimia generated it
+// (its keys and its allow list, nothing else), git does not track it and its deny list is already
+// in optimia's (otherwise the import notice in Settings offers it first). If the user changed or
+// versioned it, it is left alone.
 function cleanupLegacyClaudeSettings(projectRoot, noGo = []) {
   const file = claudeSettingsPath(projectRoot);
   let current;
@@ -127,9 +126,9 @@ function cleanupLegacyClaudeSettings(projectRoot, noGo = []) {
   if (tracked.status === 0) return false;
   fs.rmSync(file);
   try {
-    fs.rmdirSync(path.dirname(file)); // solo si queda vacia
+    fs.rmdirSync(path.dirname(file)); // only if it is empty now
   } catch {
-    /* hay mas cosas en .claude/ */
+    /* there is more in .claude/ */
   }
   return true;
 }

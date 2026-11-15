@@ -3,19 +3,19 @@
 const { test, expect } = require('@playwright/test');
 const { trackErrors, openProject } = require('./helpers');
 
-test('ajustes por capas: lo global llega al repo y el repo puede tener lo suyo', async ({ page, request }) => {
+test('layered settings: global settings reach the repo and the repo can have its own', async ({ page, request }) => {
   const errors = trackErrors(page);
   await openProject(page);
   await page.locator('#settings-button').click();
   await page.locator('.settings-nav-item[data-pane="instructions"]').click();
 
-  // Todos los repos: el flujo de trabajo común
+  // All repos: the shared workflow
   await page.locator('#settings-scope [data-scope="global"]').click();
   await page.locator('#setting-instructions').fill('Commits en Conventional Commits.');
   await page.locator('#setting-instructions').blur();
   await expect(page.locator('#settings-save-status')).toHaveText('Guardado para todos los repos');
 
-  // Solo este repo: se ven las comunes y se añaden las propias
+  // Only this repo: the shared ones are shown and the repo's own are added
   await page.locator('#settings-scope [data-scope="project"]').click();
   await expect(page.locator('#instructions-inherited')).toBeVisible();
   await expect(page.locator('#instructions-inherited .inherited-text')).toHaveText('Commits en Conventional Commits.');
@@ -23,7 +23,7 @@ test('ajustes por capas: lo global llega al repo y el repo puede tener lo suyo',
   await page.locator('#setting-instructions').blur();
   await expect(page.locator('#settings-save-status')).toHaveText('Guardado solo para este repo');
 
-  // Un valor propio del repo, y volver a heredarlo
+  // A repo's own value, and inheriting it again
   await page.locator('.settings-nav-item[data-pane="claude"]').click();
   await page.locator('#setting-claude-effort').selectOption('low');
   const origin = page.locator('#setting-claude-effort ~ .field-origin');

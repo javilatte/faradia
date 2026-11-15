@@ -6,7 +6,7 @@ const path = require('path');
 const { e2eTmp, trackErrors } = require('./helpers');
 
 const demo = () => path.join(e2eTmp(), 'repos', 'demo');
-// PNG de 1x1 pixel
+// 1x1 pixel PNG
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   'base64'
@@ -18,7 +18,7 @@ test.beforeEach(() => {
   fs.writeFileSync(path.join(demo(), 'docs', 'logo.png'), PNG);
 });
 
-test('explorar, previsualizar markdown e imagen, y copiar la ruta', async ({ page, context }) => {
+test('browse, preview markdown and an image, and copy the path', async ({ page, context }) => {
   const errors = trackErrors(page);
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/?token=e2e-token#/files');
@@ -33,13 +33,13 @@ test('explorar, previsualizar markdown e imagen, y copiar la ruta', async ({ pag
   await expect(img).toBeVisible();
   await expect.poll(() => img.evaluate((el) => el.naturalWidth)).toBe(1);
 
-  // El arbol recuerda lo plegado al volver
+  // The tree remembers what was collapsed when coming back
   await page.reload();
   await expect(page.locator('.fx-node', { hasText: 'guia.md' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test('renombrar, borrar con deshacer, papelera y portapapeles', async ({ page }) => {
+test('rename, delete with undo, trash and clipboard', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?token=e2e-token#/files');
   await page.locator('.fx-node', { hasText: 'docs' }).click();
@@ -50,21 +50,21 @@ test('renombrar, borrar con deshacer, papelera y portapapeles', async ({ page })
   await expect(page.locator('.fx-node', { hasText: 'manual.md' })).toBeVisible();
   expect(fs.existsSync(path.join(demo(), 'docs', 'manual.md'))).toBe(true);
 
-  // Borrar y deshacer desde el aviso
+  // Delete and undo from the toast
   await page.getByRole('button', { name: 'Borrar' }).click();
   await expect(page.locator('.fx-node', { hasText: 'manual.md' })).toHaveCount(0);
   expect(fs.existsSync(path.join(demo(), 'docs', 'manual.md'))).toBe(false);
   await page.locator('.toast', { hasText: 'papelera' }).getByRole('button', { name: 'Deshacer' }).click();
   await expect(page.locator('.fx-node', { hasText: 'manual.md' })).toBeVisible();
 
-  // Borrar y restaurar desde la papelera
+  // Delete and restore from the trash
   await page.locator('.fx-node', { hasText: 'manual.md' }).click();
   await page.getByRole('button', { name: 'Borrar' }).click();
   await page.getByRole('button', { name: 'Papelera' }).click();
   await page.locator('#fx-trash li', { hasText: 'manual.md' }).getByRole('button', { name: 'Restaurar' }).click();
   await expect(page.locator('.fx-node', { hasText: 'manual.md' })).toBeVisible();
 
-  // Copiar al portapapeles y pegar en la raiz
+  // Copy to the clipboard and paste at the root
   await page.locator('.fx-node', { hasText: 'manual.md' }).click();
   await page.getByRole('button', { name: 'Copiar', exact: true }).click();
   await expect(page.locator('.fx-clipboard')).toContainText('docs/manual.md');
@@ -77,7 +77,7 @@ test('renombrar, borrar con deshacer, papelera y portapapeles', async ({ page })
   expect(errors).toEqual([]);
 });
 
-test('los ficheros en bruto se sirven con Range y sin poder ejecutar scripts', async ({ page, request }) => {
+test('raw files are served with Range and cannot run scripts', async ({ page, request }) => {
   await page.goto('/?token=e2e-token');
   const { projects, defaultProjectId } = await page.evaluate(() => fetch('/api/projects').then((r) => r.json()));
   expect(projects.length).toBeGreaterThan(0);

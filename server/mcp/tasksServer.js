@@ -16,8 +16,8 @@ if (!port) {
   console.error('tasksServer: OPTIMIA_PORT env var is required');
   process.exit(1);
 }
-// Cada proyecto tiene su propio mcp.json con su id y el token de esta ejecucion de
-// optimia (ver server/runtime/projectRuntime.js#writeMcpConfig).
+// Each project has its own mcp.json with its id and the token of this optimia run (see
+// server/runtime/projectRuntime.js#writeMcpConfig).
 const projectId = process.env.OPTIMIA_PROJECT;
 const base = projectId ? `http://127.0.0.1:${port}/api/projects/${projectId}` : `http://127.0.0.1:${port}/api`;
 const authHeaders = process.env.OPTIMIA_TOKEN ? { 'X-Optimia-Token': process.env.OPTIMIA_TOKEN } : {};
@@ -32,16 +32,16 @@ server.registerTool(
       'Crea una tarea nueva para un agente de optimia a partir de un plan acordado con el usuario en el chat. ' +
       'Usar solo después de cerrar un plan concreto con el usuario (p. ej. con la skill plan-optimizer), no para pedidos vagos.',
     inputSchema: {
-      title: z.string().describe('Título corto de la tarea, visible en el panel de agentes'),
+      title: z.string().describe('Short task title, shown in the agents panel'),
       type: z
         .enum(['coding', 'bugfix', 'tests', 'documentation', 'audit', 'custom'])
         .describe(
-          'Tipo de tarea: coding (plan, implementar, verificar), bugfix (diagnosticar, arreglar, verificar), tests (escribir tests), documentation, audit (informe sin cambios) o custom (un agente propio, indica agentId)'
+          'Task type: coding (plan, implement, verify), bugfix (diagnose, fix, verify), tests (write tests), documentation, audit (report without changes) or custom (a custom agent, give agentId)'
         ),
-      agentId: z.string().optional().describe('Id del agente propio, solo para type "custom"'),
+      agentId: z.string().optional().describe('Id of the custom agent, only for type "custom"'),
       instruction: z
         .string()
-        .describe('Instruccion completa y autocontenida para el agente que ejecutara la tarea en su propio worktree')
+        .describe('Complete, self-contained instruction for the agent that will run the task in its own worktree')
     }
   },
   async ({ title, type, instruction, agentId }) => {
@@ -68,7 +68,7 @@ server.registerTool(
       taskId: z
         .string()
         .optional()
-        .describe('Id de la tarea. Si esta sesión ya corresponde a una tarea concreta, se puede omitir.'),
+        .describe('Task id. Can be omitted if this session already belongs to a specific task.'),
       phase: z.enum(['plan', 'implement', 'test']),
       status: z.enum(['pending', 'active', 'done', 'blocked'])
     }

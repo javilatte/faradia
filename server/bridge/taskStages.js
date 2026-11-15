@@ -2,19 +2,18 @@
 
 const path = require('path');
 
-// Pipelines de agentes por tipo de tarea. Cada etapa es una sesion de un agente
-// (ver server/agents/catalog.js) en el worktree de la tarea. Las transiciones son
-// deterministas: dependen del tipo de tarea, de si la etapa dejo cambios y de la
-// fase que el propio agente marco con update_task_progress (blocked = necesita
-// detalles del usuario).
+// Agent pipelines per task type. Each stage is one agent session (see server/agents/catalog.js) in
+// the task's worktree. Transitions are deterministic: they depend on the task type, on whether the
+// stage left changes and on the phase the agent itself marked with update_task_progress (blocked =
+// it needs details from the user).
 //
 // coding:        plan -> implement -> verify -> (ready_to_test)
 // bugfix:        diagnose -> implement -> verify -> (ready_to_test)
 // tests:         plan -> write-tests -> verify -> (ready_to_test)
-// documentation: research -> (awaiting_input: modo, formato, destino) -> write -> (ready_to_test)
-// audit:         audit -> (ready_to_test, solo informe)
-// custom:        custom (una etapa con un agente propio)
-// review y commit se lanzan a mano cuando la tarea esta lista para revisar.
+// documentation: research -> (awaiting_input: mode, format, target) -> write -> (ready_to_test)
+// audit:         audit -> (ready_to_test, report only)
+// custom:        custom (one stage with a custom agent)
+// review and commit are started by hand once the task is ready for review.
 
 const STAGES = {
   plan: { phase: 'plan', access: 'read', agent: 'planner', label: 'Planificación', asks: true },
@@ -38,8 +37,8 @@ const TASK_TYPES = {
   documentation: { label: 'Documentación', pipeline: ['research', 'write'] },
   audit: { label: 'Auditoría', pipeline: ['audit'], reportOnly: true },
   custom: { label: 'Agente propio', pipeline: ['custom'] },
-  // "Conocer este repo" (Ajustes > Memoria): estudia el repo y propone su memoria.
-  // No sale en el selector de modo del chat.
+  // "Conocer este repo" (Settings > Memory): studies the repo and proposes its memory. Not listed
+  // in the chat's mode selector.
   onboard: { label: 'Conocer el repo', pipeline: ['onboard'], reportOnly: true, internal: true }
 };
 
@@ -48,8 +47,8 @@ const STAGE_PHASE = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [k
 const DOC_MODES = ['new', 'edit', 'fragments'];
 const DOC_FORMATS = ['md', 'html', 'docx'];
 
-// Etapas que pueden parar para preguntar al usuario, y el tipo de pregunta que
-// muestran. Responder siempre reanuda la misma etapa con la misma conversacion.
+// Stages that may stop to ask the user, and the kind of question they show. Answering always
+// resumes the same stage in the same conversation.
 const QUESTION_KIND = Object.fromEntries(
   Object.entries(STAGES)
     .filter(([, v]) => v.asks)
@@ -60,10 +59,10 @@ const QUESTION_STAGE = Object.fromEntries(Object.entries(QUESTION_KIND).map(([st
 const ASK_RULE = (phase) =>
   `Si no puedes avanzar sin datos que solo tiene el usuario, NO inventes: llama a update_task_progress con fase "${phase}" y estado "blocked" y termina tu respuesta con preguntas numeradas, concretas y cortas. Si puedes avanzar, no preguntes.`;
 
-// Herramientas que cada etapa puede usar sin preguntar. Una sesion headless no
-// tiene donde contestar a un permiso, asi que Bash va libre en todas las etapas:
-// lo que no puede hacer se bloquea con STAGE_DISALLOWED (y el hook de git para
-// commits y pushes), no con una lista blanca que obliga a aprobar cada comando.
+// Tools each stage may use without asking. A headless session has nowhere to answer a permission
+// prompt, so Bash is allowed in every stage: what a stage must not do is blocked with
+// STAGE_DISALLOWED (plus the git hook for commits and pushes), not with an allow list that would
+// require approving every command.
 const READ_TOOLS = [
   'Read',
   'Glob',
@@ -82,8 +81,8 @@ const READ_TOOLS = [
   'mcp__tokensave__tokensave_dependencies'
 ];
 const EDIT_TOOLS = ['Edit', 'MultiEdit', 'Write'];
-// Denegaciones que ganan sobre cualquier allow. Coinciden con el texto del
-// comando, asi que tambien van las variantes con `git -c ...`.
+// Denials that win over any allow rule. They match the command text, so the `git -c ...` variants
+// are listed too.
 const STAGE_DISALLOWED = [
   'Bash(rm *)',
   'Bash(sudo *)',
@@ -115,7 +114,7 @@ function pipelineOf(type) {
   return (TASK_TYPES[type] || TASK_TYPES.coding).pipeline;
 }
 
-/** Acceso de una etapa: el de la etapa, o el del agente para la etapa custom. */
+/** A stage's access: the stage's own, or the agent's for the custom stage. */
 function stageAccess(stage, agent) {
   if (stage === 'custom') return agent?.access === 'edit' ? 'edit' : 'read';
   return STAGES[stage]?.access || null;
@@ -128,18 +127,17 @@ function stageTools(stage, agent) {
   return [];
 }
 
-// Lo que una etapa nunca puede hacer. Las de solo lectura bloquean tambien las
-// herramientas de edicion: una deny gana a cualquier allow (tambien a un permiso
-// que el usuario aprobo en otra etapa o a un defaultMode acceptEdits heredado).
+// What a stage can never do. Read-only stages also block the edit tools: a deny wins over any allow
+// (including a permission the user approved in another stage or an inherited acceptEdits
+// defaultMode).
 function stageDisallowed(stage, agent) {
   const deny = [...STAGE_DISALLOWED];
   if (stage && stageAccess(stage, agent) !== 'edit') deny.push(...EDIT_TOOLS, 'NotebookEdit');
   return deny;
 }
 
-// Regla de permiso exacta para una herramienta que una etapa tuvo que pedir.
-// Bash se aprueba solo para ese comando literal: sin comodines (*) ni saltos
-// de linea, que ampliarian la regla.
+// Exact permission rule for a tool a stage had to ask for. Bash is approved only for that literal
+// command: no wildcards (*) or line breaks, which would widen the rule.
 function approvalRule(tool, command) {
   if (typeof tool !== 'string' || !/^(mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+|[A-Z][A-Za-z]+)$/.test(tool)) return null;
   if (tool !== 'Bash') return tool;
@@ -149,9 +147,9 @@ function approvalRule(tool, command) {
   return `Bash(${c})`;
 }
 
-// Claude Code pide aprobacion para cualquier redireccion a /dev/null aunque la
-// regla coincida, asi que una etapa que la use se bloquea sin remedio desde la
-// tarjeta. Se le pide evitarla en todas las etapas.
+// Claude Code asks for approval for any redirection to /dev/null even when a rule matches, so a
+// stage that uses one gets stuck with no way to approve it from the card. Every stage is asked to
+// avoid it.
 const SHELL_RULE =
   'Al ejecutar comandos no uses redirecciones a /dev/null (2>/dev/null ni >/dev/null): para silenciar errores usa 2>&1.';
 
@@ -160,8 +158,8 @@ function firstStage(type) {
 }
 
 /**
- * Etapa que sigue a `stage` en el pipeline del tipo, saltando las etapas
- * opcionales desactivadas (`skip`, p. ej. verify si el Verificador esta apagado).
+ * Stage that follows `stage` in the type's pipeline, skipping disabled optional stages (`skip`,
+ * e.g. verify when the Verifier is turned off).
  */
 function nextStage(type, stage, { skip = [] } = {}) {
   const pipeline = pipelineOf(type);
@@ -189,7 +187,7 @@ function validateDocOptions(o) {
   return null;
 }
 
-// Devuelve null si la etapa puede lanzarse ahora, o el motivo como string.
+// Returns null if the stage can start now, or the reason as a string.
 function canRun(task, stage, { answer, docOptions } = {}) {
   if (!task) return 'tarea no encontrada';
   const { status, pendingQuestion } = task;
@@ -209,7 +207,7 @@ function canRun(task, stage, { answer, docOptions } = {}) {
 
   if (stage === 'write') {
     if (status === 'awaiting_input' && pendingQuestion?.kind === 'doc-options') return validateDocOptions(docOptions);
-    // Reintento tras un fallo: reutiliza las opciones ya guardadas.
+    // Retry after a failure: reuses the options already stored.
     if (status === 'pending' && task.docOptions) return validateDocOptions(task.docOptions);
     return 'la redacción requiere elegir antes el formato y el destino';
   }
@@ -218,7 +216,7 @@ function canRun(task, stage, { answer, docOptions } = {}) {
 
   if (STAGES[stage] && !STAGES[stage].manual) {
     if (!pipelineOf(task.type).includes(stage)) return `la etapa "${stage}" no es de este tipo de tarea`;
-    // Verificar otra vez una tarea ya lista para revisar tambien vale.
+    // Verifying again a task that is already ready for review is allowed too.
     if (stage === 'verify' && status === 'ready_to_test') return null;
     return status === 'pending' ? null : 'la etapa solo puede lanzarse desde una tarea pendiente';
   }
@@ -264,7 +262,7 @@ function buildStagePrompt(task, stage, opts = {}) {
   return `${buildStageBody(task, stage, opts)}\n\n${SHELL_RULE}`;
 }
 
-// Lo que la etapa anterior dejo escrito y que la etapa de implementacion necesita.
+// What the previous stage wrote and the implementation stage needs.
 function previousOutput(task, stage) {
   const out = (s) => (task.stageOutputs && task.stageOutputs[s]) || '';
   const pipeline = pipelineOf(task.type);
@@ -296,8 +294,8 @@ function buildStageBody(task, stage, { docOptions, agent } = {}) {
     case 'implement':
       return [
         'Etapa de IMPLEMENTACION. Implementa el plan siguiente en este worktree.',
-        // El encargo original va siempre: el plan puede no recoger cada detalle o
-        // criterio de aceptacion que pidio el usuario.
+        // The original request always goes in: the plan may not capture every detail or acceptance
+        // criterion the user asked for.
         `Encargo original del usuario (manda si el plan lo contradice u omite algo):\n${goal}`,
         previousOutput(task, 'implement')
           ? `${task.type === 'bugfix' ? 'Diagnóstico' : 'Plan'}:\n${previousOutput(task, 'implement')}`
@@ -399,39 +397,39 @@ function answerPrompt(answer, stage) {
   return `Respuesta del usuario a tus preguntas:\n${answer.trim()}\n\n${tail}`;
 }
 
-// "VEREDICTO: OK" / "VEREDICTO: FALLA ..." al final de la verificacion.
+// "VEREDICTO: OK" / "VEREDICTO: FALLA ..." at the end of the verification.
 function parseVerdict(text) {
   const m = /VEREDICTO:\s*(OK|FALLA)\b[^\n]*/i.exec(text || '');
   if (!m) return null;
   return { ok: m[1].toUpperCase() === 'OK', line: m[0].trim() };
 }
 
-// Mensaje que propone la etapa "Preparar commit" (su ultima linea "MENSAJE: ...").
+// Message proposed by the "Preparar commit" stage (its last "MENSAJE: ..." line).
 function parseCommitSuggestion(text) {
   const matches = [...String(text || '').matchAll(/^\s*\**MENSAJE:\**\s*`?([^`\n]+?)`?\s*$/gim)];
   const msg = matches.length ? matches[matches.length - 1][1].trim() : '';
   return msg && msg.length <= 120 ? msg : null;
 }
 
-// Mensaje por defecto si no se ha preparado el commit: tipo convencional segun el
-// tipo de tarea y el titulo en minuscula inicial.
+// Default message when no commit was prepared: conventional type from the task type and the title
+// starting in lower case.
 const COMMIT_TYPE = { coding: 'feat', bugfix: 'fix', tests: 'test', documentation: 'docs', audit: 'chore' };
 function defaultCommitMessage(task) {
   const type = COMMIT_TYPE[task.type] || 'feat';
   const title = String(task.title || '')
     .trim()
     .replace(/[.:]+$/, '');
-  // "Añade X" -> "añade X", pero las siglas se quedan como estan ("README", "API").
+  // "Añade X" -> "añade X", but acronyms stay as they are ("README", "API").
   const acronym = /^\p{Lu}{2,}/u.test(title);
   const summary = acronym ? title : title.charAt(0).toLocaleLowerCase('es') + title.slice(1);
   return `${type}: ${summary}`.slice(0, 72);
 }
 
 /**
- * Decide el estado de la tarea tras terminar una etapa.
+ * Decides the task's state after a stage ends.
  * outcome: { text, hasChanges, phaseStatus, isError, skip, agent }
- * Devuelve { patch, next }: patch se aplica a la tarea; next es la etapa que
- * debe lanzarse a continuacion automaticamente (o null).
+ * Returns { patch, next }: patch is applied to the task; next is the stage to start automatically
+ * right after (or null).
  */
 function decideAfterStage(
   task,
@@ -444,8 +442,8 @@ function decideAfterStage(
   const following = nextStage(task.type, stage, { skip });
   const reportOnly = Boolean(TASK_TYPES[task.type]?.reportOnly);
 
-  // La revision y el commit no tocan el estado de los cambios: un fallo solo
-  // se muestra, la tarea sigue lista para revisar.
+  // Review and commit do not change the state of the changes: a failure is only shown, and the task
+  // stays ready for review.
   if (stage === 'review' || stage === 'commit') {
     const suggested = stage === 'commit' ? parseCommitSuggestion(text) : null;
     return done({
@@ -486,7 +484,7 @@ function decideAfterStage(
     return done({ status: 'ready_to_test', reportOnly: true });
   }
   if (access === 'read') {
-    // Etapas que solo preparan texto para la siguiente (plan, diagnostico) o agentes propios de lectura.
+    // Stages that only prepare text for the next one (plan, diagnosis) or read-only custom agents.
     if (!text.trim()) {
       const what = { plan: 'la planificación', diagnose: 'el diagnóstico' }[stage] || 'la etapa';
       return done({ status: 'pending', error: `${what} no devolvio texto` });
@@ -494,7 +492,7 @@ function decideAfterStage(
     if (following) return done({ status: 'pending' }, following);
     return done({ status: 'ready_to_test', reportOnly: !hasChanges });
   }
-  // Etapas que editan: sin cambios no hay nada que revisar.
+  // Stages that edit: without changes there is nothing to review.
   if (!hasChanges) return done({ status: 'pending', error: 'no se detectaron cambios en el worktree' });
   if (following) return done({ status: 'pending' }, following);
   return done({ status: 'ready_to_test' });

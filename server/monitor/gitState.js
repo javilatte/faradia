@@ -2,8 +2,8 @@
 
 const { execFile } = require('child_process');
 
-// Plano 1: estado git de un repo o worktree, sin tocar nada (solo lecturas).
-// Asincrono para no bloquear el servidor mientras se vigilan muchos repos.
+// Plane 1: git state of a repo or worktree, without touching anything (reads only). Asynchronous so
+// the server is not blocked while watching many repos.
 
 function git(cwd, args, { maxBuffer = 32 * 1024 * 1024 } = {}) {
   return new Promise((resolve, reject) => {
@@ -27,8 +27,8 @@ const XY = {
 };
 
 /**
- * Parsea `git status --porcelain=v2 --branch -z --untracked-files=all`.
- * Devuelve { branch, upstream, ahead, behind, detached, oid, files }.
+ * Parses `git status --porcelain=v2 --branch -z --untracked-files=all`.
+ * Returns { branch, upstream, ahead, behind, detached, oid, files }.
  */
 function parseStatusV2(out) {
   const result = { branch: null, upstream: null, ahead: 0, behind: 0, detached: false, oid: null, files: [] };
@@ -113,13 +113,13 @@ async function lastCommit(cwd) {
     const [sha, subject, author, date] = out.trim().split('\0');
     return sha ? { sha, subject, author, date } : null;
   } catch {
-    return null; // repo sin commits
+    return null; // repo without commits
   }
 }
 
 /**
- * Estado completo de un repo: rama, ahead/behind, ficheros con su estado y lineas
- * +/- (de staged y sin stage juntos, frente a HEAD), y el ultimo commit.
+ * Full state of a repo: branch, ahead/behind, files with their state and +/- lines (staged and
+ * unstaged together, against HEAD), and the last commit.
  */
 async function getRepoState(cwd) {
   const statusOut = await git(cwd, ['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all']);
@@ -129,7 +129,7 @@ async function getRepoState(cwd) {
     try {
       numstat = parseNumstat(await git(cwd, ['diff', 'HEAD', '--numstat', '-z', '-M']));
     } catch {
-      /* sin HEAD valido */
+      /* no valid HEAD */
     }
   }
   let added = 0;

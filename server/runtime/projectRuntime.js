@@ -1,8 +1,8 @@
 'use strict';
 
-// Estado vivo de un proyecto: sesiones de chat y de tareas, la terminal y la API
-// HTTP del proyecto. El servidor crea un runtime por proyecto abierto (ver
-// server/index.js) y le pasa sendToClients para emitir por el WebSocket comun.
+// Live state of one project: chat and task sessions, the terminal and the project's HTTP API. The
+// server creates one runtime per open project (see server/index.js) and passes it sendToClients to
+// broadcast over the shared WebSocket.
 
 const fs = require('fs');
 const path = require('path');
@@ -17,10 +17,10 @@ const { createTaskWorktree, stageForReview, changedFiles, ignoredAmong } = requi
 const logger = require('../bridge/logger');
 
 const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write']);
-// Texto de preguntas y respuestas que se guarda en el registro, recortado.
+// Question and answer text stored in the log, truncated.
 const cut = (text, n = 500) => (typeof text !== 'string' ? null : text.length > n ? `${text.slice(0, n)}…` : text);
-// Ruta relativa a la base del proyecto o del worktree, para que el registro no
-// dependa de la carpeta donde está el repo del usuario.
+// Path relative to the project or worktree root, so the log does not depend on where the user's
+// repo lives.
 function relPath(base, p) {
   if (typeof p !== 'string' || !p) return null;
   return path.isAbsolute(p) ? path.relative(base, p) : p;
@@ -42,10 +42,9 @@ const {
 } = require('../bridge/taskStages');
 const { createApp } = require('./projectApp');
 
-// Escrito al abrir el proyecto: --mcp-config necesita este fichero antes de que
-// arranque cualquier sesion, para que create_task y update_task_progress lleguen
-// de vuelta al servidor por HTTP (el servidor MCP es hijo de `claude`, no de
-// optimia; ver server/mcp/tasksServer.js).
+// Written when the project opens: --mcp-config needs this file before any session starts, so
+// create_task and update_task_progress reach the server over HTTP (the MCP server is a child of
+// `claude`, not of optimia; see server/mcp/tasksServer.js).
 function writeMcpConfig(projectRoot, { port, projectId, token }) {
   const dir = path.join(projectRoot, '.optimia');
   fs.mkdirSync(dir, { recursive: true });
@@ -54,8 +53,8 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
   const config = {
     mcpServers: {
       'optimia-tasks': {
-        // El mismo node que ejecuta optimia: con nvm u otros gestores, "node" puede
-        // no estar en el PATH del proceso de claude y el MCP no arrancaria.
+        // The same node that runs optimia: with nvm or other version managers, "node" may not be on
+        // the claude process's PATH and the MCP server would not start.
         command: process.execPath,
         args: [path.join(__dirname, '..', 'mcp', 'tasksServer.js')],
         env
@@ -65,13 +64,13 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
   fs.writeFileSync(path.join(dir, 'mcp.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
 }
 
-// La carpeta .optimia de un repo abierto desde un workbench no debe aparecer como
-// cambio en git. Se excluye en .git/info/exclude (local, no versionado) en vez de
-// tocar el .gitignore del usuario. Si ya la ignora, no se hace nada.
+// The .optimia folder of a repo opened from a workbench must not show up as a git change. It is
+// excluded in .git/info/exclude (local, not versioned) instead of touching the user's .gitignore.
+// If it is already ignored, nothing is done.
 function ensureOptimiaExcluded(projectRoot) {
   const gitDir = path.join(projectRoot, '.git');
   try {
-    if (!fs.statSync(gitDir).isDirectory()) return; // worktree o submodulo: .git es un fichero
+    if (!fs.statSync(gitDir).isDirectory()) return; // worktree or submodule: .git is a file
     const gitignore = path.join(projectRoot, '.gitignore');
     const ignored = fs.existsSync(gitignore) && /^\/?\.optimia\/?$/m.test(fs.readFileSync(gitignore, 'utf8'));
     if (ignored) return;
@@ -81,14 +80,14 @@ function ensureOptimiaExcluded(projectRoot) {
     fs.mkdirSync(path.dirname(exclude), { recursive: true });
     fs.appendFileSync(exclude, `${current && !current.endsWith('\n') ? '\n' : ''}/.optimia\n`);
   } catch {
-    /* no es un repo git o no se puede escribir: nada que excluir */
+    /* not a git repo or not writable: nothing to exclude */
   }
 }
 
-// Denegaciones por politica que se toleran en una etapa antes de pararla.
+// Policy denials tolerated in a stage before stopping it.
 const MAX_POLICY_DENIALS = 5;
 
-// Cierra la ultima ejecucion de `stage` en stageRuns con un estado.
+// Closes the last run of `stage` in stageRuns with a status.
 function closeLastRun(task, stage, status) {
   const runs = [...(task?.stageRuns || [])];
   const last = runs[runs.length - 1];
@@ -100,7 +99,7 @@ function closeLastRun(task, stage, status) {
 
 function createProjectRuntime({ projectId, projectRoot, port, token, sendToClients }) {
   ensureOptimiaExcluded(projectRoot);
-  // Permisos de las sesiones de optimia, pasados con --settings (nada en el repo).
+  // Permissions of optimia's sessions, passed with --settings (nothing in the repo).
   syncClaudeSettings(projectRoot, loadSettings(projectRoot).preferences.noGo);
   const log = logger.createLogger(projectRoot);
   writeMcpConfig(projectRoot, { port, projectId, token });
@@ -113,7 +112,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   let terminalSession = null; // one project-wide PtySession, independent of chat/task sessions
   let terminalOwner = null; // { scope, id } when the terminal is running because a chat/task was handed off to it
 
-  // Todo lo que se emite lleva el id del proyecto: un mismo navegador ve varios.
+  // Everything broadcast carries the project id: one browser shows several projects.
   const broadcast = (payload) => sendToClients({ ...payload, projectId });
 
   // Called from both the task and chat event handlers below. The moment a
@@ -139,10 +138,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     broadcast({ type: 'terminal_handoff', scope, id, toolName: event.tool_name });
   }
 
-  // Lanza una etapa del pipeline de la tarea (ver bridge/taskStages.js) en su
-  // worktree. Una sesion de Claude por etapa; al terminar, la etapa decide el
-  // siguiente estado y, si toca, lanza la siguiente etapa automaticamente.
-  // Devuelve { task } o { error, code } para que la ruta HTTP responda.
+  // Starts a stage of the task's pipeline (see bridge/taskStages.js) in its worktree. One Claude
+  // session per stage; when it ends, the stage decides the next state and, if needed, starts the
+  // next stage automatically. Returns { task } or { error, code } for the HTTP route to answer.
   function runTaskStage(taskId, { stage, answer, docOptions } = {}) {
     const task = loadTasks(projectRoot).find((t) => t.id === taskId);
     if (!task) return { error: 'task not found', code: 404 };
@@ -169,7 +167,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       }
     }
 
-    // Cada etapa la hace un agente del catalogo, con su motor, modelo y prompt de rol.
+    // Each stage is run by an agent from the catalog, with its engine, model and role prompt.
     const agent = resolveStageAgent(projectRoot, task, stage);
     if (!agent) return { error: `no hay ningun agente para la etapa "${stage}"`, code: 409 };
     if (!agent.enabled && stage === 'custom') return { error: `el agente "${agent.name}" está desactivado`, code: 409 };
@@ -182,8 +180,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       return { error: err.message, code: 500 };
     }
 
-    // Responder a una pregunta de implementacion reanuda la misma conversacion
-    // (la sesion de la etapa anterior) para que el agente conserve el contexto.
+    // Answering an implementation question resumes the same conversation (the previous stage's
+    // session) so the agent keeps its context.
     const resuming = answer !== undefined && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
     let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent });
@@ -217,7 +215,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       branch,
       worktreePath: worktreeDir,
       sessionId: session.sessionId,
-      // Historial de etapas: que agente y modelo hizo cada una (lo muestra la tarjeta).
+      // Stage history: which agent and model ran each stage (shown on the card).
       stageRuns: [
         ...(task.stageRuns || []),
         {
@@ -233,8 +231,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     });
     broadcast({ type: 'task_updated', task: started });
 
-    // El evento de denegacion solo trae el nombre de la herramienta; el comando
-    // concreto viene en el bloque tool_use previo con el mismo id.
+    // The denial event only carries the tool name; the actual command is in the earlier tool_use
+    // block with the same id.
     const toolUses = new Map();
     session.on('event', (event) => {
       broadcast({ type: 'task_claude_event', taskId, event });
@@ -253,16 +251,15 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         }
       }
       if (event.type === 'result') finishTaskStage(taskId, stage, worktreeDir, session, event);
-      // Una tarea no es interactiva: si la etapa necesita un permiso que no tiene,
-      // se detiene y la tarjeta ofrece aprobarlo y reintentar. No se abre la terminal.
+      // A task is not interactive: if the stage needs a permission it does not have, it stops and
+      // the card offers to approve it and retry. The terminal is not opened.
       if (event.type === 'system' && event.subtype === 'permission_denied' && !session._stageDone) {
         const tool = event.tool_name || 'una herramienta';
         const use = toolUses.get(event.tool_use_id);
         const command = use?.name === 'Bash' ? use.input?.command : undefined;
-        // Bash va libre en las etapas: lo que aun asi se deniega es politica
-        // (comandos destructivos, commits...) y no se aprueba desde la tarjeta.
-        // Como en Claude Code normal, el agente recibe la denegacion y sigue por
-        // otro camino; solo si insiste demasiado se para la etapa.
+        // Bash is free in every stage: what still gets denied is policy (destructive commands,
+        // commits...) and cannot be approved from the card. As in plain Claude Code, the agent
+        // receives the denial and takes another path; the stage stops only if it insists too much.
         const rule = tool === 'Bash' ? null : approvalRule(tool);
         const approvedNow = loadSettings(projectRoot).preferences.approvedTools || [];
         const alreadyApproved = rule !== null && approvedNow.includes(rule);
@@ -300,8 +297,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     session.on('exit', () => {
       if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
       if (session._stageDone) return;
-      // Salida sin `result` (fallo, kill o handoff a la terminal): la tarea no
-      // puede quedarse en in_progress para siempre.
+      // Exit without a `result` (failure, kill or handoff to the terminal): the task cannot stay
+      // in_progress forever.
       const before = loadTasks(projectRoot).find((t) => t.id === taskId);
       const current = updateTask(projectRoot, taskId, {
         status: 'pending',
@@ -327,7 +324,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     if (tool !== task.pendingPermission.tool || (tool === 'Bash' && command !== task.pendingPermission.command)) {
       return { error: 'el permiso pendiente ya no coincide con la petición', code: 409 };
     }
-    // Los permisos aprobados desde una tarjeta son de este repo.
+    // Permissions approved from a card belong to this repo.
     const approved = loadProjectLayer(projectRoot).preferences.approvedTools;
     if (!approved.includes(rule)) {
       saveProjectSettings(projectRoot, { preferences: { approvedTools: [...approved, rule] } });
@@ -350,7 +347,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     const current = loadTasks(projectRoot).find((t) => t.id === taskId);
     session.close();
-    if (!current) return; // la tarea se borro mientras corria
+    if (!current) return; // the task was deleted while it was running
 
     const phaseStatus = (current.phases || []).find((p) => p.key === STAGE_PHASE[stage])?.status;
     const agent = resolveStageAgent(projectRoot, current, stage);
@@ -393,7 +390,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       ...commitDraft,
       stageRuns: runs,
       outputFiles: [...knownFiles].sort(),
-      // Los que git ignora: no entran en el commit salvo que el usuario los marque.
+      // The ones git ignores: they stay out of the commit unless the user ticks them.
       ignoredOutputs: ignoredAmong(worktreeDir, [...knownFiles])
     });
     log.info('task.stage.finish', {
@@ -484,8 +481,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     return session;
   }
 
-  // Para la consulta en curso sin borrar la conversacion: el siguiente mensaje
-  // reanuda la misma sesion (--resume) con el historial ya guardado.
+  // Stops the running query without deleting the conversation: the next message resumes the same
+  // session (--resume) with the history already stored.
   function stopChatSession(chatId) {
     const session = chatSessions.get(chatId);
     if (!session) return false;
@@ -551,8 +548,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     return session;
   }
 
-  // Un agente que seguia corriendo al cerrar optimia ya no existe: sus tareas
-  // quedan pendientes (reintentables) en vez de en in_progress para siempre.
+  // An agent still running when optimia closed no longer exists: its tasks become pending
+  // (retryable) instead of staying in_progress forever.
   for (const task of loadTasks(projectRoot)) {
     if (task.status === 'in_progress') {
       updateTask(projectRoot, task.id, { status: 'pending', error: 'interrumpida al reiniciar optimia' });
@@ -572,8 +569,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     log
   );
 
-  // Mensajes de WebSocket dirigidos a este proyecto. Devuelve false si el tipo
-  // no es de proyecto, para que el servidor responda con un error.
+  // WebSocket messages for this project. Returns false if the type is not a project message, so the
+  // server answers with an error.
   function handleWsMessage(msg, ws) {
     // Chat sessions are server-side and chatId-tagged on every broadcast;
     // a tab doesn't need to register interest before sending a message.
@@ -635,7 +632,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         ts: new Date().toISOString()
       });
       log.info('chat.user', { chatId: msg.chatId, text: cut(msg.text), images: (msg.images || []).length });
-      // El primer mensaje da nombre al chat; despues el nombre se queda fijo.
+      // The first message names the chat; after that the name stays.
       const chatNow = loadChat(projectRoot, msg.chatId);
       const firstLine =
         (msg.text || '')

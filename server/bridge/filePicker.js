@@ -2,9 +2,8 @@
 
 const { execFile } = require('child_process');
 
-// Abre el explorador nativo del sistema y devuelve la ruta absoluta elegida,
-// o null si el usuario cancela. La app corre en la maquina del usuario, asi
-// que el dialogo aparece donde esta el.
+// Opens the system's native file dialog and returns the chosen absolute path, or null if the user
+// cancels. The app runs on the user's machine, so the dialog shows up where they are.
 function pickFile({ prompt = 'Elige un fichero', platform = process.platform } = {}) {
   if (platform === 'darwin') {
     const script = `POSIX path of (choose file with prompt ${JSON.stringify(prompt)})`;
@@ -24,8 +23,8 @@ function pickFile({ prompt = 'Elige un fichero', platform = process.platform } =
   return Promise.reject(new Error(`no hay explorador de ficheros para ${platform}`));
 }
 
-// Cancelar el dialogo termina el proceso con codigo distinto de 0 y sin salida:
-// eso es "sin seleccion", no un error.
+// Cancelling the dialog ends the process with a non-zero code and no output: that means "no
+// selection", not an error.
 function run(cmd, args) {
   return new Promise((resolve, reject) => {
     execFile(cmd, args, { encoding: 'utf8' }, (err, stdout) => {

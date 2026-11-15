@@ -5,12 +5,11 @@ const path = require('path');
 const crypto = require('crypto');
 const { configDir } = require('./globalPaths');
 
-// Un workbench es un conjunto con nombre de repos que se miran juntos ("Trabajo",
-// "Cliente X"...). Un repo puede estar en varios. Se guarda en
-// ~/.config/optimia/workbenches.json, fuera de cualquier repo.
+// A workbench is a named set of repos looked at together ("Work", "Client X"...). A repo can be in
+// several. Stored in ~/.config/optimia/workbenches.json, outside any repo.
 
 const DEFAULT_NAME = 'Por defecto';
-// Carpetas que nunca se recorren al buscar repos: pesadas o generadas.
+// Folders never walked when looking for repos: heavy or generated.
 const SKIP_DIRS = new Set([
   'node_modules',
   '.git',
@@ -141,8 +140,8 @@ function removeRepo(id, repoPath) {
   return wb;
 }
 
-// El proyecto desde el que se lanza optimia siempre esta en algun workbench: si no
-// esta en ninguno, entra en "Por defecto" (que se crea si hace falta).
+// The project optimia is launched from is always in some workbench: if it is in none, it goes into
+// "Por defecto" (created if needed).
 function ensureLaunchRepo(root) {
   const store = load();
   const repo = normalizeRepo(root);
@@ -163,9 +162,9 @@ function ensureLaunchRepo(root) {
 }
 
 /**
- * Busca repos git bajo `root` hasta `maxDepth` niveles. No entra dentro de un
- * repo encontrado (sus submodulos y worktrees no son repos aparte para esto) ni
- * en carpetas pesadas u ocultas. Para en `limit` resultados.
+ * Looks for git repos under `root` down to `maxDepth` levels. Does not go inside a repo it found
+ * (its submodules and worktrees are not separate repos here) nor into heavy or hidden folders.
+ * Stops at `limit` results.
  */
 function scanForRepos(root, { maxDepth = 4, limit = 500 } = {}) {
   const start = normalizeRepo(root);
@@ -182,7 +181,7 @@ function scanForRepos(root, { maxDepth = 4, limit = 500 } = {}) {
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
-      return; // sin permisos
+      return; // no permission
     }
     for (const e of entries) {
       if (!e.isDirectory() || e.isSymbolicLink()) continue;
