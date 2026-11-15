@@ -10,7 +10,12 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # optimia runs on Linux and macOS: every suite runs on both.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,7 +39,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-traces
+          name: playwright-traces-${{ matrix.os }}
           path: test-results/
           retention-days: 7
 
