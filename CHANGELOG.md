@@ -2,6 +2,17 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.1] - 2026-11-15
+
+Correcciones para macOS.
+
+### Fixed
+- La terminal integrada no arrancaba en macOS (`posix_spawnp failed`): `node-pty` 1.1.0 trae su `spawn-helper` para macOS sin permiso de ejecución. optimia se lo da antes de abrir la terminal y, si no puede, explica cómo arreglarlo.
+- En macOS, la vigilancia de ficheros podía no ver un fichero creado justo después de su carpeta, así que el dashboard, la vista Cambios y el timeline no lo mostraban. En macOS y Windows se usa ahora la vigilancia recursiva nativa del sistema, sin los cambios dentro de carpetas que git ignora; en Linux se sigue vigilando carpeta a carpeta.
+
+### Changed
+- La CI ejecuta todas las suites también en macOS.
+
 ## [2.0.0] - 2026-11-15
 
 Supervisión de agentes y de varios repos a la vez. Cambio incompatible con 1.x en la API local (ver "Cambios incompatibles").
