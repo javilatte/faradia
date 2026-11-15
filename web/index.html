@@ -274,15 +274,22 @@
               </svg>
             </button>
             <span id="settings-pane-title">Claude</span>
+            <div class="settings-scope">
+              <div class="segmented" id="settings-scope" role="group" aria-label="A qué repos se aplican los cambios">
+                <button type="button" data-scope="global">Todos los repos</button>
+                <button type="button" data-scope="project">Solo <span class="scope-repo-name">este repo</span></button>
+              </div>
+            </div>
           </div>
+          <div class="settings-scope-note muted" id="settings-scope-note" role="note"></div>
           <div class="settings-pane-body">
             <section class="settings-pane" data-pane="claude">
               <div class="settings-field">
                 <label>Cuenta</label>
                 <div id="claude-account-info" class="account-box muted">Comprobando…</div>
                 <div class="account-actions">
-                  <button class="icon-button" id="claude-account-switch">Cambiar cuenta</button>
-                  <button class="icon-button" id="claude-account-refresh">Actualizar</button>
+                  <button type="button" id="claude-account-switch">Cambiar cuenta…</button>
+                  <button type="button" id="claude-account-refresh">Actualizar</button>
                 </div>
                 <div id="claude-account-switch-note" class="muted" hidden>
                   Se abrio una terminal con "claude auth login". Completa el inicio de sesion ahi y pulsa Actualizar.
@@ -347,9 +354,13 @@
             <section class="settings-pane" data-pane="instructions" hidden>
               <div id="instructions-migration-banner" class="migration-banner" hidden></div>
               <div class="settings-field">
-                <label for="setting-instructions"
+                <label for="setting-instructions" id="instructions-label"
                   >Instrucciones para el chat y todos los agentes (se añaden a su system prompt)</label
                 >
+                <details class="inherited-box" id="instructions-inherited" hidden>
+                  <summary>También se aplican las instrucciones de todos los repos</summary>
+                  <pre class="inherited-text"></pre>
+                </details>
                 <div class="ai-assist-row">
                   <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />
                   <button
@@ -368,9 +379,15 @@
             <section class="settings-pane" data-pane="memory" hidden>
               <div class="settings-field">
                 <label for="setting-memory"
-                  >Memoria del proyecto: contexto que el chat y los agentes conocen siempre (se guarda en
-                  .optimia/memory.md)</label
+                  >Conocimiento de este repo que el chat y los agentes reciben en cada sesión: comandos, estructura,
+                  convenciones y trampas (se guarda en .optimia/memory.md)</label
                 >
+                <div class="onboard-row">
+                  <button type="button" id="onboard-button" class="primary">Conocer este repo…</button>
+                  <span class="muted" id="onboard-status"
+                    >Un agente de solo lectura estudia el repo y te propone la memoria; tú decides si la guardas.</span
+                  >
+                </div>
                 <div class="ai-assist-row">
                   <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />
                   <button
@@ -393,6 +410,10 @@
                   >Ficheros y comandos prohibidos para el chat y los agentes (patrones de .claude/settings.json, p. ej.
                   "Read(**/.env*)")</label
                 >
+                <details class="inherited-box" id="nogo-inherited" hidden>
+                  <summary>También se aplican las prohibiciones de todos los repos</summary>
+                  <div class="nogo-list inherited-list"></div>
+                </details>
                 <div id="nogo-list" class="nogo-list"></div>
                 <div class="ai-assist-row">
                   <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />

@@ -77,16 +77,27 @@ async function populateChatModelSelect(settings) {
   }
 }
 
+// Cambio rápido desde el compositor: se guarda donde vive ese valor ahora (en el
+// repo si este lo cambia; si no, para todos los repos) y se dice dónde.
+async function setAiField(field, value) {
+  const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
+  const own = (settings.layers?.overrides || []).includes(`ai.${field}`);
+  const ai = {};
+  const keys = field.split('.');
+  keys.reduce((o, k, i) => (o[k] = i === keys.length - 1 ? value : {}), ai);
+  await fetch(apiPath('/api/settings'), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope: own ? 'project' : 'global', ai })
+  });
+  return own ? 'solo en este repo' : 'en todos los repos';
+}
+
 chatModelSelect.addEventListener('change', async () => {
   const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
-  if (settings.ai.mode === 'local') settings.ai.localAi.model = chatModelSelect.value;
-  else settings.ai.claude.model = chatModelSelect.value;
-  await fetch(apiPath('/api/settings'), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings)
-  });
-  appendMessage('system', `Modelo actualizado a "${chatModelSelect.value}" para la próxima sesión.`);
+  const field = settings.ai.mode === 'local' ? 'localAi.model' : 'claude.model';
+  const where = await setAiField(field, chatModelSelect.value);
+  appendMessage('system', `Modelo "${chatModelSelect.value}" ${where}, desde la próxima sesión.`);
 });
 const connectionStatus = document.getElementById('connection-status');
 const modeLabel = document.getElementById('mode-label');

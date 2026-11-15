@@ -31,7 +31,7 @@ async function loadTaskKinds() {
   const tasksGroup = document.createElement('optgroup');
   tasksGroup.label = 'Tarea para agentes';
   for (const [type, def] of Object.entries(data.taskTypes)) {
-    if (type !== 'custom') add(tasksGroup, type, def.label);
+    if (type !== 'custom' && !def.internal) add(tasksGroup, type, def.label);
   }
   chatKindSelect.appendChild(tasksGroup);
   const custom = data.agents.filter((a) => !a.builtin && a.enabled);

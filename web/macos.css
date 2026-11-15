@@ -808,3 +808,88 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Ámbito de Ajustes: todos los repos / solo este repo */
+:root .settings-content-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-scope {
+  margin-left: auto;
+}
+.settings-scope[hidden] {
+  display: none;
+}
+:root .settings-scope-note {
+  padding: 6px 20px 0;
+  font-size: var(--text-callout);
+  color: var(--secondary-label);
+}
+.field-origin {
+  margin-top: 6px;
+  font-size: var(--text-subheadline);
+  color: var(--secondary-label);
+}
+.field-origin.differs {
+  color: var(--orange-text);
+}
+.field-origin .link {
+  margin-left: 8px;
+}
+.inherited-box {
+  margin: 6px 0 8px;
+  font-size: var(--text-callout);
+  color: var(--secondary-label);
+}
+.inherited-box > summary {
+  cursor: pointer;
+}
+.inherited-box .inherited-text {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--group-bg);
+  white-space: pre-wrap;
+  font-family: var(--font);
+  font-size: var(--text-callout);
+  color: var(--secondary-label);
+}
+.inherited-list .nogo-item {
+  opacity: 0.7;
+}
+.onboard-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.onboard-row .muted {
+  font-size: var(--text-callout);
+  flex: 1;
+  min-width: 14em;
+}
+
+/* Tablero vacío y memoria del repo */
+.board-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-window);
+  background: var(--content-bg);
+}
+.board-empty-title {
+  font-weight: 600;
+}
+.board-empty .muted {
+  font-size: var(--text-callout);
+  line-height: 1.4;
+}
+:root .memory-applied {
+  color: var(--green-text);
+  flex-basis: 100%;
+}

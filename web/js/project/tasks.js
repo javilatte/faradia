@@ -294,6 +294,9 @@ function taskStepText(task, lastStep) {
         ? 'investigación lista · elige modo, formato y destino'
         : `${stage} · necesita tu respuesta para continuar`;
     case 'ready_to_test':
+      if (task.type === 'onboard')
+        return task.memoryApplied ? 'memoria guardada' : 'memoria propuesta · revísala y guárdala';
+      if (task.reportOnly) return `${stage} · informe listo (no cambia ficheros)`;
       return `${stage} · lista para revisar (cambios en stage, sin commitear)`;
     default:
       return task.error || 'pendiente';
@@ -316,7 +319,8 @@ const TASK_TYPE_LABEL = {
   tests: 'Tests',
   documentation: 'Docs',
   audit: 'Auditoría',
-  custom: 'Agente propio'
+  custom: 'Agente propio',
+  onboard: 'Conocer el repo'
 };
 
 // Acciones que la politica de agentes denego en la etapa actual: el agente siguio
@@ -821,6 +825,8 @@ function buildTaskCard(taskId, task, lastStep) {
     card.appendChild(renderAnswerForm(taskId, answerStage));
   } else if (task.status === 'awaiting_input' && task.pendingQuestion?.kind === 'doc-options') {
     card.appendChild(renderDocOptions(taskId, task));
+  } else if (ready && task.type === 'onboard') {
+    card.appendChild(renderMemoryProposal(taskId, task));
   } else if (ready && task.reportOnly) {
     // Auditorias y agentes de solo lectura: entregan un informe, no hay nada que commitear.
     const note = document.createElement('div');
@@ -890,6 +896,74 @@ async function archiveTask(taskId) {
   renderTasks();
 }
 
+// "Conocer el repo": la memoria propuesta se guarda con un clic (y se puede
+// revisar o editar después en Ajustes > Memoria).
+function renderMemoryProposal(taskId, task) {
+  const row = document.createElement('div');
+  row.className = 'task-actions';
+  if (task.memoryApplied) {
+    const done = document.createElement('div');
+    done.className = 'task-meta memory-applied';
+    done.textContent = '✓ Guardada como memoria de este repo';
+    row.appendChild(done);
+    row.appendChild(actionButton('Editar memoria…', { onClick: () => openSettingsPane('memory') }));
+    row.appendChild(actionButton('Archivar', { onClick: () => archiveTask(taskId) }));
+    return row;
+  }
+  row.appendChild(
+    actionButton('Guardar como memoria del repo', {
+      primary: true,
+      onClick: async () => {
+        const res = await fetch(apiPath(`/api/tasks/${taskId}/apply-memory`), { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          appendMessage('system', `No se pudo guardar la memoria: ${data.error || res.status}`);
+          return;
+        }
+        memoryKnown = true;
+        applyTaskFromServer(data);
+        renderTasks();
+        appendMessage('system', 'Memoria del repo guardada: el chat y los agentes la reciben desde la próxima sesión.');
+      }
+    })
+  );
+  row.appendChild(actionButton('Descartar', { onClick: () => archiveTask(taskId) }));
+  return row;
+}
+
+// Tablero vacío: qué hacer primero. Si el repo aún no tiene memoria, conocerlo.
+let memoryKnown = null;
+function renderEmptyBoard() {
+  const box = document.createElement('div');
+  box.className = 'board-empty';
+  const title = document.createElement('div');
+  title.className = 'board-empty-title';
+  const text = document.createElement('div');
+  text.className = 'muted';
+  if (memoryKnown === false) {
+    title.textContent = 'Este repo aún no tiene memoria';
+    text.textContent =
+      'Deja que un agente lo estudie (comandos, estructura, convenciones) para que el chat y los agentes trabajen aquí sin redescubrirlo.';
+    box.append(title, text, actionButton('Conocer este repo…', { primary: true, onClick: () => startOnboarding() }));
+  } else {
+    title.textContent = 'Sin tareas';
+    text.textContent =
+      'Elige un modo en el chat (Código, Bug, Tests, Documentación…) y describe lo que quieres: verás qué agente y modelo hará cada etapa antes de enviarlo.';
+    box.append(title, text);
+  }
+  return box;
+}
+
+async function refreshMemoryKnown() {
+  try {
+    const { content } = await fetch(apiPath('/api/memory')).then((r) => r.json());
+    memoryKnown = Boolean(content && content.trim());
+  } catch {
+    memoryKnown = null;
+  }
+  renderTasks();
+}
+
 function renderTasks() {
   colInProgress.innerHTML = '';
   colReadyToTest.innerHTML = '';
@@ -944,10 +1018,13 @@ function renderTasks() {
     if (agent.finished) colReadyToTest.appendChild(card);
     else colInProgress.appendChild(card);
   }
+  const hasChatAgents = [...chatAgents.values()].some((a) => a.chatId === currentChatId);
+  if (!tasks.size && !hasChatAgents) colInProgress.appendChild(renderEmptyBoard());
 }
 
 async function loadInitialTasks() {
   const list = await fetch(apiPath('/api/tasks')).then((r) => r.json());
   for (const task of list) tasks.set(task.id, { task, lastStep: null });
   renderTasks();
+  refreshMemoryKnown();
 }

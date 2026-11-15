@@ -7,14 +7,8 @@
 // this app has no verified list of installed/available Claude model ids to
 // offer without guessing at strings.
 effortSelect.addEventListener('change', async () => {
-  const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
-  settings.ai.claude.effort = effortSelect.value;
-  await fetch(apiPath('/api/settings'), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings)
-  });
-  appendMessage('system', `Effort actualizado a "${effortSelect.value}" para la próxima sesión.`);
+  const where = await setAiField('claude.effort', effortSelect.value);
+  appendMessage('system', `Effort "${effortSelect.value}" ${where}, desde la próxima sesión.`);
 });
 
 async function loadInitialSettings() {
@@ -101,35 +95,65 @@ document.querySelectorAll('.ai-assist-button').forEach((button) => {
   });
 });
 
-function renderNogoList() {
-  nogoList.innerHTML = '';
-  currentSettings.preferences.noGo.forEach((pattern, idx) => {
-    const row = document.createElement('div');
-    row.className = 'nogo-item';
-    const code = document.createElement('code');
-    code.textContent = pattern;
-    row.appendChild(code);
+// "Prohibido": la lista del ámbito elegido; en "Solo este repo" se ven también,
+// sin poder tocarlas, las de todos los repos (se suman).
+function nogoLayer() {
+  return settingsScope === 'global'
+    ? currentSettings.layers.global.preferences.noGo
+    : currentSettings.layers.project.preferences.noGo;
+}
+
+function nogoRow(pattern, onRemove) {
+  const row = document.createElement('div');
+  row.className = 'nogo-item';
+  const code = document.createElement('code');
+  code.textContent = pattern;
+  row.appendChild(code);
+  if (onRemove) {
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '✕';
     removeBtn.title = 'Quitar';
     removeBtn.setAttribute('aria-label', `Quitar ${pattern}`);
-    removeBtn.addEventListener('click', () => {
-      currentSettings.preferences.noGo.splice(idx, 1);
-      renderNogoList();
-      scheduleSave(0);
-    });
+    removeBtn.addEventListener('click', onRemove);
     row.appendChild(removeBtn);
-    nogoList.appendChild(row);
+  }
+  return row;
+}
+
+function renderNogoList() {
+  nogoList.innerHTML = '';
+  const list = nogoLayer();
+  list.forEach((pattern, idx) => {
+    nogoList.appendChild(
+      nogoRow(pattern, () => {
+        list.splice(idx, 1);
+        renderNogoList();
+        patchLayer({ preferences: { noGo: [...list] } });
+      })
+    );
   });
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'muted';
+    empty.textContent =
+      settingsScope === 'global' ? 'Nada prohibido para todos los repos.' : 'Nada propio de este repo.';
+    nogoList.appendChild(empty);
+  }
+  const inherited = document.getElementById('nogo-inherited');
+  const globalList = currentSettings.layers.global.preferences.noGo;
+  inherited.hidden = settingsScope !== 'project' || !globalList.length;
+  const box = inherited.querySelector('.inherited-list');
+  box.replaceChildren(...globalList.map((p) => nogoRow(p)));
 }
 
 nogoAddButton.addEventListener('click', () => {
   const pattern = nogoInput.value.trim();
-  if (!pattern) return;
-  currentSettings.preferences.noGo.push(pattern);
+  if (!pattern || !currentSettings) return;
+  const list = nogoLayer();
+  if (!list.includes(pattern)) list.push(pattern);
   nogoInput.value = '';
   renderNogoList();
-  scheduleSave(0);
+  patchLayer({ preferences: { noGo: [...list] } });
 });
 nogoInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') nogoAddButton.click();
@@ -149,8 +173,8 @@ function renderMigrationBanner(el, field, preview, label) {
   applyBtn.className = 'send-button';
   applyBtn.textContent = 'Importar';
   applyBtn.addEventListener('click', async () => {
-    const next = await fetch(apiPath('/api/settings/migrate'), { method: 'POST' }).then((r) => r.json());
-    currentSettings = next;
+    await fetch(apiPath('/api/settings/migrate'), { method: 'POST' });
+    currentSettings = await fetch(apiPath('/api/settings')).then((r) => r.json());
     populateSettingsForm();
     el.hidden = true;
     settingsSaveStatus.textContent = 'Configuración antigua importada.';
@@ -206,15 +230,92 @@ skillAddButton.addEventListener('click', async () => {
   });
 });
 
+// Campos de IA que un repo puede cambiar: elemento -> ruta en los ajustes.
+const AI_INPUTS = [
+  [claudeModelSelect, 'claude.model'],
+  [claudeEffortSelect, 'claude.effort'],
+  [localUrlInput, 'localAi.url'],
+  [localModelInput, 'localAi.model'],
+  [localAuthInput, 'localAi.authHeader']
+];
+const getIn = (obj, dotted) => dotted.split('.').reduce((o, k) => (o ? o[k] : undefined), obj);
+const aiPatch = (dotted, value) => {
+  const out = {};
+  const keys = dotted.split('.');
+  keys.reduce((o, k, i) => (o[k] = i === keys.length - 1 ? value : {}), out);
+  return out;
+};
+
+// Debajo de cada campo: de dónde viene el valor y, si este repo lo cambia,
+// cómo volver a heredarlo o pasarlo a todos los repos.
+function renderFieldOrigin(el, dotted) {
+  const field = el.closest('.settings-field');
+  let note = field.querySelector('.field-origin');
+  if (!note) {
+    note = document.createElement('div');
+    note.className = 'field-origin';
+    field.appendChild(note);
+  }
+  note.replaceChildren();
+  const own = currentSettings.layers.overrides.includes(`ai.${dotted}`);
+  // El valor con la etiqueta que ve el usuario en el menú ("Alto", no "high").
+  const show = (v) => {
+    if (v === '' || v === undefined) return '(vacío)';
+    const opt = el.tagName === 'SELECT' ? [...el.options].find((o) => o.value === v) : null;
+    return opt ? opt.textContent : v;
+  };
+  if (settingsScope === 'global') {
+    if (own) {
+      note.classList.add('differs');
+      note.append(`Este repo usa otro valor: ${show(getIn(currentSettings.layers.project.ai, dotted))}`);
+    } else note.classList.remove('differs');
+    return;
+  }
+  note.classList.toggle('differs', own);
+  if (!own) {
+    note.append('Igual que en todos los repos');
+    return;
+  }
+  note.append(`Propio de este repo (en todos: ${show(getIn(currentSettings.layers.global.ai, dotted))}) `);
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'link';
+  reset.textContent = 'Restablecer';
+  reset.title = 'Volver a usar el valor de todos los repos';
+  reset.addEventListener('click', () => patchSettings({ scope: 'project', reset: [`ai.${dotted}`] }, true));
+  const promote = document.createElement('button');
+  promote.type = 'button';
+  promote.className = 'link';
+  promote.textContent = 'Usar en todos los repos';
+  promote.addEventListener('click', () => patchSettings({ scope: 'project', promote: [`ai.${dotted}`] }, true));
+  note.append(reset, promote);
+}
+
 function populateSettingsForm() {
-  uiThemeSelect.value = currentSettings.ui?.theme || 'system';
-  uiClockSelect.value = currentSettings.ui?.clock || 'datetime';
-  claudeModelSelect.value = currentSettings.ai.claude.model || 'default';
-  claudeEffortSelect.value = currentSettings.ai.claude.effort || 'default';
-  localUrlInput.value = currentSettings.ai.localAi.url || '';
-  localModelInput.value = currentSettings.ai.localAi.model || '';
-  localAuthInput.value = currentSettings.ai.localAi.authHeader || '';
-  instructionsTextarea.value = currentSettings.preferences.instructions || '';
+  const { layers } = currentSettings;
+  uiThemeSelect.value = layers.global.ui?.theme || 'system';
+  uiClockSelect.value = layers.global.ui?.clock || 'datetime';
+  // En "Todos los repos" se ve y se edita la capa global; en "Solo este repo",
+  // el valor efectivo (heredado o propio).
+  const source = settingsScope === 'global' ? layers.global.ai : currentSettings.ai;
+  for (const [el, dotted] of AI_INPUTS) {
+    el.value = getIn(source, dotted) ?? '';
+    if (el.tagName === 'SELECT' && !el.value) el.value = 'default';
+    renderFieldOrigin(el, dotted);
+  }
+  const instructions = settingsScope === 'global' ? layers.global : layers.project;
+  instructionsTextarea.value = instructions.preferences.instructions || '';
+  document.getElementById('instructions-label').textContent =
+    settingsScope === 'global'
+      ? 'Instrucciones para todos los repos: el flujo de trabajo común (convenciones, commits, cómo verificar, idioma…)'
+      : 'Instrucciones solo para este repo: se suman a las de todos los repos y mandan si las contradicen';
+  instructionsTextarea.placeholder =
+    settingsScope === 'global'
+      ? 'Ej.: Conventional Commits con ámbito. Ejecuta los tests antes de terminar. Responde en español.'
+      : 'Ej.: Los tests van con vitest. No toques src/legacy/.';
+  const inherited = document.getElementById('instructions-inherited');
+  inherited.hidden = settingsScope !== 'project' || !layers.global.preferences.instructions;
+  inherited.querySelector('.inherited-text').textContent = layers.global.preferences.instructions;
   renderNogoList();
 }
 
@@ -255,6 +356,7 @@ async function openSettings() {
     if (last) showSettingsPane(last);
   }
   settingsOverlay.hidden = false;
+  renderScope();
   settingsSaveStatus.textContent = '';
   claudeAccountInfo.textContent = 'Comprobando...';
   claudeAccountSwitchNote.hidden = true;
@@ -337,6 +439,7 @@ settingsNavItems.forEach((item) => {
       p.hidden = p.dataset.pane !== pane;
     });
     settingsPaneTitle.textContent = item.textContent;
+    renderScope();
     try {
       localStorage.setItem('optimia:settings-pane', pane);
     } catch {
@@ -417,71 +520,174 @@ logRefresh.addEventListener('click', loadLogPane);
 
 // Como en los Ajustes de macOS, los cambios se aplican al momento: no hay botón
 // Guardar. Los menús guardan al cambiar; los campos de texto, al dejar de escribir
-// o al salir del campo.
+// o al salir del campo. Cada cambio va a la capa elegida (todos los repos o este).
 let settingsLoading = false;
-let saveTimer = null;
 let saveChain = Promise.resolve();
+const pendingText = new Map(); // elemento -> temporizador
 
-function scheduleSave(delay = 700) {
-  if (settingsLoading || !currentSettings) return;
-  clearTimeout(saveTimer);
-  settingsSaveStatus.textContent = delay ? 'Cambios sin guardar…' : '';
-  saveTimer = setTimeout(() => {
-    saveTimer = null;
-    saveChain = saveChain.then(saveSettingsNow).catch((err) => {
-      settingsSaveStatus.textContent = `No se pudo guardar: ${err.message}`;
+async function patchSettings(body, rerender = false) {
+  saveChain = saveChain.then(async () => {
+    const res = await fetch(apiPath('/api/settings'), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
-  }, delay);
-}
-
-function flushSettingsSave() {
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    saveChain = saveChain.then(saveSettingsNow).catch(() => {});
-  }
-  return saveChain;
-}
-
-async function saveSettingsNow() {
-  if (!currentSettings) return;
-  currentSettings.ai.claude.model = claudeModelSelect.value;
-  currentSettings.ai.claude.effort = claudeEffortSelect.value;
-  currentSettings.ai.localAi.url = localUrlInput.value.trim();
-  currentSettings.ai.localAi.model = localModelInput.value.trim();
-  currentSettings.ai.localAi.authHeader = localAuthInput.value.trim();
-  currentSettings.preferences.instructions = instructionsTextarea.value;
-  currentSettings.ui = currentUiDraft();
-
-  const res = await fetch(apiPath('/api/settings'), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(currentSettings)
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    currentSettings = data;
+    applyUi(data.ui);
+    effortSelect.value = data.ai.claude.effort || 'default';
+    modeLabel.textContent = data.ai.mode === 'local' ? 'IA local' : 'Claude Code';
+    await populateChatModelSelect(data);
+    if (rerender) populateSettingsForm();
+    else for (const [el, dotted] of AI_INPUTS) renderFieldOrigin(el, dotted);
+    if (!pendingText.size) {
+      settingsSaveStatus.textContent =
+        body.scope === 'global' ? 'Guardado para todos los repos' : 'Guardado solo para este repo';
+    }
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const saved = await res.json();
+  return saveChain.catch((err) => {
+    settingsSaveStatus.textContent = `No se pudo guardar: ${err.message}`;
+  });
+}
+
+const patchLayer = (patch) => patchSettings({ scope: settingsScope, ...patch });
+
+async function saveMemoryNow() {
   await fetch(apiPath('/api/memory'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: memoryTextarea.value })
   });
-
-  // Lo que se haya escrito mientras se guardaba no se pisa: solo se copian los
-  // campos que no son de texto libre.
-  currentSettings.preferences.noGo = saved.preferences.noGo;
-  applyUi(saved.ui);
-  effortSelect.value = saved.ai.claude.effort || 'default';
-  modeLabel.textContent = saved.ai.mode === 'local' ? 'IA local' : 'Claude Code';
-  await populateChatModelSelect(saved);
-  if (!saveTimer) settingsSaveStatus.textContent = 'Guardado · se aplica a las próximas sesiones';
+  if (!pendingText.size) settingsSaveStatus.textContent = 'Memoria de este repo guardada';
+  refreshMemoryKnown();
 }
 
-for (const el of [claudeModelSelect, claudeEffortSelect, uiThemeSelect, uiClockSelect]) {
-  el.addEventListener('change', () => scheduleSave(0));
+function saveField(el) {
+  if (settingsLoading || !currentSettings) return;
+  if (el === memoryTextarea) return saveMemoryNow();
+  if (el === instructionsTextarea) return patchLayer({ preferences: { instructions: el.value } });
+  const entry = AI_INPUTS.find(([input]) => input === el);
+  if (entry) return patchLayer({ ai: aiPatch(entry[1], el.value.trim()) });
+}
+
+function scheduleText(el, delay = 700) {
+  clearTimeout(pendingText.get(el));
+  settingsSaveStatus.textContent = 'Cambios sin guardar…';
+  pendingText.set(
+    el,
+    setTimeout(() => {
+      pendingText.delete(el);
+      saveField(el);
+    }, delay)
+  );
+}
+
+function flushSettingsSave() {
+  for (const [el, timer] of pendingText) {
+    clearTimeout(timer);
+    pendingText.delete(el);
+    saveField(el);
+  }
+  return saveChain;
+}
+
+for (const el of [claudeModelSelect, claudeEffortSelect]) el.addEventListener('change', () => saveField(el));
+for (const el of [uiThemeSelect, uiClockSelect]) {
+  el.addEventListener('change', () => patchSettings({ scope: 'global', ui: currentUiDraft() }));
 }
 for (const el of [localUrlInput, localModelInput, localAuthInput, instructionsTextarea, memoryTextarea]) {
-  el.addEventListener('input', () => scheduleSave());
+  el.addEventListener('input', () => scheduleText(el));
   el.addEventListener('blur', () => {
-    if (saveTimer) scheduleSave(0);
+    if (pendingText.has(el)) scheduleText(el, 0);
   });
 }
+
+// ---- ámbito: todos los repos / solo este repo ----
+
+// Qué apartados admiten los dos ámbitos y cuáles son de uno solo.
+const SCOPED_PANES = new Set(['claude', 'local-ai', 'instructions', 'nogo', 'agents']);
+const GLOBAL_PANES = new Set(['appearance', 'monitor']);
+let settingsScope = 'global';
+try {
+  settingsScope = localStorage.getItem('optimia:settings-scope') === 'project' ? 'project' : 'global';
+} catch {
+  /* sin persistencia */
+}
+window.optimiaSettingsScope = settingsScope;
+const scopeControl = document.getElementById('settings-scope');
+const scopeNote = document.getElementById('settings-scope-note');
+
+function currentPane() {
+  return document.querySelector('.settings-nav-item.active')?.dataset.pane || 'claude';
+}
+
+function renderScope() {
+  const pane = currentPane();
+  const repo = projectLabel.textContent || 'este repo';
+  for (const el of document.querySelectorAll('.scope-repo-name')) el.textContent = repo;
+  scopeControl.parentElement.hidden = !SCOPED_PANES.has(pane);
+  for (const b of scopeControl.querySelectorAll('button')) {
+    const on = b.dataset.scope === settingsScope;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+  if (GLOBAL_PANES.has(pane)) scopeNote.textContent = 'Igual en todos los repos.';
+  else if (!SCOPED_PANES.has(pane)) scopeNote.textContent = `Solo de este repo (${repo}).`;
+  else if (settingsScope === 'global')
+    scopeNote.textContent = 'Los cambios se aplican a todos los repos, salvo a los que tengan su propio valor.';
+  else scopeNote.textContent = `Los cambios se aplican solo a ${repo}; lo demás se hereda de todos los repos.`;
+}
+
+function setSettingsScope(scope) {
+  flushSettingsSave();
+  settingsScope = scope;
+  window.optimiaSettingsScope = scope;
+  try {
+    localStorage.setItem('optimia:settings-scope', scope);
+  } catch {
+    /* sin persistencia */
+  }
+  renderScope();
+  if (currentSettings) populateSettingsForm();
+  window.dispatchEvent(new CustomEvent('optimia:settings-scope', { detail: scope }));
+}
+
+for (const b of scopeControl.querySelectorAll('button')) {
+  b.addEventListener('click', () => setSettingsScope(b.dataset.scope));
+}
+
+// ---- "Conocer este repo": un agente estudia el repo y propone su memoria ----
+
+const onboardButton = document.getElementById('onboard-button');
+async function startOnboarding() {
+  onboardButton.disabled = true;
+  try {
+    const res = await fetch(apiPath('/api/tasks'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Conocer el repo',
+        type: 'onboard',
+        instruction: memoryTextarea.value.trim()
+          ? 'Revisa y mejora la memoria actual del repo.'
+          : 'Escribe la memoria de este repo desde cero.',
+        chatId: currentChatId || undefined
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    applyTaskFromServer(data);
+    renderTasks();
+    closeSettings();
+    appendMessage(
+      'system',
+      'Estudiando el repo. Cuando termine, revisa la memoria propuesta en su tarjeta y guárdala.'
+    );
+  } catch (err) {
+    document.getElementById('onboard-status').textContent = `No se pudo lanzar: ${err.message}`;
+  } finally {
+    onboardButton.disabled = false;
+  }
+}
+onboardButton.addEventListener('click', startOnboarding);

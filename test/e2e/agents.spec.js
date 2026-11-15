@@ -10,10 +10,12 @@ test('cada etapa usa el modelo de su agente, y el modelo se puede cambiar por pr
   // Ajustes > Agentes: el Planificador pasa de opus a haiku solo en este proyecto
   await page.locator('#settings-button').click();
   await page.locator('.settings-nav-item[data-pane="agents"]').click();
+  // Solo este repo: el cambio no afecta a los demás
+  await page.locator('#settings-scope [data-scope="project"]').click();
   const planner = page.locator('.agent-card[data-agent="planner"]');
   await expect(planner).toBeVisible();
   await planner.getByLabel('Modelo de Planificador').selectOption('haiku');
-  await expect(planner.locator('.wb-badge', { hasText: 'cambiado en este proyecto' })).toBeVisible();
+  await expect(planner.locator('.wb-badge', { hasText: 'cambiado en este repo' })).toBeVisible();
   await page.locator('#settings-close').click();
 
   // Tarea de codigo: plan (Planificador) -> implement (Implementador) -> verify (Verificador)

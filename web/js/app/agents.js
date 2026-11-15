@@ -8,7 +8,12 @@ import { currentProjectId } from './workbenches.js';
 
 let data = null;
 let localModels = [];
-let scope = localStorage.getItem('optimia:agents-scope') || 'project';
+// Ámbito compartido con el resto de Ajustes ("Todos los repos" / "Solo este repo").
+let scope = window.optimiaSettingsScope === 'project' ? 'project' : 'global';
+window.addEventListener('optimia:settings-scope', (e) => {
+  scope = e.detail === 'project' ? 'project' : 'global';
+  render();
+});
 const openPrompts = new Set();
 
 const url = (rest = '') => projectApi(currentProjectId(), `/agents${rest}`);
@@ -48,30 +53,6 @@ function render() {
   if (!host || !data) return;
   clear(host);
   host.append(
-    h(
-      'div',
-      { class: 'agents-scope' },
-      h('span', { class: 'muted' }, 'Guardar cambios en'),
-      h(
-        'div',
-        { class: 'segmented', role: 'group', 'aria-label': 'Ambito de los cambios' },
-        ['project', 'global'].map((s) =>
-          h(
-            'button',
-            {
-              class: scope === s ? 'active' : '',
-              'aria-pressed': String(scope === s),
-              onclick: () => {
-                scope = s;
-                localStorage.setItem('optimia:agents-scope', s);
-                render();
-              }
-            },
-            s === 'project' ? 'Este proyecto' : 'Todos los proyectos'
-          )
-        )
-      )
-    ),
     renderPipelines(),
     h('h3', { class: 'wb-h' }, 'Agentes'),
     ...data.agents.map(renderAgent),
@@ -198,7 +179,7 @@ function renderAgent(agent) {
         ? h(
             'span',
             { class: 'wb-badge' },
-            `cambiado en ${agent.overriddenIn.map((s) => (s === 'project' ? 'este proyecto' : 'todos los proyectos')).join(' y ')}`
+            `cambiado en ${agent.overriddenIn.map((s) => (s === 'project' ? 'este repo' : 'todos los repos')).join(' y ')}`
           )
         : null
     ),
@@ -318,8 +299,8 @@ function renderAgent(agent) {
       agent.builtin && overridden
         ? h(
             'button',
-            { onclick: () => mutate(() => api.del(url(`/${agent.id}?scope=${scope}`)), 'Restaurado') },
-            'Restaurar'
+            { onclick: () => mutate(() => api.del(url(`/${agent.id}?scope=${scope}`)), 'Restablecido') },
+            'Restablecer'
           )
         : null,
       !agent.builtin && agent.source === scope
