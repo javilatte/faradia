@@ -35,14 +35,14 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test 'test/unit/**/*.test.js' && bats test/",
-    "test:unit": "node --test 'test/unit/**/*.test.js'",
+    "test": "npm run test:unit && bats test/",
+    "test:unit": "node --test --import ./test/unit/setup.mjs 'test/unit/**/*.test.js'",
     "test:bats": "bats test/",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepublishOnly": "node --test 'test/unit/**/*.test.js' && bats test/"
+    "prepublishOnly": "npm run test:unit && bats test/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

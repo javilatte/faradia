@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
-const { optimiaClaudeSettingsPath, agentClaudeSettingsPath } = require('./claudeSettingsSync');
+const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
 
 const CHAT_TASKS_PROMPT = `## Crear tareas para agentes
 Dispones de la tool MCP "create_task". Usala solo despues de cerrar un plan concreto con el
@@ -56,7 +56,9 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
   if (fs.existsSync(mcpConfigPath)) opts.mcpConfigPath = mcpConfigPath;
-  // Permisos de optimia (lista "prohibido" incluida), sin escribir en el repo.
+  // Permisos de optimia (lista "Prohibido" global + del repo), sin escribir en el
+  // repo. Se regeneran en cada sesión: un cambio global llega a todos los repos.
+  if (Array.isArray(settings.preferences?.noGo)) syncClaudeSettings(projectRoot, settings.preferences.noGo);
   const settingsPath = taskId ? agentClaudeSettingsPath(projectRoot) : optimiaClaudeSettingsPath(projectRoot);
   if (fs.existsSync(settingsPath)) opts.settingsPath = settingsPath;
   if (taskId) {
@@ -69,7 +71,16 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const parts = [];
   if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);
-  if (settings.preferences?.instructions) parts.push(settings.preferences.instructions);
+  // Instrucciones de flujo de trabajo comunes a todos los repos y, después, las de
+  // este repo (que mandan si contradicen a las comunes).
+  const prefs = settings.preferences || {};
+  if (prefs.globalInstructions !== undefined || prefs.projectInstructions !== undefined) {
+    if (prefs.globalInstructions) parts.push(`## Instrucciones para todos los repos\n${prefs.globalInstructions}`);
+    if (prefs.projectInstructions)
+      parts.push(`## Instrucciones de este repo (mandan sobre las anteriores)\n${prefs.projectInstructions}`);
+  } else if (prefs.instructions) {
+    parts.push(prefs.instructions);
+  }
   const memory = loadMemory(projectRoot);
   if (memory.trim()) parts.push(`## Memoria del proyecto\n${memory}`);
   if (opts.mcpConfigPath) parts.push(taskId ? taskProgressPrompt(taskId) : CHAT_TASKS_PROMPT);

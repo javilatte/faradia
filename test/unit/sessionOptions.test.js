@@ -142,11 +142,28 @@ test('buildSessionOptions: chat and agents get their own optimia settings file v
   } = require('../../server/bridge/claudeSettingsSync');
   const projectRoot = mkTmpDir('sessopts-settings');
   t.after(() => rmTmpDir(projectRoot));
-  syncClaudeSettings(projectRoot, ['Read(**/.env*)']);
+  syncClaudeSettings(projectRoot, []);
   const settings = defaultSettings();
+  settings.preferences.noGo = ['Read(**/.env*)']; // la sesión regenera la lista con los ajustes efectivos
   assert.equal(buildSessionOptions(settings, projectRoot).settingsPath, optimiaClaudeSettingsPath(projectRoot));
   const task = buildSessionOptions(settings, projectRoot, projectRoot, 'task-1');
   assert.equal(task.settingsPath, agentClaudeSettingsPath(projectRoot));
   const agentFile = JSON.parse(require('fs').readFileSync(task.settingsPath, 'utf8'));
   assert.deepEqual(agentFile.permissions, { deny: ['Read(**/.env*)'] }, 'sin allow ni defaultMode para los agentes');
+});
+
+test('buildSessionOptions: instrucciones de todos los repos y luego las del repo, en apartados', (t) => {
+  const dir = mkTmpDir('sessopts-layers');
+  t.after(() => rmTmpDir(dir));
+  const settings = defaultSettings();
+  settings.preferences = {
+    ...settings.preferences,
+    instructions: 'A\n\nB',
+    globalInstructions: 'A',
+    projectInstructions: 'B'
+  };
+  const { systemPrompt } = buildSessionOptions(settings, dir);
+  assert.match(systemPrompt, /## Instrucciones para todos los repos\nA/);
+  assert.match(systemPrompt, /## Instrucciones de este repo \(mandan sobre las anteriores\)\nB/);
+  assert.ok(systemPrompt.indexOf('todos los repos') < systemPrompt.indexOf('de este repo'));
 });

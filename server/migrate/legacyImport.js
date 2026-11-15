@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadSettings, saveSettings } = require('../store/settingsStore');
+const { loadSettings, loadProjectLayer, saveProjectSettings } = require('../store/settingsStore');
 const { claudeSettingsPath, syncClaudeSettings } = require('../bridge/claudeSettingsSync');
 
 /**
@@ -51,8 +51,9 @@ function readLegacyDefaults(projectRoot) {
   };
 }
 
+// Lo antiguo se importa como instrucciones y prohibiciones de ESTE repo.
 function buildMigrationPreview(projectRoot) {
-  const current = loadSettings(projectRoot);
+  const current = loadProjectLayer(projectRoot);
   const legacy = readLegacyDefaults(projectRoot);
   return {
     instructions: {
@@ -71,16 +72,11 @@ function buildMigrationPreview(projectRoot) {
 
 function applyMigration(projectRoot) {
   const preview = buildMigrationPreview(projectRoot);
-  const current = loadSettings(projectRoot);
-  const next = {
-    ...current,
-    preferences: {
-      ...current.preferences,
-      instructions: preview.instructions.changed ? preview.instructions.proposed : current.preferences.instructions,
-      noGo: preview.noGo.changed ? preview.noGo.proposed : current.preferences.noGo
-    }
-  };
-  saveSettings(projectRoot, next);
+  const preferences = {};
+  if (preview.instructions.changed) preferences.instructions = preview.instructions.proposed;
+  if (preview.noGo.changed) preferences.noGo = preview.noGo.proposed;
+  saveProjectSettings(projectRoot, { preferences });
+  const next = loadSettings(projectRoot);
   syncClaudeSettings(projectRoot, next.preferences.noGo);
   return next;
 }

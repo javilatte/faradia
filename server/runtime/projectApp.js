@@ -2,8 +2,15 @@
 
 // HTTP API de un proyecto (todo lo que cuelga de /api/projects/:id/...).
 // Recibe el proyecto como parametro: un mismo servidor sirve varios proyectos.
+const fs = require('fs');
 const path = require('path');
-const { loadSettings, saveSettings } = require('../store/settingsStore');
+const {
+  saveSettings,
+  loadSettingsLayers,
+  saveGlobalSettings,
+  saveProjectSettings,
+  promoteToGlobal
+} = require('../store/settingsStore');
 const { loadTasks, addTask, updateTask, updateTaskPhase, deleteTask } = require('../store/taskStore');
 const { listChats, loadChat, createChat, updateChatMeta, deleteChat } = require('../store/chatStore');
 const { checkClaudeCapabilities } = require('../bridge/claudeVersion');
@@ -32,6 +39,17 @@ const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
 const { isKnownType, TASK_TYPES } = require('../bridge/taskStages');
 
+// Quita lo que no es la memoria: una envoltura ```markdown y un preámbulo antes
+// del primer apartado.
+function memoryFromOutput(text) {
+  let out = String(text || '').trim();
+  const fenced = /^```(?:markdown|md)?\n([\s\S]*?)\n```$/.exec(out);
+  if (fenced) out = fenced[1].trim();
+  const firstHeading = out.search(/^#{1,3} /m);
+  if (firstHeading > 0) out = out.slice(firstHeading);
+  return `${out.trim()}\n`;
+}
+
 function createApp(
   projectRoot,
   { onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskRun, onTaskApprove, onChatDeleted } = {},
@@ -45,19 +63,45 @@ function createApp(
       return sendJson(res, 200, { ok: true, projectRoot, claude: claudeCheck });
     }
 
+    // Ajustes efectivos del repo (global + repo) y, en `layers`, cada capa y los
+    // campos que el repo cambia.
+    const settingsView = () => {
+      const { global, project, effective, overrides } = loadSettingsLayers(projectRoot);
+      // La lista "Prohibido" efectiva es la que reciben las sesiones de optimia.
+      syncClaudeSettings(projectRoot, effective.preferences.noGo);
+      return { ...effective, layers: { global, project, overrides } };
+    };
+
     if (url.pathname === '/api/settings' && req.method === 'GET') {
-      return sendJson(res, 200, loadSettings(projectRoot));
+      return sendJson(res, 200, settingsView());
     }
 
+    // Compatibilidad: ajustes completos (ver saveSettings en settingsStore.js).
     if (url.pathname === '/api/settings' && req.method === 'PUT') {
       const body = await readJsonBody(req).catch(() => null);
       if (!body) return sendJson(res, 400, { error: 'invalid JSON body' });
       saveSettings(projectRoot, body);
-      const saved = loadSettings(projectRoot);
-      // .claude/settings.json is the actual enforcement layer — keep it in
-      // lockstep with preferences.noGo on every save, never only in the UI.
-      syncClaudeSettings(projectRoot, saved.preferences.noGo);
-      return sendJson(res, 200, saved);
+      return sendJson(res, 200, settingsView());
+    }
+
+    // PATCH /api/settings {scope: 'global'|'project', ui?, ai?, preferences?, reset?: [campo], promote?: [campo]}
+    //   global: cambia lo que comparten todos los repos
+    //   project: cambia solo este repo (reset vuelve a heredar; promote lo pasa a todos)
+    if (url.pathname === '/api/settings' && req.method === 'PATCH') {
+      const body = await readJsonBody(req).catch(() => null);
+      if (!body || !['global', 'project'].includes(body.scope)) {
+        return sendJson(res, 400, { error: 'indica scope: "global" o "project"' });
+      }
+      const list = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
+      if (body.scope === 'global') {
+        saveGlobalSettings({ ui: body.ui, ai: body.ai, preferences: body.preferences });
+      } else {
+        if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
+        if (body.ui) return sendJson(res, 400, { error: 'la apariencia es la misma para todos los repos' });
+        saveProjectSettings(projectRoot, { ai: body.ai, preferences: body.preferences }, { reset: list(body.reset) });
+      }
+      log.info('settings.change', { scope: body.scope, fields: Object.keys(body).filter((k) => k !== 'scope') });
+      return sendJson(res, 200, settingsView());
     }
 
     if (url.pathname === '/api/settings/migration-preview' && req.method === 'GET') {
@@ -232,6 +276,23 @@ function createApp(
       return sendJson(res, 200, listLocalBranches(projectRoot));
     }
 
+    // "Conocer este repo": la memoria que propuso el agente pasa a ser la del repo
+    // (la anterior queda en .optimia/memory.prev.md por si hay que recuperarla).
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/apply-memory') && req.method === 'POST') {
+      const taskId = url.pathname.split('/')[3];
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task) return sendJson(res, 404, { error: 'task not found' });
+      if (task.type !== 'onboard' || task.status !== 'ready_to_test' || !task.output) {
+        return sendJson(res, 409, { error: 'esta tarea no tiene una memoria propuesta' });
+      }
+      const content = memoryFromOutput(task.output);
+      const previous = loadMemory(projectRoot);
+      if (previous.trim()) fs.writeFileSync(path.join(projectRoot, '.optimia', 'memory.prev.md'), previous);
+      saveMemory(projectRoot, content);
+      log.info('memory.apply', { taskId, chars: content.length });
+      return sendJson(res, 200, updateTask(projectRoot, taskId, { memoryApplied: new Date().toISOString() }));
+    }
+
     // Commit y fusion son acciones del usuario (desde su tarjeta), nunca de un agente.
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/commit') && req.method === 'POST') {
       const taskId = url.pathname.split('/')[3];
@@ -364,4 +425,7 @@ function createApp(
   };
 }
 
-module.exports = { createApp };
+module.exports = {
+  memoryFromOutput,
+  createApp
+};

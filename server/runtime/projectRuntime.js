@@ -6,7 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadSettings, saveSettings } = require('../store/settingsStore');
+const { loadSettings, loadProjectLayer, saveProjectSettings } = require('../store/settingsStore');
 const { loadTasks, updateTask, updateTaskPhase } = require('../store/taskStore');
 const { loadChat, updateChatMeta, appendMessage } = require('../store/chatStore');
 const { ClaudeSession } = require('../bridge/claudeProcess');
@@ -327,11 +327,10 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     if (tool !== task.pendingPermission.tool || (tool === 'Bash' && command !== task.pendingPermission.command)) {
       return { error: 'el permiso pendiente ya no coincide con la petición', code: 409 };
     }
-    const settings = loadSettings(projectRoot);
-    const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
+    // Los permisos aprobados desde una tarjeta son de este repo.
+    const approved = loadProjectLayer(projectRoot).preferences.approvedTools;
     if (!approved.includes(rule)) {
-      settings.preferences.approvedTools = [...approved, rule];
-      saveSettings(projectRoot, settings);
+      saveProjectSettings(projectRoot, { preferences: { approvedTools: [...approved, rule] } });
     }
     log.info('task.approve', { taskId, rule });
     return runTaskStage(taskId, { stage: task.stage });
