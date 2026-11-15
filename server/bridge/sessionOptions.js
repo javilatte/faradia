@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
+const { optimiaClaudeSettingsPath, agentClaudeSettingsPath } = require('./claudeSettingsSync');
 
 const CHAT_TASKS_PROMPT = `## Crear tareas para agentes
 Dispones de la tool MCP "create_task". Usala solo despues de cerrar un plan concreto con el
@@ -55,6 +56,16 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
   if (fs.existsSync(mcpConfigPath)) opts.mcpConfigPath = mcpConfigPath;
+  // Permisos de optimia (lista "prohibido" incluida), sin escribir en el repo.
+  const settingsPath = taskId ? agentClaudeSettingsPath(projectRoot) : optimiaClaudeSettingsPath(projectRoot);
+  if (fs.existsSync(settingsPath)) opts.settingsPath = settingsPath;
+  if (taskId) {
+    // Una tarea no hereda los conectores de claude.ai del usuario, solo el MCP de
+    // optimia y el .mcp.json del repo (ver claudeProcess.js).
+    opts.strictMcpConfig = true;
+    const projectMcp = path.join(cwd, '.mcp.json');
+    if (fs.existsSync(projectMcp)) opts.extraMcpConfigPaths = [projectMcp];
+  }
 
   const parts = [];
   if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);

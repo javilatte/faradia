@@ -15,10 +15,12 @@ Uso:
   optimia                Arranca el servidor web en el directorio actual y abre el navegador.
 
 Opciones:
-  -V, --version           Muestra la version.
+  -p, --port <n>          Puerto fijo (por defecto, uno libre al azar).
+  -V, --version           Muestra la versión.
   -h, --help              Muestra esta ayuda.
 
 Variables de entorno:
+  OPTIMIA_PORT=<n>        Igual que --port.
   OPTIMIA_NO_OPEN=1       No abre el navegador (p. ej. por SSH): usa el enlace que se imprime.
 
 Toda la configuracion (workbenches, agentes y sus modelos, IA local, instrucciones,
@@ -36,36 +38,44 @@ function isGitRepo(dir) {
   }
 }
 
-function ensureGitignoreEntries(dir, entries) {
-  const gitignorePath = path.join(dir, '.gitignore');
-  let content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : '';
+// Excluye rutas de git en .git/info/exclude (local, sin versionar): optimia no
+// toca el .gitignore del repo, que es un fichero del proyecto y del equipo.
+function excludeFromGit(dir, entries) {
+  let gitDir;
+  try {
+    gitDir = execFileSync('git', ['rev-parse', '--git-common-dir'], { cwd: dir, encoding: 'utf8' }).trim();
+  } catch {
+    return;
+  }
+  const exclude = path.join(path.resolve(dir, gitDir), 'info', 'exclude');
+  let content = fs.existsSync(exclude) ? fs.readFileSync(exclude, 'utf8') : '';
   let changed = false;
   for (const entry of entries) {
-    const pattern = new RegExp(`^/?${entry.replace(/^\//, '')}/?$`, 'm');
-    if (!pattern.test(content)) {
-      if (content.length && !content.endsWith('\n')) content += '\n';
-      content += `${entry}\n`;
-      changed = true;
-    }
+    const pattern = new RegExp(`^/?${entry.replace(/^\//, '').replace(/\./g, '\\.')}/?$`, 'm');
+    if (pattern.test(content)) continue;
+    if (content.length && !content.endsWith('\n')) content += '\n';
+    content += `${entry}\n`;
+    changed = true;
   }
-  if (changed) fs.writeFileSync(gitignorePath, content);
+  if (!changed) return;
+  fs.mkdirSync(path.dirname(exclude), { recursive: true });
+  fs.writeFileSync(exclude, content);
 }
 
-// Mirrors the old bash ensure_project_dir: creates .optimia/, and in git repos
-// symlinks .codegraph -> .optimia/.codegraph so the codegraph CLI finds its
-// database at the root-level path it expects, without the index landing in git.
+// Crea .optimia/ (estado local de optimia, excluido de git).
 function ensureProjectDir(dir) {
   fs.mkdirSync(path.join(dir, '.optimia'), { recursive: true });
-  if (!isGitRepo(dir)) return;
+  if (isGitRepo(dir)) excludeFromGit(dir, ['/.optimia']);
+}
 
+// CodeGraph espera su base de datos en <repo>/.codegraph: se enlaza a
+// .optimia/.codegraph solo si el usuario activa CodeGraph.
+function ensureCodegraphLink(dir) {
   const codegraphLink = path.join(dir, '.codegraph');
   const codegraphReal = path.join(dir, '.optimia', '.codegraph');
   fs.mkdirSync(codegraphReal, { recursive: true });
-  if (!fs.existsSync(codegraphLink)) {
-    fs.symlinkSync(codegraphReal, codegraphLink);
-  }
-
-  ensureGitignoreEntries(dir, ['/.optimia', '/.codegraph']);
+  if (!fs.existsSync(codegraphLink)) fs.symlinkSync(codegraphReal, codegraphLink);
+  excludeFromGit(dir, ['/.codegraph']);
 }
 
 function askYesNo(question, defaultYes) {
@@ -114,6 +124,7 @@ async function setupCodegraph(dir) {
     saveCodegraphState(dir, state);
   }
   if (!state.enabled) return;
+  ensureCodegraphLink(dir);
 
   const cgArgs = ['@colbymchenry/codegraph'];
   if (!state.initialized) {
@@ -135,8 +146,18 @@ async function setupCodegraph(dir) {
   }
 }
 
+function parsePort(value) {
+  if (value === undefined || value === '') return 0;
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`puerto no válido: ${value} (usa un número entre 1 y 65535)`);
+  }
+  return port;
+}
+
 async function main() {
-  const arg = process.argv[2];
+  const args = process.argv.slice(2);
+  const arg = args[0];
   if (arg === '--version' || arg === '-V') {
     console.log(`optimia ${pkg.version}`);
     return;
@@ -146,13 +167,24 @@ async function main() {
     return;
   }
 
+  const portFlag = args.findIndex((a) => a === '--port' || a === '-p');
+  const inline = args.find((a) => a.startsWith('--port='));
+  const port = parsePort(
+    inline ? inline.slice('--port='.length) : portFlag >= 0 ? args[portFlag + 1] : process.env.OPTIMIA_PORT
+  );
+  const known = new Set(['--port', '-p']);
+  const unknown = args.find(
+    (a, i) => !known.has(a) && !a.startsWith('--port=') && !(portFlag >= 0 && i === portFlag + 1)
+  );
+  if (unknown) throw new Error(`opción desconocida: ${unknown} (optimia --help)`);
+
   const projectRoot = process.cwd();
   ensureProjectDir(projectRoot);
   await setupCodegraph(projectRoot);
 
   const { start } = require('../server/index.js');
   // OPTIMIA_NO_OPEN=1: no abrir el navegador (tests, servidores remotos por SSH).
-  await start({ projectRoot, open: !process.env.OPTIMIA_NO_OPEN });
+  await start({ projectRoot, port, open: !process.env.OPTIMIA_NO_OPEN });
 }
 
 main().catch((err) => {

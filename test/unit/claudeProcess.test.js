@@ -213,3 +213,19 @@ test(
     assert.ok(!session.proc.spawnargs.includes('--allowedTools'));
   }
 );
+
+test('constructor: strictMcpConfig adds --strict-mcp-config and loads the extra MCP files', needsClaude, async (t) => {
+  const session = new ClaudeSession({
+    projectRoot: process.cwd(),
+    mcpConfigPath: '/tmp/optimia-mcp.json',
+    extraMcpConfigPaths: ['/tmp/repo/.mcp.json'],
+    strictMcpConfig: true
+  });
+  t.after(() => session.kill());
+  session.close();
+  await new Promise((resolve) => session.on('exit', resolve));
+  const args = session.proc.spawnargs;
+  assert.ok(args.includes('--strict-mcp-config'));
+  const idx = args.indexOf('--mcp-config');
+  assert.deepEqual(args.slice(idx + 1, idx + 3), ['/tmp/optimia-mcp.json', '/tmp/repo/.mcp.json']);
+});

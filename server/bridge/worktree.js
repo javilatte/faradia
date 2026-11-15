@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 function worktreeDir(projectRoot, taskId) {
   return path.join(projectRoot, '.optimia', 'worktrees', taskId);
@@ -22,19 +22,8 @@ function createTaskWorktree(projectRoot, taskId, { baseRef, branchName } = {}) {
   const branch = branchName || `optimia/task-${taskId.slice(0, 8)}`;
   const base = baseRef || git(projectRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
   git(projectRoot, ['worktree', 'add', '-b', branch, dir, base]);
-
-  // .claude/ is gitignored (it's local enforcement config, not project source),
-  // so a fresh worktree never has it. Without it, a headless `claude -p`
-  // session auto-denies every tool call (see claudeProcess.js's
-  // --permission-prompts none) and silently does nothing. Copy it in so the
-  // task session gets the same permissions as the main project.
-  const srcSettings = path.join(projectRoot, '.claude', 'settings.json');
-  if (fs.existsSync(srcSettings)) {
-    const destDir = path.join(dir, '.claude');
-    fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcSettings, path.join(destDir, 'settings.json'));
-  }
-
+  // Los permisos de la sesion llegan con --settings (.optimia/claude-settings-agents.json):
+  // no se copia nada al worktree, que acabaria en el commit de la tarea.
   return { dir, branch };
 }
 
@@ -84,15 +73,17 @@ function branchNameProblem(name) {
     execFileSync('git', ['check-ref-format', '--branch', name], { stdio: 'pipe' });
     return null;
   } catch {
-    return `nombre de rama no valido: ${name}`;
+    return `nombre de rama no válido: ${name}`;
   }
 }
 
 // Commit de los cambios de la tarea. Los ficheros generados (p. ej. docs/, que
 // esta en .gitignore) se anaden de forma explicita, porque la tarea los produce.
-function commitTaskWorktree(worktreeDirPath, message, outputFiles = []) {
+// Commit de la tarea. Respeta .gitignore: un fichero que git ignora solo entra
+// si el usuario lo pide expresamente (`includeIgnored`, p. ej. un .docx generado).
+function commitTaskWorktree(worktreeDirPath, message, includeIgnored = []) {
   execFileSync('git', ['add', '-A'], { cwd: worktreeDirPath });
-  const existing = outputFiles.filter((f) => fs.existsSync(path.join(worktreeDirPath, f)));
+  const existing = includeIgnored.filter((f) => fs.existsSync(path.join(worktreeDirPath, f)));
   if (existing.length) execFileSync('git', ['add', '-f', '--', ...existing], { cwd: worktreeDirPath });
   const staged = execFileSync('git', ['diff', '--cached', '--name-only'], {
     cwd: worktreeDirPath,
@@ -101,6 +92,13 @@ function commitTaskWorktree(worktreeDirPath, message, outputFiles = []) {
   if (!staged) throw new Error('no hay cambios que commitear');
   execFileSync('git', ['commit', '-m', message], { cwd: worktreeDirPath, encoding: 'utf8' });
   return git(worktreeDirPath, ['rev-parse', 'HEAD']);
+}
+
+// De `files` (relativos), los que git ignora en `dir`.
+function ignoredAmong(dir, files) {
+  if (!files.length) return [];
+  const res = spawnSync('git', ['check-ignore', '--stdin'], { cwd: dir, input: files.join('\n'), encoding: 'utf8' });
+  return res.status === 0 ? res.stdout.split('\n').filter(Boolean) : [];
 }
 
 function worktreeIsClean(worktreeDirPath) {
@@ -117,9 +115,19 @@ function worktreeOfBranch(projectRoot, branch) {
   return null;
 }
 
-function mergeAt(dir, branch, targetBranch, message) {
+// Fast-forward si la base no ha avanzado (historial lineal); si ha avanzado, un
+// merge normal con el mensaje estandar de git ("Merge branch '...'"), que las
+// herramientas de Conventional Commits ignoran.
+function mergeAt(dir, branch, targetBranch) {
+  const before = git(dir, ['rev-parse', 'HEAD']);
   try {
-    git(dir, ['merge', '--no-ff', '-m', message, branch]);
+    git(dir, ['merge', '--ff-only', branch]);
+    return { sha: git(dir, ['rev-parse', 'HEAD']), before, fastForward: true };
+  } catch {
+    /* la base avanzo: hace falta un commit de merge */
+  }
+  try {
+    git(dir, ['merge', '--no-ff', '--no-edit', branch]);
   } catch (err) {
     try {
       git(dir, ['merge', '--abort']);
@@ -127,22 +135,22 @@ function mergeAt(dir, branch, targetBranch, message) {
       /* no habia merge en curso */
     }
     throw new Error(
-      `conflictos al fusionar ${branch} en ${targetBranch}; resuelvelos a mano. ${err.message.split('\n')[0]}`
+      `conflictos al fusionar ${branch} en ${targetBranch}; resuélvelos a mano. ${err.message.split('\n')[0]}`
     );
   }
-  return git(dir, ['rev-parse', 'HEAD']);
+  return { sha: git(dir, ['rev-parse', 'HEAD']), before, fastForward: false };
 }
 
 // Fusiona la rama de la tarea en la base sin cambiar de rama en el checkout del usuario:
 // si la base esta checkeada en algun worktree, se fusiona ahi (exigiendo que este limpio);
 // si no, se usa un worktree temporal sobre la base que se borra al terminar.
-function mergeTaskBranch(projectRoot, branch, targetBranch, message) {
+function mergeTaskBranch(projectRoot, branch, targetBranch) {
   const checkedOutAt = worktreeOfBranch(projectRoot, targetBranch);
   if (checkedOutAt) {
     if (git(checkedOutAt, ['status', '--porcelain']) !== '') {
       throw new Error(`hay cambios sin commitear en ${checkedOutAt}; no se puede fusionar en "${targetBranch}" ahora`);
     }
-    return mergeAt(checkedOutAt, branch, targetBranch, message);
+    return mergeAt(checkedOutAt, branch, targetBranch);
   }
   const tmp = path.join(
     projectRoot,
@@ -152,7 +160,7 @@ function mergeTaskBranch(projectRoot, branch, targetBranch, message) {
   );
   git(projectRoot, ['worktree', 'add', tmp, targetBranch]);
   try {
-    return mergeAt(tmp, branch, targetBranch, message);
+    return mergeAt(tmp, branch, targetBranch);
   } finally {
     try {
       git(projectRoot, ['worktree', 'remove', '--force', tmp]);
@@ -162,11 +170,10 @@ function mergeTaskBranch(projectRoot, branch, targetBranch, message) {
   }
 }
 
-// Ficheros que cambia un commit (o una fusion, frente a su primer padre).
-function filesChangedBy(dir, sha) {
-  return git(dir, ['diff', '--name-only', `${sha}^1`, sha])
-    .split('\n')
-    .filter(Boolean);
+// Ficheros que cambia un commit (o una fusion, frente a su primer padre), o
+// los que cambian entre dos commits si se pasa `from`.
+function filesChangedBy(dir, sha, from = `${sha}^1`) {
+  return git(dir, ['diff', '--name-only', from, sha]).split('\n').filter(Boolean);
 }
 
 // Ficheros modificados, staged o sin seguimiento en un worktree ahora mismo.
@@ -191,6 +198,7 @@ module.exports = {
   commitTaskWorktree,
   worktreeIsClean,
   mergeTaskBranch,
+  ignoredAmong,
   filesChangedBy,
   changedFiles
 };

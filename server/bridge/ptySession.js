@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const pty = require('node-pty');
 const { EventEmitter } = require('events');
 
@@ -8,13 +9,13 @@ const SCROLLBACK_LIMIT = 200_000; // chars kept in memory, oldest trimmed first
 /**
  * Wraps one long-lived, real interactive `claude` process in a pseudo-terminal.
  * Unlike ClaudeSession (headless -p, --permission-prompts none), this is the
- * normal interactive CLI: no permission flags are passed, so .claude/settings.json
- * applies exactly as it would for a human running `claude` by hand in this
- * project — including real permission prompts, rendered and answerable because
- * there is now a real TTY on the other end.
+ * normal interactive CLI with real permission prompts, rendered and answerable
+ * because there is a real TTY on the other end. It gets the same optimia
+ * settings as the chat (--settings .optimia/claude-settings.json: the "prohibido"
+ * list and the base permissions) on top of the repo's own .claude/ settings.
  */
 class PtySession extends EventEmitter {
-  constructor({ cwd, mcpConfigPath, cols = 80, rows = 24, resumeSessionId } = {}) {
+  constructor({ cwd, mcpConfigPath, settingsPath, cols = 80, rows = 24, resumeSessionId } = {}) {
     super();
     this.scrollback = '';
     this._exited = false;
@@ -22,6 +23,7 @@ class PtySession extends EventEmitter {
     const args = [];
     if (resumeSessionId) args.push('--resume', resumeSessionId);
     if (mcpConfigPath) args.push('--mcp-config', mcpConfigPath);
+    if (settingsPath && fs.existsSync(settingsPath)) args.push('--settings', settingsPath);
     this.proc = pty.spawn('claude', args, {
       name: 'xterm-256color',
       cols,

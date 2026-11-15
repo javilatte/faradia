@@ -27,6 +27,9 @@ class ClaudeSession extends EventEmitter {
     authHeader,
     systemPrompt,
     mcpConfigPath,
+    extraMcpConfigPaths = [],
+    settingsPath,
+    strictMcpConfig = false,
     extraAllowedTools = [],
     disallowedTools = [],
     gitHooksPath
@@ -49,9 +52,17 @@ class ClaudeSession extends EventEmitter {
     if (model) args.push('--model', model);
     if (effort) args.push('--effort', effort);
     if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
+    if (settingsPath) args.push('--settings', settingsPath);
     const allowedTools = [];
+    // Agentes de tarea: solo los servidores MCP de optimia y los del propio proyecto
+    // (.mcp.json). Sin --strict-mcp-config heredarian los conectores de la cuenta de
+    // claude.ai del usuario (Gmail, Drive, Slack...), que gastan contexto, no pintan
+    // nada en una tarea de codigo y abren una via de inyeccion de instrucciones.
+    if (strictMcpConfig) args.push('--strict-mcp-config');
+    const extraMcp = extraMcpConfigPaths.filter(Boolean);
+    if (extraMcp.length && !mcpConfigPath) args.push('--mcp-config', ...extraMcp);
     if (mcpConfigPath) {
-      args.push('--mcp-config', mcpConfigPath);
+      args.push('--mcp-config', mcpConfigPath, ...extraMcp);
       // A headless, --permission-prompts none session has no approval surface:
       // MCP tool calls are denied outright regardless of .claude/settings.json's
       // permissions.allow (verified against the real binary — allow-list entries

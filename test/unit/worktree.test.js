@@ -15,6 +15,7 @@ const {
   branchNameProblem,
   commitTaskWorktree,
   mergeTaskBranch,
+  ignoredAmong,
   filesChangedBy,
   changedFiles
 } = require('../../server/bridge/worktree');
@@ -28,7 +29,7 @@ function initGitRepo(dir) {
   execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: dir });
 }
 
-test('createTaskWorktree: creates a real git worktree on its own branch, copying .claude/settings.json', (t) => {
+test('createTaskWorktree: creates a real git worktree on its own branch and copies nothing into it', (t) => {
   const dir = mkTmpDir('worktree-repo');
   t.after(() => {
     try {
@@ -48,13 +49,14 @@ test('createTaskWorktree: creates a real git worktree on its own branch, copying
   assert.equal(wtDir, worktreeDir(dir, 'task-123'));
   assert.equal(branch, 'optimia/task-task-123'); // taskId.slice(0, 8) of "task-123" is "task-123" itself (8 chars)
   assert.equal(fs.existsSync(path.join(wtDir, 'README.md')), true);
-  assert.equal(fs.existsSync(path.join(wtDir, '.claude', 'settings.json')), true);
+  // Un .claude/ sin seguimiento del repo no se copia: acabaria en el commit de la tarea.
+  assert.equal(fs.existsSync(path.join(wtDir, '.claude', 'settings.json')), false);
 
   const branches = execFileSync('git', ['branch', '--list', branch], { cwd: dir, encoding: 'utf8' });
   assert.match(branches, new RegExp(branch));
 });
 
-test('createTaskWorktree: skips copying .claude/settings.json when the source project has none', (t) => {
+test('createTaskWorktree: no .claude/ in the worktree when the project has none', (t) => {
   const dir = mkTmpDir('worktree-repo');
   t.after(() => {
     try {
@@ -149,8 +151,9 @@ test('tareas: salen de la rama base elegida, con su propia rama, y se fusionan e
   const committed = execFileSync('git', ['show', '--name-only', '--format=', sha], { cwd: dir, encoding: 'utf8' });
   assert.match(committed, /docs\/botones\.docx/);
 
-  const mergeSha = mergeTaskBranch(dir, branch, 'fix/rebranding', 'Merge fix/rebranding-buttons en fix/rebranding');
-  assert.match(mergeSha, /^[0-9a-f]{40}$/);
+  const merge = mergeTaskBranch(dir, branch, 'fix/rebranding');
+  assert.equal(merge.sha, sha, 'la base no avanzo: fast-forward al commit de la tarea');
+  assert.equal(merge.fastForward, true);
   assert.ok(fs.existsSync(path.join(dir, 'boton.css')));
 });
 
@@ -166,7 +169,7 @@ test('mergeTaskBranch: fusiona aunque el checkout principal este en otra rama, y
   execFileSync('git', ['checkout', '-q', 'main'], { cwd: dir });
   const before = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
 
-  mergeTaskBranch(dir, 'fix/tarea-x', 'fix/base', 'Merge fix/tarea-x en fix/base');
+  mergeTaskBranch(dir, 'fix/tarea-x', 'fix/base');
 
   const after = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
   assert.equal(after, before);
@@ -184,7 +187,7 @@ test('mergeTaskBranch: se niega si la base esta checkeada con cambios sin commit
   execFileSync('git', ['commit', '-q', '-m', 'y'], { cwd: dir });
   execFileSync('git', ['checkout', '-q', 'fix/base'], { cwd: dir });
   fs.writeFileSync(path.join(dir, 'README.md'), 'cambio sin guardar\n');
-  assert.throws(() => mergeTaskBranch(dir, 'fix/tarea-y', 'fix/base', 'm'), /cambios sin commitear/);
+  assert.throws(() => mergeTaskBranch(dir, 'fix/tarea-y', 'fix/base'), /cambios sin commitear/);
 });
 
 test('filesChangedBy y changedFiles: listan los ficheros de un commit y los pendientes', (t) => {
@@ -200,4 +203,43 @@ test('filesChangedBy y changedFiles: listan los ficheros de un commit y los pend
 
   fs.writeFileSync(path.join(dir, 'c.txt'), 'c\n');
   assert.deepEqual(changedFiles(dir), ['c.txt']);
+});
+
+test('mergeTaskBranch: si la base avanzo, merge con el mensaje estandar de git', (t) => {
+  const dir = mkTmpDir('worktree-merge-diverged');
+  t.after(() => rmTmpDir(dir));
+  initGitRepo(dir);
+  const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
+  git('checkout', '-q', '-b', 'fix/tarea-z');
+  fs.writeFileSync(path.join(dir, 'z.txt'), 'z\n');
+  git('add', 'z.txt');
+  git('commit', '-q', '-m', 'feat: z');
+  git('checkout', '-q', 'main');
+  fs.writeFileSync(path.join(dir, 'm.txt'), 'm\n');
+  git('add', 'm.txt');
+  git('commit', '-q', '-m', 'feat: m');
+
+  const merge = mergeTaskBranch(dir, 'fix/tarea-z', 'main');
+  assert.equal(merge.fastForward, false);
+  assert.equal(git('log', '-1', '--format=%s', merge.sha), "Merge branch 'fix/tarea-z'");
+  assert.deepEqual(filesChangedBy(dir, merge.sha, merge.before), ['z.txt']);
+});
+
+test('commitTaskWorktree respeta .gitignore salvo lo marcado, e ignoredAmong los detecta', (t) => {
+  const dir = mkTmpDir('worktree-ignored');
+  t.after(() => rmTmpDir(dir));
+  initGitRepo(dir);
+  const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
+  fs.writeFileSync(path.join(dir, '.gitignore'), '.env\ndist/\n');
+  git('add', '.gitignore');
+  git('commit', '-q', '-m', 'ignore');
+  fs.writeFileSync(path.join(dir, 'a.js'), 'a\n');
+  fs.writeFileSync(path.join(dir, '.env'), 'SECRET=1\n');
+  fs.mkdirSync(path.join(dir, 'dist'));
+  fs.writeFileSync(path.join(dir, 'dist', 'out.js'), 'x\n');
+
+  assert.deepEqual(ignoredAmong(dir, ['a.js', '.env', 'dist/out.js']).sort(), ['.env', 'dist/out.js']);
+  const sha = commitTaskWorktree(dir, 'feat: a', []);
+  assert.equal(git('show', '--name-only', '--format=', sha), 'a.js');
+  assert.equal(fs.existsSync(path.join(dir, '.claude')), false);
 });

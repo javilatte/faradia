@@ -263,7 +263,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     monitor.start().catch((err) => console.error(`optimia: no se pudo iniciar la vigilancia: ${err.message}`));
   }
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    server.once('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        reject(new Error(`el puerto ${port} está ocupado (¿otro optimia abierto?). Usa otro con --port`));
+      } else reject(err);
+    });
     server.listen(port, '127.0.0.1', () => {
       actualPort = server.address().port;
       registry = new ProjectRegistry({ port: actualPort, token: sessionToken, sendToClients });

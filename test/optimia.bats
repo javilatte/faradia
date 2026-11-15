@@ -31,7 +31,7 @@ teardown() {
     [[ "$output" == *"interfaz web"* ]]
 }
 
-@test "optimia: in a git repo, creates .optimia/, symlinks .codegraph, and updates .gitignore" {
+@test "optimia: in a git repo, creates .optimia/ and leaves the repo clean (no .gitignore edits)" {
     cd "$TESTDIR"
     git init -q
     git config user.email test@test.com
@@ -45,17 +45,40 @@ teardown() {
     OPTIMIA_NO_OPEN=1 node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
     pid=$!
     for i in $(seq 1 50); do
-        [ -d .optimia ] && break
+        grep -q "optimia running at" server.log 2>/dev/null && break
         sleep 0.1
     done
     kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
 
     [ -d .optimia ]
-    [ -L .codegraph ]
-    grep -q '^/.optimia$' .gitignore
-    grep -q '^/.codegraph$' .gitignore
+    [ ! -e .codegraph ]
+    [ ! -e .gitignore ]
+    [ ! -e .claude ]
+    grep -q '^/.optimia$' .git/info/exclude
+    [ -z "$(git status --porcelain -- . ':!server.log')" ]
     grep -q "optimia running at" server.log
+}
+
+@test "optimia --port: listens on the given port, and rejects bad values" {
+    cd "$TESTDIR"
+    port=$((40000 + RANDOM % 20000))
+    OPTIMIA_NO_OPEN=1 node "$OPTIMIA_BIN" --port "$port" < /dev/null > server.log 2>&1 &
+    pid=$!
+    for i in $(seq 1 50); do
+        grep -q "optimia running at" server.log 2>/dev/null && break
+        sleep 0.1
+    done
+    grep -q "http://127.0.0.1:$port/" server.log
+    run node "$OPTIMIA_BIN" --port "$port"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"está ocupado"* ]]
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+
+    run node "$OPTIMIA_BIN" --port abc
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"puerto no válido"* ]]
 }
 
 @test "optimia: outside a git repo, still creates .optimia/ but skips CodeGraph setup" {

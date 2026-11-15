@@ -113,3 +113,40 @@ test('buildSessionOptions: a local agent without URL or model fails with a clear
   settings.ai.localAi.url = 'http://localhost:11434';
   assert.throws(() => buildSessionOptions(settings, dir, dir, 't', { engine: 'local', model: '' }), /modelo local/);
 });
+
+test('buildSessionOptions: a task session uses strict MCP config and keeps the repo .mcp.json', (t) => {
+  const projectRoot = mkTmpDir('sessopts-main');
+  const worktree = mkTmpDir('sessopts-wt');
+  t.after(() => {
+    rmTmpDir(projectRoot);
+    rmTmpDir(worktree);
+  });
+  const settings = defaultSettings();
+  const chat = buildSessionOptions(settings, projectRoot);
+  assert.equal(chat.strictMcpConfig, undefined, 'el chat conserva los conectores del usuario');
+
+  const bare = buildSessionOptions(settings, worktree, projectRoot, 'task-1');
+  assert.equal(bare.strictMcpConfig, true);
+  assert.equal(bare.extraMcpConfigPaths, undefined);
+
+  require('fs').writeFileSync(require('path').join(worktree, '.mcp.json'), '{"mcpServers":{}}');
+  const withRepoMcp = buildSessionOptions(settings, worktree, projectRoot, 'task-1');
+  assert.deepEqual(withRepoMcp.extraMcpConfigPaths, [require('path').join(worktree, '.mcp.json')]);
+});
+
+test('buildSessionOptions: chat and agents get their own optimia settings file via --settings', (t) => {
+  const {
+    syncClaudeSettings,
+    optimiaClaudeSettingsPath,
+    agentClaudeSettingsPath
+  } = require('../../server/bridge/claudeSettingsSync');
+  const projectRoot = mkTmpDir('sessopts-settings');
+  t.after(() => rmTmpDir(projectRoot));
+  syncClaudeSettings(projectRoot, ['Read(**/.env*)']);
+  const settings = defaultSettings();
+  assert.equal(buildSessionOptions(settings, projectRoot).settingsPath, optimiaClaudeSettingsPath(projectRoot));
+  const task = buildSessionOptions(settings, projectRoot, projectRoot, 'task-1');
+  assert.equal(task.settingsPath, agentClaudeSettingsPath(projectRoot));
+  const agentFile = JSON.parse(require('fs').readFileSync(task.settingsPath, 'utf8'));
+  assert.deepEqual(agentFile.permissions, { deny: ['Read(**/.env*)'] }, 'sin allow ni defaultMode para los agentes');
+});
