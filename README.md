@@ -115,8 +115,15 @@ Agents can use different local models at the same time: the model name is passed
 straight to Ollama.
 
 Agents can never commit, push, merge, rebase or run destructive commands: a deny
-list and a git hook block them. Commit and merge are always your action, from the
-task card.
+list and a git hook block them. When an agent tries one, it gets the denial and
+carries on another way, as in Claude Code. Read-only stages cannot edit files. Task
+agents only see optimia's MCP server and your repo's `.mcp.json`, not the
+connectors of your claude.ai account.
+
+Commit and merge are always your action, from the task card. "Proponer mensaje de
+commit" fills in a Conventional Commits message in the repo's language; the commit
+respects `.gitignore` (ignored files only go in if you tick them). Merging
+fast-forwards when it can, then removes the task's worktree and branch.
 
 ---
 
@@ -164,6 +171,7 @@ with a sandbox CSP.
 ```
 <project>/.optimia/              per project (excluded from git automatically)
 ├── settings.json                AI mode, model/effort, local AI, instructions, no-go list
+├── claude-settings*.json        permissions for optimia's own claude sessions (--settings)
 ├── memory.md                    project memory, included in every session's system prompt
 ├── tasks.json, chats.json       kanban and chat state
 ├── agents/                      project agents and stage map
@@ -181,8 +189,10 @@ with a sandbox CSP.
 └── trash/                       files deleted from the explorer
 ```
 
-A repo opened from a workbench excludes `.optimia` through `.git/info/exclude`, so
-optimia never edits your `.gitignore` there.
+optimia leaves your repo alone: `.optimia` is excluded through `.git/info/exclude`
+(never your `.gitignore`), and the Claude Code permissions of its own sessions —
+including the "Prohibido" list — live in `.optimia/claude-settings*.json` and are
+passed with `claude --settings`, so your project's `.claude/` is never touched.
 
 ---
 
@@ -190,11 +200,15 @@ optimia never edits your `.gitignore` there.
 
 ```
 optimia              Set up .optimia/, start the server, open the browser
+optimia --port 4777  Use a fixed port (default: a free one); also OPTIMIA_PORT
 optimia --version    Print version
 optimia --help       Print help
 ```
 
 `OPTIMIA_NO_OPEN=1` starts the server without opening a browser (handy over SSH).
+
+Keyboard: ⌥1…⌥5 (Alt on Linux and Windows) switch views, ⌘, (Ctrl+,) opens
+Settings and ⌃⌘S (Ctrl+Alt+S) shows or hides the sidebar.
 
 ---
 

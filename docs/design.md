@@ -38,8 +38,13 @@ recarga la vista, porque los scripts clásicos cargan su estado al arrancar y as
 más fiable que intentar reiniciarlos en caliente. Todos los mensajes del WebSocket
 llevan `projectId`, y cada vista filtra los suyos.
 
-Un repo abierto desde un workbench excluye `.optimia` en `.git/info/exclude`, para no
-tocar el `.gitignore` del usuario.
+optimia no deja rastro en el repo: `.optimia` se excluye en `.git/info/exclude` (no se
+toca el `.gitignore`), y los permisos de Claude Code de sus propias sesiones van en
+`.optimia/claude-settings.json` (chat y terminal: permisos base, modo y lista
+"Prohibido") y `.optimia/claude-settings-agents.json` (agentes: solo la lista
+"Prohibido" y la aprobación del MCP), que se pasan con `claude --settings`. Así el
+`.claude/` del proyecto, que es configuración compartida del equipo, no se modifica, y
+sus reglas `deny` siguen sumándose a las de optimia.
 
 ## Agentes
 
@@ -104,7 +109,16 @@ avisos se deduplican durante 10 minutos.
   simbólicos), no toca `.git` ni `.optimia`, nunca sobrescribe y sirve los ficheros
   en bruto con una CSP `sandbox`.
 - Los agentes no pueden hacer commit, push, merge ni rebase: lo impiden una lista de
-  denegación y un hook de git que se activa por variables de entorno.
+  denegación y un hook de git que se activa por variables de entorno. Una acción
+  denegada por esa política no para la etapa: el agente recibe la denegación y sigue
+  por otro camino; la etapa solo se detiene si insiste (5 veces). Las herramientas
+  que sí se pueden aprobar paran la etapa y se aprueban desde la tarjeta.
+- Las etapas de solo lectura bloquean `Edit`, `MultiEdit`, `Write` y `NotebookEdit`
+  con `--disallowedTools`, que gana a cualquier permiso aprobado.
+- Los agentes de las tareas usan `--strict-mcp-config`: solo el MCP de optimia y el
+  `.mcp.json` del repo, sin los conectores de la cuenta de claude.ai del usuario.
+- El commit de una tarea respeta `.gitignore`: un fichero ignorado que generó el
+  agente solo entra si el usuario lo marca en la tarjeta.
 
 ## Pruebas
 
@@ -114,3 +128,21 @@ avisos se deduplican durante 10 minutos.
 - `test/e2e`: Playwright contra un `claude` simulado
   (`test/e2e/fixtures/bin/claude`) que habla stream-json, registra sus argumentos y
   escribe un fichero en las etapas que editan.
+
+## Diseño de la interfaz
+
+La interfaz sigue las Human Interface Guidelines de Apple para macOS:
+
+- **Ventana**: barra lateral (material translúcido) con el workbench, las vistas y los
+  repos, y una barra de herramientas con el título de la vista y sus acciones. La
+  barra lateral tiene una sola selección: la vista; el repo abierto se marca con ✓.
+- **Color**: tokens semánticos (`--label`, `--secondary-label`, `--separator`,
+  `--accent`, `--selection-bg`...) definidos en `web/styles.css`, con variante oscura,
+  "Aumentar contraste" (`prefers-contrast: more`) y "Reducir transparencia"
+  (`prefers-reduced-transparency`). El texto cumple un contraste mínimo de 4,5:1; los
+  estados no dependen solo del color (llevan texto o símbolo).
+- **Tipografía**: la del sistema con la escala de macOS (cuerpo de 13 pt, mínimo 10).
+- **Controles**: `web/macos.css` unifica botones push (un único botón principal por
+  vista), menús desplegables, campos, controles segmentados y anillos de foco.
+- **Ajustes**: se aplican al momento, sin botón Guardar, y se abren en el último
+  apartado visitado.

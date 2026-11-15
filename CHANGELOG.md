@@ -17,15 +17,34 @@ Supervisión de agentes y de varios repos a la vez. Cambio incompatible con 1.x 
 - **Lista de vigilancia** por repo (plano 2) para ficheros que git ignora.
 - **Explorador de ficheros** con vistas previas (markdown, código, imagen, audio, vídeo, PDF), portapapeles, renombrar, copiar, mover y borrar con Deshacer, y papelera restaurable.
 - CI en GitHub Actions (lint, formato, unitarios, bats, e2e con Playwright y gitleaks), ESLint y Prettier, `docs/design.md` y `docs/roadmap.md`.
-- `OPTIMIA_NO_OPEN=1` para arrancar sin abrir el navegador.
+- `OPTIMIA_NO_OPEN=1` para arrancar sin abrir el navegador, y `--port` / `OPTIMIA_PORT` para fijar el puerto.
+- Diseño según las Human Interface Guidelines de Apple para macOS: barra lateral con las vistas y los repos, barra de herramientas con el título de la vista, colores semánticos con modo claro y oscuro, "Aumentar contraste" y "Reducir transparencia", escala tipográfica del sistema, botones push, menús desplegables, controles segmentados y anillos de foco. Atajos ⌥1…⌥5 (vistas), ⌘, (Ajustes) y ⌃⌘S (barra lateral).
+- Ajustes y agentes se guardan al momento, sin botón Guardar, y Ajustes se abre en el último apartado visitado.
+- El compositor muestra, antes de enviar una tarea, sus etapas y qué agente y modelo hará cada una, con un enlace para cambiarlos.
+- Las tarjetas de tarea muestran el pipeline con el estado de cada etapa y su agente y modelo; el chat y los informes se ven como markdown.
+- "Proponer mensaje de commit" rellena el campo de commit con un mensaje Conventional Commits que sigue el idioma del repo; sin él, el tipo se deduce del tipo de tarea.
+- Fusionar una tarea hace fast-forward cuando la base no ha avanzado, borra después su worktree y su rama, y la tarea pasa al grupo "Hechas".
+- Effort `xhigh` y `max`.
 
 ### Changed
 - Requiere Node 22 o posterior.
 - Los modelos locales se pasan por su nombre real de Ollama, sin el alias `claude-haiku-4-5`, así que cada agente puede usar un modelo local distinto a la vez.
 - `web/app.js` se divide en `web/js/project/`; las vistas nuevas son módulos ES en `web/js/app/`.
 
+### Fixed
+- Cada etapa recibe el encargo original del usuario, no solo el plan de la anterior.
+- Una acción prohibida para los agentes ya no detiene la etapa: el agente recibe la denegación y sigue (la etapa solo se para si insiste).
+- Abrir Ajustes ya no borra lo que se empieza a escribir mientras carga.
+- El servidor MCP de tareas arranca con el mismo `node` que optimia (con nvm, `node` puede no estar en el PATH).
+- El timeline ignora los ficheros temporales de escrituras atómicas y editores.
+
 ### Security
 - La API local y el WebSocket comprueban el `Host` (contra DNS rebinding), el `Origin` (contra CSRF) y un token por ejecución (cabecera o cookie `SameSite=Strict`).
+- optimia ya no escribe en el repo: los permisos de sus sesiones (lista "Prohibido" incluida) van en `.optimia/claude-settings*.json` y se pasan con `claude --settings`. Antes reescribía `.claude/settings.json` (configuración compartida del proyecto, sustituyendo su lista `deny`) y lo copiaba a los worktrees, donde acababa en los commits. Un `.claude/settings.json` generado por versiones anteriores, sin seguimiento en git, se borra solo.
+- `.optimia` se excluye en `.git/info/exclude` en vez de editar el `.gitignore` del repo, y el enlace `.codegraph` solo se crea si se activa CodeGraph.
+- Los agentes de las tareas no heredan los conectores MCP de la cuenta de claude.ai del usuario (Gmail, Drive, Slack…): solo el MCP de optimia y el `.mcp.json` del repo (`--strict-mcp-config`).
+- Las etapas de solo lectura bloquean las herramientas de edición explícitamente.
+- El commit de una tarea respeta `.gitignore`: un fichero ignorado solo entra si se marca en la tarjeta.
 
 ### Cambios incompatibles
 - Los clientes de la API tienen que enviar `X-Optimia-Token`: el token sale en el enlace que imprime optimia al arrancar.
