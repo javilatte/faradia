@@ -19,6 +19,21 @@ function isSelf(rel) {
   return SELF_DIRS.some((d) => rel === d || rel.startsWith(`${d}/`));
 }
 
+// Ficheros efímeros de editores y de escrituras atómicas (se crean y se renombran
+// al momento): no son cambios que nadie quiera ver en el timeline ni en los avisos.
+const TRANSIENT = [
+  /\.tmp\.\d+\.[0-9a-f]+$/i, // escritura atómica (fichero.tmp.<pid>.<hash>)
+  /\.(swp|swo|swx)$/, // vim
+  /~$/, // copias de seguridad
+  /(^|\/)\.#/, // emacs
+  /(^|\/)4913$/, // prueba de escritura de vim
+  /\.crswap$/ // Chrome
+];
+
+function isTransient(rel) {
+  return TRANSIENT.some((re) => re.test(rel));
+}
+
 function dirsOf(files) {
   const dirs = new Set(['']);
   for (const f of files) {
@@ -201,7 +216,7 @@ class TreeWatcher extends EventEmitter {
 
   flush() {
     this.timer = null;
-    const paths = [...this.pending];
+    const paths = [...this.pending].filter((p) => !isTransient(p));
     const gitChanged = this.gitChanged;
     this.pending.clear();
     this.gitChanged = false;
@@ -220,4 +235,9 @@ class TreeWatcher extends EventEmitter {
   }
 }
 
-module.exports = { TreeWatcher, dirsOf, isSelf };
+module.exports = {
+  isTransient,
+  TreeWatcher,
+  dirsOf,
+  isSelf
+};

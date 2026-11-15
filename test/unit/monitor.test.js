@@ -213,7 +213,7 @@ test('diff: hunks con numeros de linea, fichero nuevo sin seguimiento y modo com
   assert.equal(nuevo.files[0].added, 2);
 
   await assert.rejects(getDiff(dir, { path: '../fuera' }), /ruta no valida/);
-  await assert.rejects(getDiff(dir, { mode: 'commit', ref: 'HEAD; rm -rf' }), /commit no valido/);
+  await assert.rejects(getDiff(dir, { mode: 'commit', ref: 'HEAD; rm -rf' }), /commit no válido/);
   assert.equal(safeRel('/etc/passwd'), null);
   assert.equal(parseUnifiedDiff('').length, 0);
 });
@@ -230,4 +230,11 @@ test('listCommits: commits con ficheros y lineas', async (t) => {
   assert.equal(commits[0].files, 1);
   assert.equal(commits[0].added, 2);
   assert.match(commits[0].sha, /^[0-9a-f]{40}$/);
+});
+
+test('isTransient: ignora escrituras atómicas y ficheros de editores, no los normales', () => {
+  const { isTransient } = require('../../server/monitor/treeWatcher');
+  for (const p of ['README.md.tmp.147857.98b65491f150', 'src/.a.js.swp', 'a.txt~', 'src/.#notas.md', '4913'])
+    assert.equal(isTransient(p), true, p);
+  for (const p of ['README.md', 'src/tmp/a.js', 'notes.tmp', 'docs/api.md']) assert.equal(isTransient(p), false, p);
 });
