@@ -3,6 +3,7 @@
 const fs = require('fs');
 const pty = require('node-pty');
 const { EventEmitter } = require('events');
+const { ensureSpawnHelperExecutable } = require('./nodePtyFix');
 
 const SCROLLBACK_LIMIT = 200_000; // chars kept in memory, oldest trimmed first
 
@@ -24,6 +25,7 @@ class PtySession extends EventEmitter {
     if (resumeSessionId) args.push('--resume', resumeSessionId);
     if (mcpConfigPath) args.push('--mcp-config', mcpConfigPath);
     if (settingsPath && fs.existsSync(settingsPath)) args.push('--settings', settingsPath);
+    ensureSpawnHelperExecutable();
     this.proc = pty.spawn('claude', args, {
       name: 'xterm-256color',
       cols,

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
 const { git } = require('./gitState');
 
@@ -13,6 +14,30 @@ const { git } = require('./gitState');
 //   'change' { paths: [relative paths], git: boolean (change in HEAD/index/refs) }
 
 const SELF_DIRS = ['.optimia', '.codegraph'];
+
+// Files in .git/ whose change means a commit, checkout or staging change.
+const GIT_META = ['HEAD', 'index', 'packed-refs', 'FETCH_HEAD', 'ORIG_HEAD'];
+
+// Native recursive watching: cheap on macOS (FSEvents) and Windows. On Linux it
+// would put one inotify watch on every subfolder (node_modules included), so
+// there optimia watches only the folders that matter, one by one.
+const NATIVE_RECURSIVE = process.platform === 'darwin' || process.platform === 'win32';
+
+// Which of `dirs` (relative) git ignores. One `git check-ignore --stdin` call.
+function checkIgnored(root, dirs) {
+  return new Promise((resolve) => {
+    const child = spawn('git', ['check-ignore', '--stdin'], {
+      cwd: root,
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' }
+    });
+    let out = '';
+    child.stdout.on('data', (c) => (out += c));
+    child.on('error', () => resolve(new Set()));
+    // exit 0 = some ignored, 1 = none ignored, 128 = not a git repo
+    child.on('close', () => resolve(new Set(out.split('\n').filter(Boolean))));
+    child.stdin.end(dirs.join('\n') + '\n');
+  });
+}
 
 function isSelf(rel) {
   return SELF_DIRS.some((d) => rel === d || rel.startsWith(`${d}/`));
@@ -65,8 +90,13 @@ class TreeWatcher extends EventEmitter {
    * extraDirs: folders (relative) watched entirely even if git ignores them, e.g. "dist" for a
    * plane 2 pattern "dist/**".
    */
-  constructor(root, { extraDirs = [], maxDirs = 4000, debounceMs = 300, watchGitMeta = true } = {}) {
+  constructor(
+    root,
+    { extraDirs = [], maxDirs = 4000, debounceMs = 300, watchGitMeta = true, recursive = NATIVE_RECURSIVE } = {}
+  ) {
     super();
+    this.recursive = recursive;
+    this.ignoredDirs = new Map(); // recursive mode: dir -> ignored by git?
     this.root = root;
     this.extraDirs = extraDirs;
     this.maxDirs = maxDirs;
@@ -81,6 +111,7 @@ class TreeWatcher extends EventEmitter {
   }
 
   async start() {
+    if (this.recursive) return this.startRecursive();
     let tracked = [];
     let untracked = [];
     try {
@@ -106,6 +137,70 @@ class TreeWatcher extends EventEmitter {
     return this;
   }
 
+  // macOS and Windows: one native recursive watch (FSEvents / ReadDirectoryChangesW)
+  // costs next to nothing and sees files created right after their folder, which
+  // per-folder watches can miss there. Events inside folders git ignores are
+  // filtered out when the batch is flushed (see filterIgnored).
+  startRecursive() {
+    try {
+      const w = fs.watch(this.root, { recursive: true }, (_event, name) => this.onRecursiveEvent(name));
+      w.on('error', () => w.close());
+      this.watchers.set('', w);
+    } catch {
+      /* the folder vanished */
+    }
+    return this;
+  }
+
+  onRecursiveEvent(name) {
+    if (!name) return;
+    const rel = String(name).split(path.sep).join('/');
+    if (rel === '.git' || rel.startsWith('.git/')) {
+      const sub = rel.slice('.git/'.length);
+      const meta = GIT_META.includes(sub) || sub.startsWith('refs/heads/');
+      if (this.watchGitMeta && meta && !sub.endsWith('.lock')) {
+        this.gitChanged = true;
+        this.schedule();
+      }
+      return;
+    }
+    if (isSelf(rel)) return;
+    // A changed .gitignore can change which folders are ignored.
+    if (rel === '.gitignore' || rel.endsWith('/.gitignore')) this.ignoredDirs.clear();
+    this.pending.add(rel);
+    this.schedule();
+  }
+
+  // Drops paths inside folders git ignores (node_modules, build output...) and
+  // those folders themselves (FSEvents also reports the folder when something
+  // inside changes), except the plane 2 extraDirs. Ignored files such as .env
+  // are kept: the plane 2 watchlist needs them. Answers are cached per folder.
+  async filterIgnored(paths) {
+    const isExtra = (d) => this.extraDirs.some((x) => d === x || d.startsWith(`${x}/`));
+    const isDir = (p) => {
+      try {
+        return fs.statSync(path.join(this.root, p)).isDirectory();
+      } catch {
+        return false;
+      }
+    };
+    const ancestors = (p) => {
+      const out = [];
+      for (let d = path.posix.dirname(p); d && d !== '.'; d = path.posix.dirname(d)) out.unshift(d);
+      if (isDir(p)) out.push(p);
+      return out;
+    };
+    const unknown = new Set();
+    for (const p of paths) {
+      for (const d of ancestors(p)) if (!isExtra(d) && !this.ignoredDirs.has(d)) unknown.add(d);
+    }
+    if (unknown.size) {
+      const ignored = await checkIgnored(this.root, [...unknown]);
+      for (const d of unknown) this.ignoredDirs.set(d, ignored.has(d));
+    }
+    return paths.filter((p) => !ancestors(p).some((d) => !isExtra(d) && this.ignoredDirs.get(d)));
+  }
+
   watchGit() {
     const gitDir = path.join(this.root, '.git');
     try {
@@ -117,8 +212,7 @@ class TreeWatcher extends EventEmitter {
       try {
         const w = fs.watch(abs, (_event, name) => {
           if (!name || name.endsWith('.lock')) return;
-          if (abs === gitDir && !['HEAD', 'index', 'packed-refs', 'FETCH_HEAD', 'ORIG_HEAD'].includes(String(name)))
-            return;
+          if (abs === gitDir && !GIT_META.includes(String(name))) return;
           this.gitChanged = true;
           this.schedule();
         });
@@ -219,7 +313,11 @@ class TreeWatcher extends EventEmitter {
     const gitChanged = this.gitChanged;
     this.pending.clear();
     this.gitChanged = false;
-    if (paths.length || gitChanged) this.emit('change', { paths, git: gitChanged });
+    const emit = (kept) => {
+      if (!this.closed && (kept.length || gitChanged)) this.emit('change', { paths: kept, git: gitChanged });
+    };
+    if (!this.recursive) return emit(paths);
+    this.filterIgnored(paths).then(emit, () => emit(paths));
   }
 
   get size() {

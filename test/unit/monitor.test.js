@@ -114,48 +114,58 @@ test('dirsOf: folders of a list of files', () => {
   assert.deepEqual([...dirsOf(['a/b/c.js', 'a/d.js', 'x.js'])].sort(), ['', 'a', 'a/b']);
 });
 
-test('TreeWatcher: batches changes, watches new folders and skips ignored ones', async (t) => {
-  const { dir } = makeRepo(t);
-  fs.mkdirSync(path.join(dir, 'node_modules', 'pkg'), { recursive: true });
-  const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();
-  t.after(() => w.close());
-  assert.ok(![...w.watchers.keys()].some((k) => k.startsWith('node_modules')));
+// Both watching modes run everywhere: per-folder (Linux default) and native
+// recursive (macOS and Windows default; Node also supports it on Linux).
+for (const recursive of [false, true]) {
+  const mode = recursive ? 'recursive' : 'per-folder';
 
-  let batch = waitFor(w, 'change');
-  fs.writeFileSync(path.join(dir, 'src', 'a.js'), 'cambio\n');
-  fs.writeFileSync(path.join(dir, 'README.md'), 'cambio\n');
-  assert.deepEqual((await batch).paths.sort(), ['README.md', 'src/a.js']);
+  test(`TreeWatcher (${mode}): batches changes, watches new folders and skips ignored ones`, async (t) => {
+    const { dir } = makeRepo(t);
+    fs.mkdirSync(path.join(dir, 'node_modules', 'pkg'), { recursive: true });
+    const w = await new TreeWatcher(dir, { debounceMs: 100, recursive }).start();
+    t.after(() => w.close());
+    if (!recursive) assert.ok(![...w.watchers.keys()].some((k) => k.startsWith('node_modules')));
 
-  batch = waitFor(w, 'change');
-  fs.mkdirSync(path.join(dir, 'lib'));
-  await batch;
-  await new Promise((r) => setTimeout(r, 150)); // the new folder is watched after checking git
-  batch = waitFor(w, 'change');
-  fs.writeFileSync(path.join(dir, 'lib', 'b.js'), 'x');
-  assert.ok((await batch).paths.includes('lib/b.js'));
-});
+    let batch = waitFor(w, 'change');
+    fs.writeFileSync(path.join(dir, 'src', 'a.js'), 'cambio\n');
+    fs.writeFileSync(path.join(dir, 'README.md'), 'cambio\n');
+    fs.writeFileSync(path.join(dir, 'node_modules', 'pkg', 'index.js'), 'ignored\n');
+    assert.deepEqual((await batch).paths.sort(), ['README.md', 'src/a.js']);
 
-test('TreeWatcher: a file created right after its folder is not missed', async (t) => {
-  const { dir } = makeRepo(t);
-  const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();
-  t.after(() => w.close());
-  const seen = new Set();
-  w.on('change', ({ paths }) => paths.forEach((p) => seen.add(p)));
-  fs.mkdirSync(path.join(dir, 'test'));
-  fs.writeFileSync(path.join(dir, 'test', 'a.test.js'), 'x'); // before the watch on test/ is in place
-  const deadline = Date.now() + 3000;
-  while (!seen.has('test/a.test.js') && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
-  assert.ok(seen.has('test/a.test.js'));
-});
+    batch = waitFor(w, 'change');
+    fs.mkdirSync(path.join(dir, 'lib'));
+    await batch;
+    await new Promise((r) => setTimeout(r, 150)); // the new folder is watched after checking git
+    batch = waitFor(w, 'change');
+    fs.writeFileSync(path.join(dir, 'lib', 'b.js'), 'x');
+    assert.ok((await batch).paths.includes('lib/b.js'));
+  });
 
-test('TreeWatcher: a commit shows up as a git change', async (t) => {
-  const { dir, git } = makeRepo(t);
-  const w = await new TreeWatcher(dir, { debounceMs: 100 }).start();
-  t.after(() => w.close());
-  const batch = waitFor(w, 'change');
-  git('commit', '-q', '--allow-empty', '-m', 'vacio');
-  assert.equal((await batch).git, true);
-});
+  // macOS coalesces these events (FSEvents): the per-folder mode can miss the file there,
+  // which is why macOS uses the recursive mode.
+  const racy = !recursive && process.platform === 'darwin' ? { skip: 'per-folder mode is not used on macOS' } : {};
+  test(`TreeWatcher (${mode}): a file created right after its folder is not missed`, racy, async (t) => {
+    const { dir } = makeRepo(t);
+    const w = await new TreeWatcher(dir, { debounceMs: 100, recursive }).start();
+    t.after(() => w.close());
+    const seen = new Set();
+    w.on('change', ({ paths }) => paths.forEach((p) => seen.add(p)));
+    fs.mkdirSync(path.join(dir, 'test'));
+    fs.writeFileSync(path.join(dir, 'test', 'a.test.js'), 'x'); // before the watch on test/ is in place
+    const deadline = Date.now() + 3000;
+    while (!seen.has('test/a.test.js') && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+    assert.ok(seen.has('test/a.test.js'));
+  });
+
+  test(`TreeWatcher (${mode}): a commit shows up as a git change`, async (t) => {
+    const { dir, git } = makeRepo(t);
+    const w = await new TreeWatcher(dir, { debounceMs: 100, recursive }).start();
+    t.after(() => w.close());
+    const batch = waitFor(w, 'change');
+    git('commit', '-q', '--allow-empty', '-m', 'vacio');
+    assert.equal((await batch).git, true);
+  });
+}
 
 test('MonitorService: initial state, refresh after a change and plane 2 events', async (t) => {
   const cfg = mkTmpDir('mon-cfg');
