@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.0.0] - 2026-11-14
+## [2.0.0] - 2026-11-15
 
 Supervisión de agentes y de varios repos a la vez. Cambio incompatible con 1.x en la API local (ver "Cambios incompatibles").
 
