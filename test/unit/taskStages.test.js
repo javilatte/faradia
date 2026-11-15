@@ -318,3 +318,13 @@ test('stageDisallowed: read-only stages block the edit tools, edit stages do not
     assert.ok(!stageDisallowed(stage).includes('Edit'));
   assert.ok(stageDisallowed('plan').includes('Bash(git commit*)'));
 });
+
+test('onboard: estudio de solo lectura, informe, fuera del selector y sin datos de la sesión', () => {
+  const { TASK_TYPES, buildStagePrompt, stageDisallowed } = require('../../server/bridge/taskStages');
+  assert.equal(TASK_TYPES.onboard.internal, true);
+  assert.equal(TASK_TYPES.onboard.reportOnly, true);
+  assert.ok(stageDisallowed('onboard').includes('Edit'));
+  const prompt = buildStagePrompt({ type: 'onboard', title: 'Conocer el repo', instruction: 'x' }, 'onboard');
+  assert.match(prompt, /## Comandos/);
+  assert.match(prompt, /worktree temporal/);
+});

@@ -27,7 +27,8 @@ const STAGES = {
   audit: { phase: 'test', access: 'read', agent: 'auditor', label: 'Auditoría', asks: true },
   review: { phase: 'test', access: 'read', agent: 'reviewer', label: 'Revisión', manual: true },
   commit: { phase: 'test', access: 'read', agent: 'committer', label: 'Preparar commit', manual: true },
-  custom: { phase: 'implement', access: null, agent: null, label: 'Agente propio' }
+  custom: { phase: 'implement', access: null, agent: null, label: 'Agente propio' },
+  onboard: { phase: 'plan', access: 'read', agent: 'researcher', label: 'Estudio del repo' }
 };
 
 const TASK_TYPES = {
@@ -36,7 +37,10 @@ const TASK_TYPES = {
   tests: { label: 'Tests', pipeline: ['plan', 'write-tests', 'verify'] },
   documentation: { label: 'Documentación', pipeline: ['research', 'write'] },
   audit: { label: 'Auditoría', pipeline: ['audit'], reportOnly: true },
-  custom: { label: 'Agente propio', pipeline: ['custom'] }
+  custom: { label: 'Agente propio', pipeline: ['custom'] },
+  // "Conocer este repo" (Ajustes > Memoria): estudia el repo y propone su memoria.
+  // No sale en el selector de modo del chat.
+  onboard: { label: 'Conocer el repo', pipeline: ['onboard'], reportOnly: true, internal: true }
 };
 
 const STAGE_PHASE = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [k, v.phase]));
@@ -346,6 +350,23 @@ function buildStageBody(task, stage, { docOptions, agent } = {}) {
       ].join('\n\n');
     case 'write':
       return buildWritePrompt(task, docOptions || task.docOptions || {}, out('research'));
+    case 'onboard':
+      return [
+        'Etapa de ESTUDIO DEL REPO. No modifiques ficheros.',
+        'Vas a escribir la memoria de este repositorio: el conocimiento que el chat y todos los agentes reciben en cada sesión para trabajar aquí sin redescubrirlo. Si ya hay una memoria (la tienes en el system prompt), mejórala: conserva lo que siga siendo cierto y útil.',
+        `Indicaciones del usuario:\n${goal}`,
+        'Investiga leyendo los ficheros (manifiestos, README, configuración de CI, scripts, estructura de carpetas) y el historial (git log --oneline -30). Puedes ejecutar comandos de solo lectura y, si son rápidos, comprobar que el comando de tests funciona.',
+        [
+          'Responde SOLO con el markdown completo de la memoria, sin preámbulo, con estos apartados (omite los que no apliquen):',
+          '## Qué es — una o dos frases.',
+          '## Comandos — instalar, arrancar, tests, lint, formato y build, exactamente como se ejecutan aquí (marca los que no hayas podido comprobar).',
+          '## Estructura — dónde está cada cosa importante.',
+          '## Convenciones — estilo de código, idioma, mensajes de commit (según el historial), cómo se escriben los tests.',
+          '## Cuidado con — trampas, ficheros generados, cosas que no se deben tocar.',
+          'Sé concreto y breve (unas 60 líneas como mucho): es contexto que se paga en cada sesión.',
+          'Escribe solo conocimiento estable del repo. No incluyas nada de esta sesión: estás en un worktree temporal de optimia en una rama de tarea (optimia/task-…), y esa ruta y esa rama no son del repo. La rama principal sí. Tampoco repitas las instrucciones que ya recibes en el system prompt.'
+        ].join('\n')
+      ].join('\n\n');
     case 'audit':
       return [
         'Etapa de AUDITORIA. No modifiques ficheros.',

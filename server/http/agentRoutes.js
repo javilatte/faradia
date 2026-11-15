@@ -23,7 +23,10 @@ function catalogView(projectRoot) {
       ])
     ),
     taskTypes: Object.fromEntries(
-      Object.entries(TASK_TYPES).map(([k, v]) => [k, { label: v.label, pipeline: v.pipeline }])
+      Object.entries(TASK_TYPES).map(([k, v]) => [
+        k,
+        { label: v.label, pipeline: v.pipeline, internal: Boolean(v.internal) }
+      ])
     ),
     claudeModels: catalog.CLAUDE_MODELS,
     efforts: catalog.EFFORTS
