@@ -607,7 +607,7 @@ for (const el of [localUrlInput, localModelInput, localAuthInput, instructionsTe
 
 // Qué apartados admiten los dos ámbitos y cuáles son de uno solo.
 const SCOPED_PANES = new Set(['claude', 'local-ai', 'instructions', 'nogo', 'agents']);
-const GLOBAL_PANES = new Set(['appearance', 'monitor']);
+const GLOBAL_PANES = new Set(['general', 'appearance', 'monitor']);
 let settingsScope = 'global';
 try {
   settingsScope = localStorage.getItem('optimia:settings-scope') === 'project' ? 'project' : 'global';

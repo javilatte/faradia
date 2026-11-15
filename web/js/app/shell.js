@@ -6,6 +6,7 @@ import { loadWorkbenches, state } from './workbenches.js';
 import { viewNames, viewLabel, showView, viewFromHash } from './views.js';
 import { h } from './dom.js';
 import './markdown.js';
+import { initConfig } from './config.js';
 import './agents.js';
 import './dashboard.js';
 import './changes.js';
@@ -132,6 +133,7 @@ async function boot() {
   }
   showView(viewFromHash(), ctx);
   window.addEventListener('hashchange', () => showView(viewFromHash(), ctx));
+  initConfig();
 }
 
 boot();

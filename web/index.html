@@ -64,6 +64,7 @@
           </div>
           <div class="toolbar-spacer"></div>
           <div class="topbar-actions toolbar-group">
+            <button type="button" class="update-pill" id="update-button" hidden>Actualización disponible</button>
             <button class="icon-button toolbar-item" id="terminal-button" title="Terminal" aria-label="Terminal">
               <svg
                 viewBox="0 0 24 24"
@@ -243,6 +244,8 @@
     <div class="modal-overlay" id="settings-overlay" hidden>
       <div class="modal">
         <nav class="settings-nav">
+          <div class="settings-nav-group">optimia</div>
+          <button class="settings-nav-item" data-pane="general">General</button>
           <div class="settings-nav-group">IA</div>
           <button class="settings-nav-item active" data-pane="claude">Claude</button>
           <button class="settings-nav-item" data-pane="local-ai">IA local</button>
@@ -283,6 +286,10 @@
           </div>
           <div class="settings-scope-note muted" id="settings-scope-note" role="note"></div>
           <div class="settings-pane-body">
+            <section class="settings-pane" data-pane="general" hidden>
+              <div id="general-pane"></div>
+            </section>
+
             <section class="settings-pane" data-pane="claude">
               <div class="settings-field">
                 <label>Cuenta</label>

@@ -697,7 +697,8 @@ body {
   border-bottom: 1px solid var(--separator);
 }
 /* Cada ajuste es una fila de un grupo, como en Ajustes del Sistema */
-:root .settings-pane > .settings-field {
+:root .settings-pane > .settings-field,
+:root #general-pane > .settings-field {
   background: var(--group-bg);
   border: 0.5px solid var(--separator);
   border-radius: var(--radius-group);
@@ -892,4 +893,131 @@ body {
 :root .memory-applied {
   color: var(--green-text);
   flex-basis: 100%;
+}
+
+/* ---------- Sheets (modal dialogs attached to the window, as on macOS) ---------- */
+
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 64px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.sheet {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 12px;
+  border: 0.5px solid var(--control-border);
+  background: var(--content-bg);
+  box-shadow: var(--shadow-popover);
+  color: var(--label);
+}
+.sheet-title {
+  margin: 0 0 10px;
+  font-size: var(--text-body);
+  font-weight: 700;
+}
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: var(--text-body);
+  line-height: 1.4;
+}
+.sheet-body p {
+  margin: 0;
+}
+.sheet-section ul {
+  margin: 4px 0 0;
+  padding-left: 1.2em;
+}
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.update-command {
+  display: block;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--group-bg);
+  font-family: var(--mono);
+  font-size: var(--text-callout);
+  user-select: all;
+}
+
+/* First run: drop zone for the configuration file */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 16px;
+  border: 1.5px dashed var(--control-border);
+  border-radius: var(--radius-window);
+  background: var(--group-bg);
+  text-align: center;
+}
+.dropzone .muted {
+  font-size: var(--text-callout);
+}
+
+/* Dragging a configuration file over the window */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+}
+.drop-overlay-box {
+  padding: 18px 26px;
+  border: 2px dashed var(--accent);
+  border-radius: 14px;
+  background: var(--content-bg);
+  font-weight: 600;
+  box-shadow: var(--shadow-popover);
+}
+
+/* Toolbar notice for a new version */
+:root .update-pill {
+  min-height: 22px;
+  padding: 1px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-size: var(--text-callout);
+  font-weight: 500;
+  cursor: default;
+}
+:root .update-pill:hover {
+  background: var(--accent-hover);
+}
+
+/* Settings > General */
+.general-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  font-size: var(--text-body);
+  font-weight: 400;
 }
