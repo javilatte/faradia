@@ -1,0 +1,68 @@
+name: Publish to npm
+
+# Publishes the package to npm with Trusted Publishing (OIDC): no npm token is
+# stored anywhere, and npm attaches a provenance attestation automatically.
+# npmjs.com must list this repository and this workflow file (publish.yml) as
+# the package's trusted publisher.
+#
+# Runs when a GitHub release is published, or by hand for an existing tag:
+#   gh workflow run publish.yml -f tag=v2.0.0
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v2.0.0)'
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for npm Trusted Publishing
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted Publishing needs npm 11.5.1 or later.
+      - name: Update npm
+        run: npm install -g npm@^11.5.1
+
+      - name: Check that the tag matches package.json
+        env:
+          TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$version" ]; then
+            echo "::error::tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Integration tests (bats)
+        run: npm run test:bats
+
+      - name: Show the package contents
+        run: npm pack --dry-run
+
+      - name: Publish
+        run: npm publish --access public
