@@ -119,6 +119,9 @@ function connect() {
       if (window.TerminalView) window.TerminalView.handleData(msg.data);
     } else if (msg.type === 'terminal_exit') {
       if (window.TerminalView) window.TerminalView.handleExit(msg.info);
+    } else if (msg.type === 'terminal_error') {
+      if (window.TerminalView) window.TerminalView.handleError(msg.error);
+      appendMessage('error', msg.error);
     }
   });
 

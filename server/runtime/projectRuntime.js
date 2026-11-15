@@ -134,8 +134,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     log.warn('handoff.terminal', { scope, id, tool: event.tool_name });
     session.kill();
     sessionsMap.delete(id);
-    startOrGetTerminalSession(session.sessionId, { scope, id });
-    broadcast({ type: 'terminal_handoff', scope, id, toolName: event.tool_name });
+    if (startOrGetTerminalSession(session.sessionId, { scope, id })) {
+      broadcast({ type: 'terminal_handoff', scope, id, toolName: event.tool_name });
+    }
   }
 
   // Starts a stage of the task's pipeline (see bridge/taskStages.js) in its worktree. One Claude
@@ -510,6 +511,13 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     broadcast({ type: 'task_deleted', taskId });
   }
 
+  function terminalErrorMessage(err) {
+    if (/posix_spawnp|ENOENT|not found/i.test(err.message)) {
+      return `No se pudo abrir la terminal de Claude: ${err.message}. Comprueba que el comando "claude" está instalado y en el PATH.`;
+    }
+    return `No se pudo abrir la terminal de Claude: ${err.message}`;
+  }
+
   // A real interactive `claude` process in a PTY — separate from chat/task
   // sessions, which stay headless. Lives here, server-side, independent of
   // any WebSocket connection: closing the terminal view doesn't kill it.
@@ -520,7 +528,16 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
     const settingsPath = optimiaClaudeSettingsPath(projectRoot);
-    const session = new PtySession({ cwd: projectRoot, mcpConfigPath, settingsPath, resumeSessionId });
+    let session;
+    try {
+      session = new PtySession({ cwd: projectRoot, mcpConfigPath, settingsPath, resumeSessionId });
+    } catch (err) {
+      // A terminal that cannot start (claude missing, node-pty broken...) must never
+      // bring the server down: the error is logged and shown in the interface.
+      log.error('terminal.spawn_failed', { error: err.message });
+      broadcast({ type: 'terminal_error', error: terminalErrorMessage(err) });
+      return null;
+    }
     terminalSession = session;
     terminalOwner = owner || null;
 
@@ -578,7 +595,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     if (msg.type === 'terminal_subscribe') {
       const session = startOrGetTerminalSession();
-      ws.send(JSON.stringify({ type: 'terminal_scrollback', data: session.scrollback }));
+      if (session) ws.send(JSON.stringify({ type: 'terminal_scrollback', data: session.scrollback }));
       return;
     }
 
