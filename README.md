@@ -270,6 +270,16 @@ npm run test:e2e        # Playwright, against a fake `claude` CLI
 The design is described in [docs/design.md](docs/design.md) and what comes next in
 [docs/roadmap.md](docs/roadmap.md).
 
+### Releasing
+
+1. Bump `version` in `package.json`, add the entry to `CHANGELOG.md` and merge to `main`.
+2. Tag it and create the GitHub release: `git tag -a vX.Y.Z -m "optimia X.Y.Z" && git push origin vX.Y.Z`,
+   then `gh release create vX.Y.Z --title "optimia X.Y.Z" --notes-file <notes>`.
+3. Publishing the release runs `.github/workflows/publish.yml`, which checks that the tag
+   matches `package.json`, runs lint and tests and publishes to npm with Trusted Publishing
+   (no npm token; the package gets a provenance attestation). To publish an existing tag by
+   hand: `gh workflow run publish.yml -f tag=vX.Y.Z`.
+
 ---
 
 ## License
