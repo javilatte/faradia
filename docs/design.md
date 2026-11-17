@@ -88,6 +88,35 @@ como cambio del repo lo que difiere de los valores por defecto.
   `claude` 2.1.x lo reenvía tal cual a `ANTHROPIC_BASE_URL`, cosa que se verificó con
   un servidor falso. Por eso desapareció el alias único de Ollama y varios agentes
   pueden usar modelos locales distintos a la vez.
+- `server/bridge/localAi.js`: detecta Ollama (`/api/tags`) y LM Studio (`/api/v1/models`,
+  con el puerto que da `lms server status --json`) y construye el entorno de las
+  sesiones locales: un token de relleno en vez del login de claude.ai, sin
+  `ANTHROPIC_API_KEY`, y el mismo modelo local para las peticiones de fondo.
+
+## Entrega de tareas
+
+- La etapa manual `describe` (agente «Redactor de PR y Jira») redacta la descripción
+  de la PR (primera línea `TÍTULO:`) o el comentario de Jira. Recibe el encargo, el
+  plan o diagnóstico, el veredicto y unas indicaciones opcionales, y lee el diff de
+  la rama contra la base. La respuesta se guarda en `task.delivery.{pr,jira}`, y lo
+  que edita el usuario se guarda con `PUT /api/tasks/:id/delivery`.
+- `server/bridge/delivery.js`: sube la rama (`GIT_TERMINAL_PROMPT=0`, sin esperar
+  contraseñas) y abre la PR con `gh pr create --body-file -`, o la actualiza con
+  `gh pr edit` si ya existe. Sin `gh` o fuera de GitHub devuelve la URL para crearla
+  (compare de GitHub, merge request de GitLab, PR de Bitbucket). El proveedor sale de
+  la URL configurada del remoto, no de `git remote get-url`, que aplica las reglas
+  `insteadOf`.
+- Sin remoto (`GET /api/git/remote` devuelve `remote: null`), la tarjeta ofrece la
+  fusión local de siempre.
+
+## Cambio de repo
+
+El frontend del proyecto (`web/js/project/`) cambia de repo sin recargar
+(`switch.js`): actualiza `currentProjectId` y `?p=` con `history.pushState`, vacía el
+estado del chat y del tablero, y vuelve a pedir los ajustes, las tareas y los chats.
+Cada carga comprueba al volver que el repo sigue siendo el mismo, así que una
+respuesta lenta del repo anterior se descarta. Las vistas de módulos escuchan
+`optimia:project-changed`.
 
 ## Vigilancia
 

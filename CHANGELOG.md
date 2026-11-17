@@ -2,6 +2,27 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **Entrega por pull request**: tras el commit, en un repo con remoto la tarjeta ya no ofrece fusionar en la rama base. Tiene una pestaña «Pull request» (título, descripción y borrador) y otra «Jira» (comentario para el ticket, que se copia al portapapeles). «Redactar con IA» genera cada texto a partir del encargo, el plan, la verificación y el diff de la rama, con indicaciones opcionales. «Crear PR» sube la rama y abre la PR con `gh`, o la actualiza en commits posteriores; sin `gh`, o en GitLab y Bitbucket, sube la rama y abre la página para crearla. Los repos sin remoto siguen fusionando en local.
+- Agente nuevo **Redactor de PR y Jira** (etapa «Descripción»).
+- **LM Studio** como IA local, además de Ollama: Ajustes › IA local › «Detectar servidores locales» encuentra los dos y sus modelos, y el selector de modelo del chat los lista junto a los de Claude.
+- «+» junto a «Repositorios» para añadir un repo con el diálogo de carpetas del sistema.
+
+### Changed
+- **Cambiar de repo ya no recarga la página**: el chat, los agentes, los ajustes y la terminal pasan al otro repo, la vista abierta se mantiene, cada repo conserva su mensaje sin enviar y los botones atrás/adelante del navegador cambian de repo.
+- Al cambiar de workbench se abre el último repo usado en él (o el primero), en vez de seguir en un repo de otro workbench.
+- La rama base recordada para las tareas nuevas es por repo.
+- Una carpeta que no es un repo git se rechaza con una pista, y una subcarpeta cuenta como su repo.
+- El chat oculta «Effort» con un modelo local.
+
+### Fixed
+- Las sesiones con modelo local ya no envían las credenciales de la cuenta de Claude al servidor local.
+- Un enlace con `?token=…&p=<repo>` perdía el repo al cambiar el token por la cookie.
+- Guardar la memoria de «Conocer el repo» deja de dejar un worktree y una rama `optimia/task-…` sin usar.
+- Una tarea puede volver a hacer commit si una etapa posterior deja cambios nuevos.
+
 ## [2.0.1] - 2026-11-15
 
 Correcciones para macOS.

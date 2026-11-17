@@ -11,7 +11,7 @@ Run `optimia` in any project directory. It starts a local web server and opens a
 dashboard in your browser where you can **direct** coding agents and **watch**
 what they do, across every repo you work on:
 
-- **Chat** against a real **Claude Code** session (or a local model via **Ollama**).
+- **Chat** against a real **Claude Code** session (or a local model via **LM Studio** or **Ollama**).
 - **Agents with their own model**: ten default agents (planner, implementer,
   verifier, reviewer, debugger, test writer, auditor…) wired into task pipelines,
   each with its own engine, model, effort and role prompt — plus your own agents.
@@ -63,7 +63,8 @@ npx @javilatte/optimia
 | `node` ≥ 22 | yes | runs the server and the CLI launcher |
 | `git` | yes | worktrees for agent tasks, and all repo supervision |
 | [`claude`](https://claude.ai/code) (Claude Code CLI) | yes | chats and agents are real `claude` subprocesses — optimia never calls the Anthropic API directly |
-| [Ollama](https://ollama.com) | optional | local models for the chat or for any agent (Anthropic-Messages-compatible endpoint, Ollama ≥ 0.14) |
+| [LM Studio](https://lmstudio.ai) ≥ 0.4 or [Ollama](https://ollama.com) ≥ 0.14 | optional | local models for the chat or for any agent (both serve the Anthropic Messages API that `claude` needs) |
+| [`gh`](https://cli.github.com) | optional | opens the pull request of a task from its card (without it, optimia pushes the branch and opens the page to create it) |
 | [`gitleaks`](https://github.com/gitleaks/gitleaks) | optional | extra secret detection rules on top of the built-in ones |
 
 ---
@@ -97,7 +98,8 @@ own git worktree:
 | Auditoría (`audit`) | audit → report (no changes) |
 | Agente propio (`custom`) | one stage with one of your agents |
 
-Review and commit preparation run on demand once a task is ready. The verifier runs
+Review, commit preparation and the PR / Jira description run on demand once a task
+is ready. The verifier runs
 the project's tests, lint and build and gives a verdict; disable it to skip that
 stage. Each task card shows which agent and model ran every stage.
 
@@ -111,8 +113,15 @@ frontmatter:
 ~/.config/optimia/agents/<id>.md       every project
 ```
 
-Agents can use different local models at the same time: the model name is passed
-straight to Ollama.
+### Local models
+
+**Ajustes → IA local → Detectar servidores locales** finds LM Studio and Ollama on
+this machine and lists their models; the chat's model selector lists them too,
+under the Claude models. Any agent can use a local model, and several agents can use
+different ones at the same time. Your Claude account never reaches the local server:
+local sessions get a placeholder token, `ANTHROPIC_API_KEY` is dropped and background
+requests use the same local model. Tested end to end with LM Studio and Gemma 4 12B
+(plan → implement → verify, repo study, PR and Jira descriptions).
 
 Agents can never commit, push, merge, rebase or run destructive commands: a deny
 list and a git hook block them. When an agent tries one, it gets the denial and
@@ -120,10 +129,24 @@ carries on another way, as in Claude Code. Read-only stages cannot edit files. T
 agents only see optimia's MCP server and your repo's `.mcp.json`, not the
 connectors of your claude.ai account.
 
-Commit and merge are always your action, from the task card. "Proponer mensaje de
+Commit and delivery are always your action, from the task card. "Proponer mensaje de
 commit" fills in a Conventional Commits message in the repo's language; the commit
-respects `.gitignore` (ignored files only go in if you tick them). Merging
-fast-forwards when it can, then removes the task's worktree and branch.
+respects `.gitignore` (ignored files only go in if you tick them).
+
+After the commit, a repo with a remote delivers the task as a **pull request**:
+
+- **Pull request** tab: "Redactar con IA" drafts the title and description from the
+  request, the plan, the verification and the branch diff. It follows the repo's PR
+  template and leaves the internal process of the task out. Optional notes steer it
+  ("no menciones la migración"). "Crear PR" pushes the branch and opens the PR with
+  `gh` (draft if you want); later commits update it. Without `gh`, or on GitLab and
+  Bitbucket, the branch is pushed and the page to create the PR opens.
+- **Jira** tab: a separate comment for the ticket (what was done, how to test it,
+  what is pending), which can say more or less than the PR. "Copiar" puts it on the
+  clipboard.
+
+A repo without a remote merges the task locally instead (fast-forward when it can),
+then removes the task's worktree and branch.
 
 ---
 
