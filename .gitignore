@@ -5,10 +5,12 @@ node_modules/
 /.codegraph
 /.tokensave
 .DS_Store
-# docs/ es la salida por defecto de las tareas de documentacion; el diseno y el roadmap si se versionan
+# docs/ is the default output of documentation tasks; the design, the roadmap and the README assets
+# are versioned
 /docs/*
 !/docs/design.md
 !/docs/roadmap.md
+!/docs/assets/
 
 # AI assistant config
 .claude/

@@ -1,5 +1,7 @@
 'use strict';
 
+const { eccAgents } = require('../ecc/library');
+
 const fs = require('fs');
 const path = require('path');
 const { configDir } = require('../store/globalPaths');
@@ -60,7 +62,7 @@ const BUILTIN_AGENTS = [
   {
     id: 'reviewer',
     name: 'Revisor',
-    description: 'Revisa los cambios antes de hacer commit: errores, riesgos y estilo.',
+    description: 'Revisa los cambios antes de hacer commit: errores reales, seguridad y riesgos, sin ruido.',
     engine: 'claude',
     model: 'opus',
     effort: 'high',
@@ -78,6 +80,29 @@ const BUILTIN_AGENTS = [
     access: 'read',
     prompt:
       'Eres el Redactor de commits. Escribe mensajes en Conventional Commits (tipo(ambito): resumen en imperativo), con un cuerpo breve que explique el porque cuando aporte.'
+  },
+  {
+    id: 'pr-writer',
+    name: 'Redactor de PR y Jira',
+    description: 'Redacta la descripción de la pull request o el comentario para Jira a partir de la tarea.',
+    engine: 'claude',
+    model: 'sonnet',
+    effort: 'low',
+    access: 'read',
+    prompt:
+      'Eres el Redactor de PR y Jira. Escribes para el lector concreto: quien revisa el código en la PR, quien sigue el ticket en Jira. Claro, breve y sin relleno; nunca inventes cambios que no estén en el diff.'
+  },
+  {
+    id: 'wiki-keeper',
+    name: 'Bibliotecario',
+    description:
+      'Mantiene la wiki del proyecto (y la personal) al día tras cada tarea. Usa el modelo local si hay uno; si no, este modelo de Claude.',
+    engine: 'claude',
+    model: 'haiku',
+    effort: 'low',
+    access: 'read',
+    prompt:
+      'Eres el Bibliotecario. Conviertes el trabajo de cada tarea en conocimiento duradero y fácil de encontrar: páginas cortas, bien enlazadas, sin duplicados, con la fuente citada. Mejor actualizar una página existente que crear otra.'
   },
   {
     id: 'researcher',
@@ -135,6 +160,41 @@ const BUILTIN_AGENTS = [
       'Eres el Auditor. Analiza el alcance pedido buscando problemas de seguridad, rendimiento, fiabilidad y mantenibilidad. Ordena los hallazgos por gravedad, con evidencia (fichero:línea) y recomendación concreta. No modifiques nada.'
   }
 ];
+
+// optimia's agents follow the method of their best ECC counterpart (MIT, vendor/ecc): the agent
+// keeps its id, name, stage and access, and its prompt is its own role plus that method. Without the
+// bundle, the short prompt alone.
+const ECC_METHOD = {
+  planner: ['ecc-planner', 'ecc-architect'],
+  verifier: ['ecc-build-error-resolver'],
+  reviewer: ['ecc-code-reviewer'],
+  committer: ['ecc-commit-reviewer'],
+  researcher: ['ecc-code-explorer'],
+  'doc-writer': ['ecc-doc-updater'],
+  'test-writer': ['ecc-tdd-guide'],
+  auditor: ['ecc-security-reviewer', 'ecc-performance-optimizer']
+};
+const methodCache = new Map();
+function withEccMethod(id, own) {
+  if (methodCache.has(id)) return methodCache.get(id);
+  const methods = (ECC_METHOD[id] || []).map((eid) => eccAgents().find((a) => a.id === eid)).filter(Boolean);
+  const prompt = methods.length
+    ? [
+        own,
+        'Responde en el idioma del usuario. Las instrucciones de la etapa de optimia mandan sobre este método (por ejemplo, no hagas commit ni push, y respeta el acceso de tu etapa).',
+        ...methods.map((m) => `## Método: ${m.name.replace(' (ECC)', '')} (de ECC, licencia MIT)\n\n${m.prompt}`)
+      ].join('\n\n')
+    : own;
+  methodCache.set(id, prompt);
+  return prompt;
+}
+
+// Base definition of an agent: optimia's own (with its ECC method) or one from the ECC library.
+function baseAgent(id) {
+  const own = BUILTIN_AGENTS.find((a) => a.id === id);
+  if (own) return { ...own, prompt: withEccMethod(id, own.prompt) };
+  return eccAgents().find((a) => a.id === id) || null;
+}
 
 function globalAgentsDir() {
   return path.join(configDir(), 'agents');
@@ -227,14 +287,19 @@ function normalize(agent) {
 function loadAgents(projectRoot) {
   const global = readDir(globalAgentsDir());
   const project = projectRoot ? readDir(projectAgentsDir(projectRoot)) : new Map();
-  const ids = new Set([...BUILTIN_AGENTS.map((a) => a.id), ...global.keys(), ...project.keys()]);
+  const ids = new Set([
+    ...BUILTIN_AGENTS.map((a) => a.id),
+    ...eccAgents().map((a) => a.id),
+    ...global.keys(),
+    ...project.keys()
+  ]);
   const agents = [];
   for (const id of ids) {
-    const builtin = BUILTIN_AGENTS.find((a) => a.id === id);
+    const base = baseAgent(id);
     const overriddenIn = [global.has(id) && 'global', project.has(id) && 'project'].filter(Boolean);
-    const merged = { ...(builtin || {}), ...(global.get(id) || {}), ...(project.get(id) || {}), id };
-    const source = builtin ? 'builtin' : project.has(id) ? 'project' : 'global';
-    agents.push({ ...normalize(merged), builtin: Boolean(builtin), source, overriddenIn });
+    const merged = { ...(base || {}), ...(global.get(id) || {}), ...(project.get(id) || {}), id };
+    const source = base?.library === 'ecc' ? 'ecc' : base ? 'builtin' : project.has(id) ? 'project' : 'global';
+    agents.push({ ...normalize(merged), builtin: Boolean(base), source, overriddenIn });
   }
   return agents;
 }
@@ -276,7 +341,7 @@ function slugify(name) {
 /** Saves the given agent fields in a scope (merged with whatever was already there). */
 function saveAgent(projectRoot, scope, id, input) {
   if (!ID_RE.test(id)) throw new Error('id de agente no válido');
-  const exists = BUILTIN_AGENTS.some((a) => a.id === id) || loadAgents(projectRoot).some((a) => a.id === id);
+  const exists = Boolean(baseAgent(id)) || loadAgents(projectRoot).some((a) => a.id === id);
   const problem = validateAgentInput(input, { isNew: !exists });
   if (problem) throw new Error(problem);
   const dir = dirFor(scope, projectRoot);

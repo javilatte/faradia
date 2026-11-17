@@ -3,6 +3,7 @@
 const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
 const crypto = require('crypto');
+const { localSessionEnv } = require('./localAi');
 
 /**
  * Wraps one long-lived `claude -p --input-format stream-json --output-format
@@ -32,7 +33,9 @@ class ClaudeSession extends EventEmitter {
     strictMcpConfig = false,
     extraAllowedTools = [],
     disallowedTools = [],
-    gitHooksPath
+    gitHooksPath,
+    extraEnv = {},
+    addDirs = []
   } = {}) {
     super();
     this.projectRoot = projectRoot;
@@ -50,6 +53,8 @@ class ClaudeSession extends EventEmitter {
     }
     args.push('--permission-prompts', 'none');
     if (model) args.push('--model', model);
+    // Extra folders Claude Code reads skills and commands from (ECC, see ecc/library.js).
+    for (const dir of addDirs) args.push('--add-dir', dir);
     if (effort) args.push('--effort', effort);
     if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
     if (settingsPath) args.push('--settings', settingsPath);
@@ -78,7 +83,7 @@ class ClaudeSession extends EventEmitter {
     if (allowedTools.length) args.push('--allowedTools', allowedTools.join(','));
     if (disallowedTools.length) args.push('--disallowedTools', disallowedTools.join(','));
 
-    const env = { ...process.env };
+    const env = { ...process.env, ...extraEnv };
     // Task sessions only: the hook blocks commits and pushes even when the command comes with flags
     // (git -c ...) that text rules do not cover.
     if (gitHooksPath) {
@@ -86,10 +91,10 @@ class ClaudeSession extends EventEmitter {
       env.GIT_CONFIG_KEY_0 = 'core.hooksPath';
       env.GIT_CONFIG_VALUE_0 = gitHooksPath;
     }
-    if (baseUrl) env.ANTHROPIC_BASE_URL = baseUrl;
-    if (authHeader) env.ANTHROPIC_CUSTOM_HEADERS = authHeader;
+    // Local model: the account's credentials stay out of the request (see localAi.js).
+    const finalEnv = baseUrl ? localSessionEnv(env, { baseUrl, authHeader, model }) : env;
 
-    this.proc = spawn('claude', args, { cwd: projectRoot, env });
+    this.proc = spawn('claude', args, { cwd: projectRoot, env: finalEnv });
 
     this.proc.stdout.on('data', (chunk) => this._onStdout(chunk));
     this.proc.stderr.on('data', (chunk) => this.emit('stderr', chunk.toString('utf8')));

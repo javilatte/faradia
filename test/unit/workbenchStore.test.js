@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 
 // Each test uses its own XDG_CONFIG_HOME: the real ~/.config is never touched.
@@ -20,7 +21,8 @@ function freshStore(t) {
 
 function makeRepo(parent, rel) {
   const dir = path.join(parent, rel);
-  fs.mkdirSync(path.join(dir, '.git'), { recursive: true });
+  fs.mkdirSync(dir, { recursive: true });
+  execFileSync('git', ['init', '-q'], { cwd: dir });
   return fs.realpathSync(dir);
 }
 
@@ -71,6 +73,18 @@ test('addRepos/removeRepo: no duplicates, and a repo can be in several workbench
   wb.removeRepo(a.id, repo);
   assert.deepEqual(wb.listWorkbenches().workbenches[0].repos, []);
   assert.throws(() => wb.addRepos(a.id, [path.join(root, 'no-existe')]), /no existe/);
+});
+
+test('addRepos: a subfolder counts as its repo; a folder outside git is refused with a way out', (t) => {
+  const wb = freshStore(t);
+  const root = mkTmpDir('wb-git');
+  t.after(() => rmTmpDir(root));
+  const repo = makeRepo(root, 'api');
+  fs.mkdirSync(path.join(repo, 'src', 'lib'), { recursive: true });
+  const a = wb.createWorkbench('A');
+  assert.deepEqual(wb.addRepos(a.id, [path.join(repo, 'src', 'lib')]).added, [repo]);
+  fs.mkdirSync(path.join(root, 'plain'));
+  assert.throws(() => wb.addRepos(a.id, [path.join(root, 'plain')]), /no es un repositorio git.*Buscar repos/);
 });
 
 test('scanForRepos: finds repos, does not go into them or into heavy folders, respects the depth', (t) => {

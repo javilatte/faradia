@@ -113,7 +113,7 @@ function applyUi(ui) {
 tickClock();
 setInterval(tickClock, 1000 * 30);
 
-function appendMessage(role, text, images = []) {
+function appendMessage(role, text, images = [], files = []) {
   const el = document.createElement('div');
   el.className = `msg ${role}`;
   if (images.length) {
@@ -125,6 +125,17 @@ function appendMessage(role, text, images = []) {
       imgRow.appendChild(img);
     }
     el.appendChild(imgRow);
+  }
+  if (files.length) {
+    const row = document.createElement('div');
+    row.className = 'msg-files';
+    for (const f of files) {
+      const chip = document.createElement('span');
+      chip.className = 'attachment-file ready';
+      chip.textContent = f.name;
+      row.appendChild(chip);
+    }
+    el.appendChild(row);
   }
   if (text) {
     const textEl = document.createElement(role === 'assistant' ? 'div' : 'span');
@@ -140,7 +151,23 @@ function appendMessage(role, text, images = []) {
 
 function renderAttachments() {
   attachmentsEl.innerHTML = '';
-  attachmentsEl.hidden = pendingImages.length === 0;
+  attachmentsEl.hidden = pendingImages.length === 0 && pendingFiles.length === 0;
+  for (const f of pendingFiles) {
+    const chip = document.createElement('div');
+    chip.className = `attachment-file ${f.status}`;
+    chip.title = f.error || f.name;
+    const label = document.createElement('span');
+    label.textContent = `${f.name}${f.status === 'uploading' ? ' · subiendo…' : f.status === 'error' ? ' · error' : ''}`;
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.title = 'Quitar';
+    removeBtn.addEventListener('click', () => {
+      pendingFiles = pendingFiles.filter((x) => x !== f);
+      renderAttachments();
+    });
+    chip.append(label, removeBtn);
+    attachmentsEl.appendChild(chip);
+  }
   pendingImages.forEach((img, idx) => {
     const thumb = document.createElement('div');
     thumb.className = 'attachment-thumb';
@@ -159,8 +186,36 @@ function renderAttachments() {
   });
 }
 
+// Any file that is not an image is uploaded now, so sending does not wait (see
+// server/bridge/attachments.js for how each kind reaches the context).
+async function addPendingFile(file) {
+  const entry = { key: Math.random(), name: file.name, status: 'uploading' };
+  pendingFiles.push(entry);
+  renderAttachments();
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).slice(String(reader.result).indexOf(',') + 1));
+      reader.onerror = () => reject(new Error('no se pudo leer el fichero'));
+      reader.readAsDataURL(file);
+    });
+    const res = await fetch(apiPath('/api/attachments'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId: currentChatId, name: file.name, mediaType: file.type, data })
+    });
+    const meta = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(meta.error || `HTTP ${res.status}`);
+    Object.assign(entry, { status: 'ready', id: meta.id, kind: meta.kind });
+  } catch (err) {
+    Object.assign(entry, { status: 'error', error: err.message });
+    appendMessage('system', `No se pudo adjuntar ${file.name}: ${err.message}`);
+  }
+  renderAttachments();
+}
+
 function addPendingImage(file) {
-  if (!IMAGE_MIME_TYPES.has(file.type)) return;
+  if (!IMAGE_MIME_TYPES.has(file.type)) return addPendingFile(file);
   const reader = new FileReader();
   reader.onload = () => {
     const dataUrl = reader.result;
@@ -177,7 +232,7 @@ function addImageFilesFromList(fileList) {
 
 input.addEventListener('paste', (e) => {
   const items = Array.from(e.clipboardData?.items || []);
-  const imageItems = items.filter((item) => item.kind === 'file' && item.type.startsWith('image/'));
+  const imageItems = items.filter((item) => item.kind === 'file');
   if (!imageItems.length) return;
   e.preventDefault();
   for (const item of imageItems) {
@@ -202,6 +257,13 @@ input.addEventListener('paste', (e) => {
 
 chatInputArea.addEventListener('drop', (e) => {
   addImageFilesFromList(e.dataTransfer?.files || []);
+});
+
+const attachInput = document.getElementById('attach-input');
+document.getElementById('attach-button').addEventListener('click', () => attachInput.click());
+attachInput.addEventListener('change', () => {
+  addImageFilesFromList(attachInput.files || []);
+  attachInput.value = '';
 });
 
 function setWaiting(isWaiting) {

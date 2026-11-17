@@ -20,7 +20,10 @@ function saveTasks(projectRoot, tasks) {
   fs.writeFileSync(tasksPath(projectRoot), JSON.stringify(tasks, null, 2) + '\n');
 }
 
-function addTask(projectRoot, { title, type, steps, instruction, chatId, baseBranch, branchName, agentId }) {
+function addTask(
+  projectRoot,
+  { title, type, steps, instruction, chatId, baseBranch, branchName, agentId, existingBranch }
+) {
   const tasks = loadTasks(projectRoot);
   const now = new Date().toISOString();
   const task = {
@@ -51,6 +54,8 @@ function addTask(projectRoot, { title, type, steps, instruction, chatId, baseBra
     instruction: instruction || title,
     baseBranch: baseBranch || null,
     branchName: branchName || null,
+    // true: the task works on a branch that already existed (several tasks can share one branch)
+    existingBranch: Boolean(existingBranch),
     branch: null,
     worktreePath: null,
     createdAt: now,

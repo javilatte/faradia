@@ -107,8 +107,8 @@ test('buildSessionOptions: a local agent without URL or model fails with a clear
   t.after(() => rmTmpDir(dir));
   const settings = defaultSettings();
   assert.throws(
-    () => buildSessionOptions(settings, dir, dir, 't', { engine: 'local', model: 'x' }),
-    /URL de la IA local/
+    () => buildSessionOptions(settings, dir, dir, 't', { engine: 'local', model: 'x', name: 'Implementador' }),
+    /el agente "Implementador" usa un modelo local, pero no hay servidor configurado.*Detectar servidores locales/
   );
   settings.ai.localAi.url = 'http://localhost:11434';
   assert.throws(() => buildSessionOptions(settings, dir, dir, 't', { engine: 'local', model: '' }), /modelo local/);
@@ -149,7 +149,18 @@ test('buildSessionOptions: chat and agents get their own optimia settings file v
   const task = buildSessionOptions(settings, projectRoot, projectRoot, 'task-1');
   assert.equal(task.settingsPath, agentClaudeSettingsPath(projectRoot));
   const agentFile = JSON.parse(require('fs').readFileSync(task.settingsPath, 'utf8'));
-  assert.deepEqual(agentFile.permissions, { deny: ['Read(**/.env*)'] }, 'no allow list or defaultMode for agents');
+  assert.deepEqual(Object.keys(agentFile.permissions), ['deny'], 'no allow list or defaultMode for agents');
+  assert.equal(agentFile.permissions.deny[0], 'Read(**/.env*)', "the user's own rules first");
+  assert.ok(agentFile.permissions.deny.includes('Bash(git push*)'), 'commit/push/merge/rebase always denied');
+  // The policy hook answers, so the approvable rules live in it and not in deny.
+  assert.ok(!agentFile.permissions.deny.includes('Bash(rm *)'));
+  assert.match(agentFile.hooks.PreToolUse[0].hooks[0].command, /policyHook\.js"$/);
+  assert.deepEqual(agentFile.sandbox, {
+    enabled: true,
+    failIfUnavailable: true,
+    allowUnsandboxedCommands: false,
+    autoAllowBashIfSandboxed: true
+  });
 });
 
 test("buildSessionOptions: instructions for all repos and then the repo's own, in sections", (t) => {

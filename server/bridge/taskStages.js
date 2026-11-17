@@ -13,7 +13,8 @@ const path = require('path');
 // documentation: research -> (awaiting_input: mode, format, target) -> write -> (ready_to_test)
 // audit:         audit -> (ready_to_test, report only)
 // custom:        custom (one stage with a custom agent)
-// review and commit are started by hand once the task is ready for review.
+// review, commit and describe (PR or Jira description) are started by hand once the task is ready
+// for review.
 
 const STAGES = {
   plan: { phase: 'plan', access: 'read', agent: 'planner', label: 'Planificación', asks: true },
@@ -26,6 +27,7 @@ const STAGES = {
   audit: { phase: 'test', access: 'read', agent: 'auditor', label: 'Auditoría', asks: true },
   review: { phase: 'test', access: 'read', agent: 'reviewer', label: 'Revisión', manual: true },
   commit: { phase: 'test', access: 'read', agent: 'committer', label: 'Preparar commit', manual: true },
+  describe: { phase: 'test', access: 'read', agent: 'pr-writer', label: 'Descripción', manual: true },
   custom: { phase: 'implement', access: null, agent: null, label: 'Agente propio' },
   onboard: { phase: 'plan', access: 'read', agent: 'researcher', label: 'Estudio del repo' }
 };
@@ -61,8 +63,8 @@ const ASK_RULE = (phase) =>
 
 // Tools each stage may use without asking. A headless session has nowhere to answer a permission
 // prompt, so Bash is allowed in every stage: what a stage must not do is blocked with
-// STAGE_DISALLOWED (plus the git hook for commits and pushes), not with an allow list that would
-// require approving every command.
+// the safety policy (policy.js, plus the git hook for commits and pushes), not with an allow list
+// that would require approving every command.
 const READ_TOOLS = [
   'Read',
   'Glob',
@@ -83,28 +85,10 @@ const READ_TOOLS = [
 const EDIT_TOOLS = ['Edit', 'MultiEdit', 'Write'];
 // Denials that win over any allow rule. They match the command text, so the `git -c ...` variants
 // are listed too.
-const STAGE_DISALLOWED = [
-  'Bash(rm *)',
-  'Bash(sudo *)',
-  'Bash(chmod -R *)',
-  'Bash(find * -delete*)',
-  'Bash(git reset --hard*)',
-  'Bash(git clean *)',
-  'Bash(git checkout -- *)',
-  'Bash(git restore *)',
-  'Bash(git branch -D *)',
-  'Bash(git branch -d *)',
-  'Bash(git worktree remove *)',
-  'Bash(git stash drop*)',
-  'Bash(git commit*)',
-  'Bash(git push*)',
-  'Bash(git merge*)',
-  'Bash(git rebase*)',
-  'Bash(git -c * commit*)',
-  'Bash(git -c * push*)',
-  'Bash(git -c * merge*)',
-  'Bash(git -c * rebase*)'
-];
+// Destructive commands, commits and pushes are not deny rules any more: the PreToolUse hook of
+// policy.js blocks them, explains why to the agent and lets the user approve exact commands from the
+// card. The git hook (gitGuard.js) still blocks commits and pushes at the git level.
+const STAGE_DISALLOWED = [];
 
 function isKnownType(type) {
   return Object.prototype.hasOwnProperty.call(TASK_TYPES, type);
@@ -192,10 +176,10 @@ function canRun(task, stage, { answer, docOptions } = {}) {
   if (!task) return 'tarea no encontrada';
   const { status, pendingQuestion } = task;
 
-  if (stage === 'review' || stage === 'commit') {
+  if (stage === 'review' || stage === 'commit' || stage === 'describe') {
     return status === 'ready_to_test'
       ? null
-      : 'la revisión y el commit solo están disponibles cuando la tarea está lista para revisar';
+      : 'la revisión, el commit y la descripción solo están disponibles cuando la tarea está lista para revisar';
   }
 
   if (answer !== undefined) {
@@ -258,8 +242,76 @@ function buildWritePrompt(task, { mode, format, targetPath, template }, research
   ].join('\n\n');
 }
 
+const DESCRIBE_TARGETS = ['pr', 'jira'];
+
+// What the describe stage knows about the task: the request and what the earlier stages concluded.
+// The diff is read by the agent itself, against the base branch.
+function taskContext(task) {
+  const out = task.stageOutputs || {};
+  const parts = [`Encargo original:\n${task.instruction || task.title}`];
+  const plan = out.plan || out.diagnose;
+  if (plan) parts.push(`${out.diagnose ? 'Diagnóstico' : 'Plan'} de la tarea:\n${plan.slice(0, 6000)}`);
+  if (task.verification?.line) parts.push(`Verificación: ${task.verification.line}`);
+  return parts.join('\n\n');
+}
+
+function buildDescribePrompt(task, { target, notes }) {
+  const base = task.baseBranch || 'la rama base';
+  const range = task.baseBranch ? `${task.baseBranch}...HEAD` : 'HEAD~1...HEAD';
+  const common = [
+    'Etapa de DESCRIPCION. No modifiques ficheros ni ejecutes git commit, git push ni gh.',
+    `Lee los cambios de esta rama respecto a ${base}: git log --oneline ${range} y git diff ${range}.`,
+    taskContext(task),
+    notes ? `Indicaciones del usuario (mandan sobre todo lo demás):\n${notes}` : null,
+    'Escribe en el idioma de los commits del repo. Sin firmas de agente, sin "Generated with" ni menciones a la IA.'
+  ];
+  if (target === 'jira') {
+    return [
+      ...common,
+      [
+        'Escribe un comentario para el ticket de Jira de esta tarea, para quien sigue el ticket (producto, QA, el equipo):',
+        '- Qué se ha hecho y por qué, en lenguaje de negocio.',
+        '- Cómo probarlo o verificarlo.',
+        '- Decisiones tomadas, limitaciones y lo que queda pendiente.',
+        'Detalles de código solo los imprescindibles. Markdown sencillo (Jira lo convierte al pegarlo).',
+        'Responde SOLO con el comentario, sin preámbulo.'
+      ].join('\n')
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+  }
+  return [
+    ...common,
+    [
+      'Escribe la descripción de la pull request, para quien la va a revisar:',
+      '- Si el repo tiene plantilla de PR (.github/pull_request_template.md, .github/PULL_REQUEST_TEMPLATE/, docs/pull_request_template.md), síguela.',
+      '- Si no: un resumen de 1-3 frases, "## Cambios" con los cambios principales y "## Cómo probarlo".',
+      '- Describe solo lo que contiene el diff. No cuentes el proceso interno de la tarea (planes descartados, intentos fallidos, preguntas al usuario) ni contexto interno que no aporte a la revisión.',
+      'Primera línea exactamente "TÍTULO: <título de la PR>", corto y en el estilo de los commits del repo (Conventional Commits si los usa). Después, la descripción en markdown, sin preámbulo.'
+    ].join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+// Title and body out of the describe stage's answer ("TÍTULO: ..." first, then the body).
+function parseDescription(text, target) {
+  let body = String(text || '').trim();
+  const fenced = /^```(?:markdown|md)?\n([\s\S]*?)\n```$/.exec(body);
+  if (fenced) body = fenced[1].trim();
+  if (target === 'jira') return { body };
+  const m = /^\s*\**T[IÍ]TULO:\**\s*`?(.+?)`?\s*$/im.exec(body);
+  const title = m ? m[1].trim().slice(0, 120) : '';
+  if (m) body = (body.slice(0, m.index) + body.slice(m.index + m[0].length)).trim();
+  return { title, body };
+}
+
+// Agents work with as little human intervention as possible: they stop only for missing details.
+const AUTONOMY_RULE =
+  'Trabaja de forma autónoma: decide tú los detalles razonables y anótalos en tu respuesta. Para solo si falta concreción o contexto que no puedas deducir del repo. Si una acción queda bloqueada por seguridad, no te detengas: sigue por otro camino y, si era imprescindible, di al final qué necesitabas y para qué (el usuario puede permitirla desde la tarjeta).';
+
 function buildStagePrompt(task, stage, opts = {}) {
-  return `${buildStageBody(task, stage, opts)}\n\n${SHELL_RULE}`;
+  return `${buildStageBody(task, stage, opts)}\n\n${AUTONOMY_RULE}\n\n${SHELL_RULE}`;
 }
 
 // What the previous stage wrote and the implementation stage needs.
@@ -270,7 +322,7 @@ function previousOutput(task, stage) {
   return idx > 0 ? out(pipeline[idx - 1]) : '';
 }
 
-function buildStageBody(task, stage, { docOptions, agent } = {}) {
+function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}) {
   const goal = task.instruction || task.title;
   const out = (s) => (task.stageOutputs && task.stageOutputs[s]) || '';
   switch (stage) {
@@ -339,6 +391,8 @@ function buildStageBody(task, stage, { docOptions, agent } = {}) {
         'Propon un mensaje en formato Conventional Commits: tipo(ambito): resumen en minusculas, imperativo, sin punto final y de 72 caracteres como mucho; si hace falta, un cuerpo breve tras una línea en blanco. Sigue el idioma de los commits anteriores del repo. No anadas líneas Co-Authored-By ni firmas de agente.',
         'Termina SIEMPRE con una línea exacta "MENSAJE: <primera línea del commit>", que optimia usa para rellenar el campo de commit.'
       ].join('\n\n');
+    case 'describe':
+      return buildDescribePrompt(task, describeOptions || {});
     case 'research':
       return [
         'Etapa de INVESTIGACION. No escribas ni modifiques documentos.',
@@ -434,7 +488,7 @@ function defaultCommitMessage(task) {
 function decideAfterStage(
   task,
   stage,
-  { text = '', hasChanges = false, phaseStatus, isError = false, skip = [], agent } = {}
+  { text = '', hasChanges = false, phaseStatus, isError = false, skip = [], agent, describeTarget } = {}
 ) {
   const stageOutputs = { ...(task.stageOutputs || {}), [stage]: text };
   const base = { stage, stageOutputs, output: text, pendingQuestion: null, pendingPermission: null, error: null };
@@ -444,6 +498,19 @@ function decideAfterStage(
 
   // Review and commit do not change the state of the changes: a failure is only shown, and the task
   // stays ready for review.
+  if (stage === 'describe') {
+    const target = DESCRIBE_TARGETS.includes(describeTarget) ? describeTarget : 'pr';
+    const parsed = isError ? null : parseDescription(text, target);
+    const delivery = { ...(task.delivery || {}) };
+    if (parsed?.body) delivery[target] = { ...parsed, generatedAt: new Date().toISOString() };
+    return done({
+      status: 'ready_to_test',
+      // The previous report stays on the card: the description goes into its own editor.
+      output: task.output,
+      error: isError ? 'la etapa terminó con error' : parsed?.body ? null : 'el agente no devolvió ninguna descripción',
+      delivery
+    });
+  }
   if (stage === 'review' || stage === 'commit') {
     const suggested = stage === 'commit' ? parseCommitSuggestion(text) : null;
     return done({
@@ -499,6 +566,8 @@ function decideAfterStage(
 }
 
 module.exports = {
+  DESCRIBE_TARGETS,
+  parseDescription,
   parseCommitSuggestion,
   defaultCommitMessage,
   STAGES,

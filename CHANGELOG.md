@@ -2,6 +2,26 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.0] - 2026-11-17
+
+### Added
+- **Pull request delivery**: after the commit, the task card offers a Pull request tab (title, description, draft) and a Jira tab (a comment for the ticket). An agent drafts both from the request, plan, verification and diff; "Create PR" pushes the branch and opens it with `gh`. "Commit only" ends a task on its branch, and several tasks can share one branch.
+- **Wiki**: a project wiki and a personal one (tree, search, link map, editing), updated by an agent after every committed task, with the local model when available, otherwise Claude Haiku.
+- **Export and import all your knowledge** (configuration, wikis, memories) in one file, merged by date.
+- **ECC (Everything Claude Code, MIT) bundled**: optimia's agents follow the method of their best ECC counterpart, its 72 agents are available (call any with `@` in the chat) and its skills reach every session.
+- **Chat attachments**: PDF, Word, Excel, PowerPoint, text and any other file, sent to the context efficiently (PDFs read by page, Office text extracted to markdown, small files inline).
+- **LM Studio** support next to Ollama, with detection and local models in the chat's model selector.
+- Inter bundled (no font CDN) and the Optimia logo.
+
+### Changed
+- Switching repos no longer reloads the page; workbenches reopen their last repo; a "+" adds repos with the folder dialog, and optimia offers to `git init` a folder that is not a repo.
+- Agents only stop to ask for missing context. Blocked actions never stop a stage and can be allowed from the card; commit, push, merge and rebase stay forbidden.
+- Agents run in Claude Code's OS sandbox (`bubblewrap` + `socat` on Linux, built in on macOS); without it they do not start unless you turn it off in Settings › General.
+
+### Fixed
+- Local-model sessions no longer send your Claude credentials to the local server.
+- `?token=…&p=<repo>` links keep the repo.
+
 ## [2.0.1] - 2026-11-15
 
 Correcciones para macOS.

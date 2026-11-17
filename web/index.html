@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>optimia</title>
+    <link rel="icon" href="logo.svg" type="image/svg+xml" />
+    <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="app.css" />
@@ -13,12 +15,13 @@
     <div class="app-window" id="app-window">
       <aside class="sidebar" id="sidebar" aria-label="Barra lateral">
         <div class="sidebar-top">
+          <img class="app-logo" src="logo.svg" alt="Optimia" width="104" height="24" />
           <div class="wb-switcher" id="wb-switcher"></div>
         </div>
         <div class="sidebar-scroll">
           <div class="sidebar-group-title" id="nav-title">Vistas</div>
           <nav class="sidebar-nav main-nav" id="main-nav" aria-labelledby="nav-title"></nav>
-          <div class="sidebar-group-title" id="repos-title">Repositorios</div>
+          <div class="sidebar-group-title" id="repos-title-row"><span id="repos-title">Repositorios</span></div>
           <div class="sidebar-repos" id="repo-list" role="listbox" aria-labelledby="repos-title"></div>
         </div>
       </aside>
@@ -143,7 +146,31 @@
               <div class="chat-attachments" id="chat-attachments" hidden></div>
               <div class="skill-suggest" id="skill-suggest" role="listbox" hidden></div>
               <div class="chat-input-row">
-                <textarea id="chat-input" rows="1" placeholder="Envía un mensaje o arrastra una imagen"></textarea>
+                <button
+                  type="button"
+                  class="icon-button attach-button"
+                  id="attach-button"
+                  title="Adjuntar ficheros (PDF, Word, Excel, imágenes, texto…)"
+                  aria-label="Adjuntar ficheros"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 0 1 4.7 4.7L10 17.7a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9"
+                    />
+                  </svg>
+                </button>
+                <input type="file" id="attach-input" multiple hidden />
+                <textarea id="chat-input" rows="1" placeholder="Envía un mensaje o arrastra ficheros"></textarea>
                 <button class="send-button" id="send-button" disabled>Enviar</button>
               </div>
               <div class="chat-meta-row">
@@ -157,7 +184,7 @@
                   <span class="muted">Modelo</span>
                   <select id="chat-model-select"></select>
                 </label>
-                <label class="meta-field chat-only">
+                <label class="meta-field chat-only" id="chat-effort-field">
                   <span class="muted">Effort</span>
                   <select id="model-select">
                     <option value="default">Por defecto</option>
@@ -177,14 +204,18 @@
                   <input
                     type="text"
                     id="task-branch-input"
-                    placeholder="automática"
-                    title="Nombre de la rama de la tarea; vacío = optimia/task-xxxx"
+                    list="task-branch-options"
+                    placeholder="nueva automática"
+                    title="Vacío = rama nueva optimia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama)."
                     spellcheck="false"
                   />
+                  <datalist id="task-branch-options"></datalist>
                 </label>
               </div>
               <div class="task-plan-row task-only" id="task-plan-row" hidden></div>
-              <div class="chat-hint muted">Enter envía · Shift+Enter nueva línea</div>
+              <div class="chat-hint muted">
+                Enter envía · Shift+Enter nueva línea · @ llama a un agente · / usa una skill
+              </div>
             </div>
           </section>
 
@@ -326,13 +357,26 @@
             </section>
 
             <section class="settings-pane" data-pane="local-ai" hidden>
+              <p class="muted settings-help">
+                Ollama o LM Studio en este equipo. El chat y cada agente pueden usar un modelo local; tu cuenta de
+                Claude no se envía al servidor local.
+              </p>
+              <div class="settings-field">
+                <button type="button" id="local-ai-detect">Detectar servidores locales</button>
+                <div id="local-ai-servers" class="local-ai-servers" aria-live="polite"></div>
+              </div>
               <div class="settings-field">
                 <label for="setting-local-url">URL</label>
-                <input type="text" id="setting-local-url" placeholder="http://localhost:11434" />
+                <input
+                  type="text"
+                  id="setting-local-url"
+                  placeholder="http://127.0.0.1:1234 (LM Studio) o :11434 (Ollama)"
+                />
               </div>
               <div class="settings-field">
                 <label for="setting-local-model">Modelo</label>
-                <input type="text" id="setting-local-model" placeholder="llama3.1" />
+                <input type="text" id="setting-local-model" list="local-ai-models" placeholder="google/gemma-4-12b" />
+                <datalist id="local-ai-models"></datalist>
               </div>
               <div class="settings-field">
                 <label for="setting-local-auth">Cabecera de autenticación</label>
@@ -520,6 +564,7 @@
     <script src="js/project/composer.js"></script>
     <script src="js/project/skills.js"></script>
     <script src="js/project/settings.js"></script>
+    <script src="js/project/switch.js"></script>
     <script src="js/project/main.js"></script>
     <script src="terminal.js"></script>
     <script type="module" src="js/app/shell.js"></script>

@@ -13,7 +13,6 @@ const {
   buildStagePrompt,
   answerPrompt,
   stageTools,
-  stageDisallowed,
   approvalRule,
   decideAfterStage
 } = require('../../server/bridge/taskStages');
@@ -213,19 +212,6 @@ test('stageTools: implementation can edit and use Bash without asking per comman
   assert.ok(impl.includes('Bash'));
 });
 
-test('stageDisallowed: blocks commits, pushes and destructive actions, also with git -c', () => {
-  const deny = stageDisallowed();
-  for (const rule of [
-    'Bash(git commit*)',
-    'Bash(git push*)',
-    'Bash(git -c * commit*)',
-    'Bash(git reset --hard*)',
-    'Bash(rm *)'
-  ]) {
-    assert.ok(deny.includes(rule), `falta ${rule}`);
-  }
-});
-
 test('stageTools: read stages can query tokensave but not edit it', () => {
   const plan = stageTools('plan');
   assert.ok(plan.includes('mcp__tokensave__tokensave_context'));
@@ -316,7 +302,7 @@ test('stageDisallowed: read-only stages block the edit tools, edit stages do not
   }
   for (const stage of ['implement', 'write-tests', 'write', 'verify'])
     assert.ok(!stageDisallowed(stage).includes('Edit'));
-  assert.ok(stageDisallowed('plan').includes('Bash(git commit*)'));
+  assert.ok(!stageDisallowed('implement').some((r) => r.startsWith('Bash(')), 'Bash policy lives in the hook');
 });
 
 test('onboard: read-only study, report, hidden from the selector and without session details', () => {
@@ -327,4 +313,64 @@ test('onboard: read-only study, report, hidden from the selector and without ses
   const prompt = buildStagePrompt({ type: 'onboard', title: 'Conocer el repo', instruction: 'x' }, 'onboard');
   assert.match(prompt, /## Comandos/);
   assert.match(prompt, /worktree temporal/);
+});
+
+test('describe: PR prompt asks for the title line and leaves the internal process out; Jira is for the ticket', () => {
+  const { buildStagePrompt } = require('../../server/bridge/taskStages');
+  const task = {
+    title: 'Login con Google',
+    instruction: 'Añade login con Google',
+    type: 'coding',
+    baseBranch: 'develop',
+    stageOutputs: { plan: 'Plan: usar passport' },
+    verification: { ok: true, line: 'VEREDICTO: OK' }
+  };
+  const pr = buildStagePrompt(task, 'describe', {
+    describeOptions: { target: 'pr', notes: 'no menciones la migración' }
+  });
+  assert.match(pr, /TÍTULO:/);
+  assert.match(pr, /git diff develop\.\.\.HEAD/);
+  assert.match(pr, /No cuentes el proceso interno/);
+  assert.match(pr, /no menciones la migración/);
+  assert.match(pr, /Plan: usar passport/);
+  const jira = buildStagePrompt(task, 'describe', { describeOptions: { target: 'jira' } });
+  assert.match(jira, /ticket de Jira/);
+  assert.doesNotMatch(jira, /TÍTULO:/);
+});
+
+test('parseDescription: title out of the body, code fences removed', () => {
+  const { parseDescription } = require('../../server/bridge/taskStages');
+  assert.deepEqual(parseDescription('TÍTULO: feat(auth): login con Google\n\nResumen.\n\n## Cambios\n- x', 'pr'), {
+    title: 'feat(auth): login con Google',
+    body: 'Resumen.\n\n## Cambios\n- x'
+  });
+  assert.deepEqual(parseDescription('```markdown\n**TITULO:** `fix: y`\nCuerpo\n```', 'pr'), {
+    title: 'fix: y',
+    body: 'Cuerpo'
+  });
+  assert.deepEqual(parseDescription('Hecho X.\nPara probar: Y.', 'jira'), { body: 'Hecho X.\nPara probar: Y.' });
+});
+
+test('describe stage: keeps the report on the card and stores the description by target', () => {
+  const { decideAfterStage, canRun } = require('../../server/bridge/taskStages');
+  const task = {
+    type: 'coding',
+    status: 'ready_to_test',
+    output: 'informe de verificación',
+    delivery: { jira: { body: 'j' } }
+  };
+  assert.equal(canRun(task, 'describe'), null);
+  assert.match(canRun({ ...task, status: 'pending' }, 'describe'), /lista para revisar/);
+  const { patch, next } = decideAfterStage(task, 'describe', {
+    text: 'TÍTULO: feat: x\n\nCuerpo',
+    describeTarget: 'pr'
+  });
+  assert.equal(next, null);
+  assert.equal(patch.status, 'ready_to_test');
+  assert.equal(patch.output, 'informe de verificación');
+  assert.equal(patch.delivery.pr.title, 'feat: x');
+  assert.equal(patch.delivery.pr.body, 'Cuerpo');
+  assert.equal(patch.delivery.jira.body, 'j', 'the other target is kept');
+  const empty = decideAfterStage(task, 'describe', { text: '', describeTarget: 'jira' });
+  assert.match(empty.patch.error, /no devolvió/);
 });

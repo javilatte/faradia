@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
+const { prepareActiveDir } = require('../ecc/library');
 const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
 
 const CHAT_TASKS_PROMPT = `## Crear tareas para agentes
@@ -45,9 +46,9 @@ function localDefaults(ai) {
  * given, its engine, model, effort and role prompt win over the general AI settings, which are left
  * for the chat.
  *
- * Local models: the current claude CLI (verified with 2.1.x) sends the model name as is to
- * ANTHROPIC_BASE_URL, Ollama names like "qwen2.5-coder:7b" included, so the ensureOllamaAlias alias
- * is no longer needed and each agent can use a different local model at the same time.
+ * Local models (Ollama, LM Studio): the current claude CLI (verified with 2.1.x) sends the model
+ * name as is to ANTHROPIC_BASE_URL ("qwen2.5-coder:7b", "google/gemma-4-12b"), so each agent can use
+ * a different local model at the same time. See localAi.js for the environment of those sessions.
  */
 function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;
@@ -66,6 +67,14 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
     opts.strictMcpConfig = true;
     const projectMcp = path.join(cwd, '.mcp.json');
     if (fs.existsSync(projectMcp)) opts.extraMcpConfigPaths = [projectMcp];
+  }
+
+  // ECC skills and commands the user enabled (copied to a folder Claude Code reads with --add-dir).
+  try {
+    const eccDir = prepareActiveDir(settings.ecc || {});
+    if (eccDir) opts.addDirs = [eccDir];
+  } catch {
+    /* without them */
   }
 
   const parts = [];
@@ -88,7 +97,11 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const engine = agent ? agent.engine : ai.mode === 'local' ? 'local' : 'claude';
   if (engine === 'local') {
     Object.assign(opts, localDefaults(ai));
-    if (!opts.baseUrl) throw new Error('configura la URL de la IA local en Ajustes > IA local');
+    if (!opts.baseUrl) {
+      throw new Error(
+        `${agent ? `el agente "${agent.name}" usa un modelo local, pero` : 'el chat usa IA local, pero'} no hay servidor configurado: abre Ajustes › IA local y pulsa «Detectar servidores locales»`
+      );
+    }
     const model = (agent ? agent.model : '') || ai.localAi.model;
     if (!model) throw new Error('elige un modelo local para este agente o en Ajustes > IA local');
     opts.model = model;

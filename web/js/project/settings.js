@@ -12,7 +12,9 @@ effortSelect.addEventListener('change', async () => {
 });
 
 async function loadInitialSettings() {
+  const pid = currentProjectId;
   const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
+  if (pid !== currentProjectId) return;
   applyUi(settings.ui || {});
   modeLabel.textContent = settings.ai.mode === 'local' ? 'IA local' : 'Claude Code';
   effortSelect.value = settings.ai.claude.effort || 'default';
@@ -602,6 +604,62 @@ for (const el of [localUrlInput, localModelInput, localAuthInput, instructionsTe
     if (pendingText.has(el)) scheduleText(el, 0);
   });
 }
+
+// ---- local AI: detect the servers running on this machine ----
+
+const localDetectButton = document.getElementById('local-ai-detect');
+const localServersBox = document.getElementById('local-ai-servers');
+const localModelsList = document.getElementById('local-ai-models');
+
+async function detectLocalAi() {
+  localDetectButton.disabled = true;
+  localServersBox.textContent = 'Buscando…';
+  let servers = [];
+  try {
+    ({ servers = [] } = await fetch(apiPath('/api/local-ai/detect')).then((r) => r.json()));
+  } catch {
+    /* shown as "none found" */
+  }
+  localDetectButton.disabled = false;
+  localServersBox.replaceChildren();
+  if (!servers.length) {
+    localServersBox.textContent =
+      'No hay ningún servidor local en marcha. Abre LM Studio y arranca su servidor (lms server start) o abre Ollama.';
+    return;
+  }
+  for (const server of servers) {
+    const row = document.createElement('div');
+    row.className = 'local-ai-server';
+    const name = document.createElement('span');
+    const count = server.models.length;
+    name.textContent = `${server.label} · ${server.url} · ${count} ${count === 1 ? 'modelo' : 'modelos'}`;
+    const use = document.createElement('button');
+    use.type = 'button';
+    const inUse = localUrlInput.value.replace(/\/+$/, '') === server.url;
+    use.textContent = inUse ? 'En uso' : 'Usar';
+    use.disabled = inUse;
+    use.addEventListener('click', () => {
+      localUrlInput.value = server.url;
+      if (!localModelInput.value && server.models[0]) localModelInput.value = server.models[0].name;
+      saveField(localUrlInput);
+      saveField(localModelInput);
+      detectLocalAi();
+    });
+    row.append(name, use);
+    localServersBox.appendChild(row);
+  }
+  localModelsList.replaceChildren(
+    ...servers.flatMap((s) =>
+      s.models.map((m) => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        opt.label = s.label;
+        return opt;
+      })
+    )
+  );
+}
+localDetectButton.addEventListener('click', detectLocalAi);
 
 // ---- scope: all repos / only this repo ----
 

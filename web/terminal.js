@@ -63,6 +63,11 @@ window.TerminalView = {
   handleExit() {
     if (term) term.write('\r\n\x1b[31m[sesión de terminal terminada]\x1b[0m\r\n');
   },
+  // Another project was opened: its terminal is a different session.
+  reset() {
+    if (term) term.reset();
+    if (!terminalOverlay.hidden && ws && wsOpen) ws.send(wsPayload({ type: 'terminal_subscribe' }));
+  },
   handleError(message) {
     ensureTerminal();
     term.write(`\r\n\x1b[31m${message}\x1b[0m\r\n`);

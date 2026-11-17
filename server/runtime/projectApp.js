@@ -23,21 +23,38 @@ const {
   commitTaskWorktree,
   worktreeIsClean,
   mergeTaskBranch,
-  filesChangedBy
+  filesChangedBy,
+  worktreeOfBranch
 } = require('../bridge/worktree');
 const { pickFile } = require('../bridge/filePicker');
+const { saveAttachment } = require('../bridge/attachments');
 const logger = require('../bridge/logger');
 
 const { resolveInside, readPreview, openWithSystem } = require('../bridge/taskFiles');
 const { loadMemory, saveMemory } = require('../store/memoryStore');
 const { listSkills, createSkill } = require('../bridge/skills');
 const { getClaudeAuthStatus, openAuthLoginInTerminal } = require('../bridge/claudeAuth');
-const { listLocalModels } = require('../bridge/localAi');
+const { listModelsAt, detectLocalServers } = require('../bridge/localAi');
 const { getAiAssistSuggestion } = require('../bridge/aiAssist');
 const { sendJson, readJsonBody } = require('../http/util');
 const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
-const { isKnownType, TASK_TYPES } = require('../bridge/taskStages');
+const { isKnownType, TASK_TYPES, DESCRIBE_TARGETS } = require('../bridge/taskStages');
+const { remoteInfo, ghReady, deliverPullRequest } = require('../bridge/delivery');
+
+// Removing a task never loses work: a shared branch, or commits that are neither merged nor
+// pushed, keep their branch.
+function keepsBranch(task) {
+  if (task.existingBranch) return true;
+  return Boolean(task.lastCommit && !task.mergedInto && !task.pr);
+}
+
+// gh's login is checked at most once a minute: it takes a while and rarely changes.
+let ghCache = { at: 0, ready: false };
+async function ghReadyCached(now = Date.now()) {
+  if (now - ghCache.at > 60_000) ghCache = { at: now, ready: await ghReady() };
+  return ghCache.ready;
+}
 
 // Strips what is not the memory: a ```markdown wrapper and any preamble before the first section.
 function memoryFromOutput(text) {
@@ -51,7 +68,16 @@ function memoryFromOutput(text) {
 
 function createApp(
   projectRoot,
-  { onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskRun, onTaskApprove, onChatDeleted } = {},
+  {
+    onTaskCreated,
+    onTaskUpdated,
+    onTaskDeleted,
+    onTaskRun,
+    onTaskApprove,
+    onTaskAllow,
+    onTaskCommitted,
+    onChatDeleted
+  } = {},
   log = logger
 ) {
   return async function handler(req, res) {
@@ -94,7 +120,14 @@ function createApp(
       }
       const list = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
       if (body.scope === 'global') {
-        saveGlobalSettings({ ui: body.ui, ai: body.ai, preferences: body.preferences, updates: body.updates });
+        saveGlobalSettings({
+          ui: body.ui,
+          ai: body.ai,
+          preferences: body.preferences,
+          updates: body.updates,
+          security: body.security,
+          wiki: body.wiki
+        });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
         if (body.ui) return sendJson(res, 400, { error: 'la apariencia es la misma para todos los repos' });
@@ -120,8 +153,23 @@ function createApp(
       return sendJson(res, 200, await openAuthLoginInTerminal());
     }
 
+    // Models of the configured local server (Settings > Local AI) or, without a URL, of the first
+    // server found on this machine.
     if (url.pathname === '/api/local-models' && req.method === 'GET') {
-      return sendJson(res, 200, listLocalModels());
+      const configured = loadSettingsLayers(projectRoot).effective.ai.localAi.url;
+      try {
+        if (configured) return sendJson(res, 200, await listModelsAt(configured));
+        const [first] = await detectLocalServers();
+        return sendJson(res, 200, first ? first.models : []);
+      } catch {
+        return sendJson(res, 200, []);
+      }
+    }
+
+    // Ollama / LM Studio running on this machine, to fill in Settings > Local AI with one click.
+    if (url.pathname === '/api/local-ai/detect' && req.method === 'GET') {
+      const configuredUrl = loadSettingsLayers(projectRoot).effective.ai.localAi.url;
+      return sendJson(res, 200, { servers: await detectLocalServers({ configuredUrl }) });
     }
 
     if (url.pathname === '/api/ai-assist' && req.method === 'POST') {
@@ -175,16 +223,35 @@ function createApp(
         if (!agent.enabled) return sendJson(res, 409, { error: `el agente "${agent.name}" está desactivado` });
       }
       const git = listLocalBranches(projectRoot);
+      // Without a base, the branch checked out now (what the worktree would branch off anyway).
+      if (!body.baseBranch && git.current && git.current !== 'HEAD') body.baseBranch = git.current;
       if (body.baseBranch && !git.branches.includes(body.baseBranch)) {
         return sendJson(res, 400, { error: `la rama base "${body.baseBranch}" no existe` });
       }
+      let existingBranch = false;
       if (body.branchName) {
         const problem = branchNameProblem(body.branchName);
         if (problem) return sendJson(res, 400, { error: problem });
-        if (git.branches.includes(body.branchName))
-          return sendJson(res, 409, { error: `ya existe la rama ${body.branchName}` });
+        // An existing branch: the task adds its work to it (a branch with several tasks).
+        if (git.branches.includes(body.branchName)) {
+          const busy = loadTasks(projectRoot).find(
+            (t) => t.branch === body.branchName && t.worktreePath && !t.mergedInto && !t.deliveredAs
+          );
+          if (busy) {
+            return sendJson(res, 409, {
+              error: `la tarea «${busy.title}» ya trabaja en la rama ${body.branchName}: haz su commit antes de lanzar otra en la misma rama`
+            });
+          }
+          const openAt = worktreeOfBranch(projectRoot, body.branchName);
+          if (openAt) {
+            return sendJson(res, 409, {
+              error: `la rama ${body.branchName} está abierta en ${openAt}: cambia allí de rama o elige otra`
+            });
+          }
+          existingBranch = true;
+        }
       }
-      const task = addTask(projectRoot, body);
+      const task = addTask(projectRoot, { ...body, existingBranch });
       onTaskCreated?.(task);
       return sendJson(res, 201, task);
     }
@@ -198,6 +265,16 @@ function createApp(
       const result = onTaskRun ? onTaskRun(taskId, body) : { error: 'not supported', code: 501 };
       if (result.error) return sendJson(res, result.code || 409, { error: result.error });
       return sendJson(res, 202, result.task);
+    }
+
+    // POST /api/tasks/:id/allow {blockedId, retry?}: approves an action the safety policy blocked.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/allow') && req.method === 'POST') {
+      const taskId = url.pathname.split('/')[3];
+      const body = await readJsonBody(req).catch(() => null);
+      if (!body || typeof body.blockedId !== 'string') return sendJson(res, 400, { error: 'blockedId is required' });
+      const result = onTaskAllow ? onTaskAllow(taskId, body) : { error: 'not supported', code: 501 };
+      if (result.error) return sendJson(res, result.code || 409, { error: result.error });
+      return sendJson(res, 200, result.task);
     }
 
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/approve') && req.method === 'POST') {
@@ -234,7 +311,7 @@ function createApp(
       if (!task) return sendJson(res, 404, { error: 'task not found' });
       onTaskDeleted?.(taskId); // kills any live session before its worktree goes away
       try {
-        removeTaskWorktree(projectRoot, task);
+        removeTaskWorktree(projectRoot, task, { keepBranch: keepsBranch(task) });
       } catch (err) {
         log.error('task.delete_failed', { taskId, error: err.message });
         return sendJson(res, 500, { error: `no se pudo limpiar el worktree: ${err.message}` });
@@ -290,7 +367,21 @@ function createApp(
       if (previous.trim()) fs.writeFileSync(path.join(projectRoot, '.optimia', 'memory.prev.md'), previous);
       saveMemory(projectRoot, content);
       log.info('memory.apply', { taskId, chars: content.length });
-      return sendJson(res, 200, updateTask(projectRoot, taskId, { memoryApplied: new Date().toISOString() }));
+      // The study only read the repo: its worktree and branch are no longer needed.
+      let cleaned = {};
+      if (task.worktreePath || task.branch) {
+        try {
+          removeTaskWorktree(projectRoot, task);
+          cleaned = { worktreePath: null, branchDeleted: true };
+        } catch (err) {
+          log.warn('task.cleanup_failed', { taskId, error: err.message });
+        }
+      }
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, { memoryApplied: new Date().toISOString(), ...cleaned })
+      );
     }
 
     // Commit and merge are user actions (from the task card), never an agent's.
@@ -316,7 +407,125 @@ function createApp(
         return sendJson(res, 409, { error: `no se pudo hacer commit: ${err.message}` });
       }
       log.info('task.commit', { taskId, sha, files: filesChangedBy(task.worktreePath, sha) });
-      return sendJson(res, 200, updateTask(projectRoot, taskId, { lastCommit: sha, lastCommitMessage: message }));
+      // The wikis learn from every accepted change (in the background).
+      onTaskCommitted?.(task, { sha, dir: task.worktreePath });
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, { lastCommit: sha, lastCommitMessage: message, uncommitted: false })
+      );
+    }
+
+    // How tasks are delivered in this repo: with a remote, as pull requests (opened with gh when the
+    // remote is GitHub and gh is logged in); without one, merging locally.
+    if (url.pathname === '/api/git/remote' && req.method === 'GET') {
+      const remote = await remoteInfo(projectRoot);
+      const gh = remote?.provider === 'github' ? await ghReadyCached() : false;
+      return sendJson(res, 200, {
+        remote: remote && { name: remote.name, webUrl: remote.webUrl, provider: remote.provider },
+        gh
+      });
+    }
+
+    // Edits of the PR description or the Jira comment, kept with the task.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/delivery') && req.method === 'PUT') {
+      const taskId = url.pathname.split('/')[3];
+      const body = await readJsonBody(req).catch(() => null);
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task) return sendJson(res, 404, { error: 'task not found' });
+      if (!body || !DESCRIBE_TARGETS.includes(body.target) || typeof body.body !== 'string') {
+        return sendJson(res, 400, { error: 'indica target ("pr" o "jira") y body' });
+      }
+      const entry = { ...(task.delivery?.[body.target] || {}), body: body.body.slice(0, 60_000) };
+      if (body.target === 'pr' && typeof body.title === 'string') entry.title = body.title.trim().slice(0, 200);
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, { delivery: { ...task.delivery, [body.target]: entry } })
+      );
+    }
+
+    // Pushes the task branch and opens (or updates) its pull request.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/pull-request') && req.method === 'POST') {
+      const taskId = url.pathname.split('/')[3];
+      const body = await readJsonBody(req).catch(() => null);
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task) return sendJson(res, 404, { error: 'task not found' });
+      if (!task.lastCommit) return sendJson(res, 409, { error: 'haz commit de la tarea antes de abrir la PR' });
+      if (!task.worktreePath || !task.branch || !task.baseBranch)
+        return sendJson(res, 409, { error: 'la tarea no tiene rama o rama base' });
+      if (!worktreeIsClean(task.worktreePath))
+        return sendJson(res, 409, { error: 'quedan cambios sin commitear en la tarea' });
+      const title = typeof body?.title === 'string' ? body.title.trim() : '';
+      const text = typeof body?.body === 'string' ? body.body : '';
+      if (!title) return sendJson(res, 400, { error: 'la PR necesita un título' });
+      let result;
+      try {
+        result = await deliverPullRequest({
+          dir: task.worktreePath,
+          branch: task.branch,
+          base: task.baseBranch,
+          title,
+          body: text,
+          draft: body?.draft === true,
+          existingUrl: task.pr?.manual ? null : task.pr?.url
+        });
+      } catch (err) {
+        log.warn('task.pr_failed', { taskId, error: err.message });
+        return sendJson(res, 409, { error: err.message });
+      }
+      log.info('task.pr', {
+        taskId,
+        url: result.url,
+        created: Boolean(result.created),
+        manual: Boolean(result.manual)
+      });
+      const now = new Date().toISOString();
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, {
+          delivery: { ...task.delivery, pr: { ...(task.delivery?.pr || {}), title, body: text } },
+          pr: {
+            url: result.url,
+            manual: Boolean(result.manual),
+            draft: body?.draft === true,
+            remote: result.remote,
+            pushedCommit: task.lastCommit,
+            createdAt: task.pr?.createdAt || now,
+            updatedAt: now
+          }
+        })
+      );
+    }
+
+    // "Solo commit": the task ends with its commit on its branch, without a PR or a merge (e.g. one
+    // of several tasks of the same branch). The worktree goes; the branch stays.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/finish') && req.method === 'POST') {
+      const taskId = url.pathname.split('/')[3];
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task) return sendJson(res, 404, { error: 'task not found' });
+      if (!task.lastCommit) return sendJson(res, 409, { error: 'haz commit de la tarea antes de terminarla' });
+      if (task.worktreePath && !worktreeIsClean(task.worktreePath))
+        return sendJson(res, 409, { error: 'quedan cambios sin commitear en la tarea' });
+      onTaskDeleted?.(taskId);
+      let cleaned = true;
+      try {
+        removeTaskWorktree(projectRoot, task, { keepBranch: true });
+      } catch (err) {
+        cleaned = false;
+        log.warn('task.cleanup_failed', { taskId, error: err.message });
+      }
+      log.info('task.finish', { taskId, branch: task.branch, commit: task.lastCommit });
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, {
+          deliveredAs: 'commit',
+          doneAt: new Date().toISOString(),
+          ...(cleaned ? { worktreePath: null } : {})
+        })
+      );
     }
 
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/merge') && req.method === 'POST') {
@@ -340,7 +549,7 @@ function createApp(
       onTaskDeleted?.(taskId);
       let cleaned = true;
       try {
-        removeTaskWorktree(projectRoot, task);
+        removeTaskWorktree(projectRoot, task, { keepBranch: Boolean(task.existingBranch) });
       } catch (err) {
         cleaned = false;
         log.warn('task.cleanup_failed', { taskId, error: err.message });
@@ -377,6 +586,25 @@ function createApp(
         return sendJson(res, 400, { error: 'el fichero tiene que estar dentro del proyecto' });
       }
       return sendJson(res, 200, { path: rel.split(path.sep).join('/') });
+    }
+
+    // POST /api/attachments {chatId, name, mediaType, data (base64)}: a file for the next message.
+    if (url.pathname === '/api/attachments' && req.method === 'POST') {
+      let body;
+      try {
+        body = await readJsonBody(req, { maxBytes: 45 * 1024 * 1024 });
+      } catch (err) {
+        return sendJson(res, 413, { error: err.message });
+      }
+      if (!body?.chatId || !loadChat(projectRoot, body.chatId)) return sendJson(res, 404, { error: 'chat not found' });
+      try {
+        const a = saveAttachment(projectRoot, body.chatId, body);
+        log.info('chat.attachment', { chatId: body.chatId, kind: a.kind, size: a.size });
+        const { inline, ...meta } = a;
+        return sendJson(res, 201, { ...meta, inline: inline !== undefined });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
     }
 
     if (url.pathname === '/api/chats' && req.method === 'GET') {

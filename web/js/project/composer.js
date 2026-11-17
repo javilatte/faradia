@@ -34,16 +34,24 @@ async function loadTaskKinds() {
     if (type !== 'custom' && !def.internal) add(tasksGroup, type, def.label);
   }
   chatKindSelect.appendChild(tasksGroup);
-  const custom = data.agents.filter((a) => !a.builtin && a.enabled);
-  if (custom.length) {
+  // Agents that run on their own: the user's and the ECC ones turned on (any agent can also be
+  // called with @ in the message box).
+  const groups = [
+    ['Agentes propios', data.agents.filter((a) => (a.source === 'global' || a.source === 'project') && a.enabled)],
+    ['Agentes de ECC', data.agents.filter((a) => a.source === 'ecc' && a.enabled)]
+  ];
+  for (const [label, list] of groups) {
+    if (!list.length) continue;
     const group = document.createElement('optgroup');
-    group.label = 'Agentes propios';
-    for (const a of custom) {
+    group.label = label;
+    for (const a of list) {
       add(group, `custom:${a.id}`, a.name);
       CHAT_KIND_LABEL[`custom:${a.id}`] = `de ${a.name}`;
     }
     chatKindSelect.appendChild(group);
   }
+  // A builtin agent picked with @ runs alone too.
+  for (const a of data.agents.filter((x) => x.source === 'builtin')) CHAT_KIND_LABEL[`custom:${a.id}`] = `de ${a.name}`;
   const values = [...chatKindSelect.querySelectorAll('option')].map((o) => o.value);
   chatKindSelect.value = values.includes(saved) ? saved : 'chat';
   syncTaskControls();
@@ -53,7 +61,7 @@ const taskBranchInput = document.getElementById('task-branch-input');
 
 async function loadTaskBranches() {
   const { current, branches } = await fetch(apiPath('/api/git/branches')).then((r) => r.json());
-  const saved = localStorage.getItem('optimia:task-base');
+  const saved = localStorage.getItem(taskBaseKey());
   taskBaseSelect.innerHTML = '';
   for (const name of branches) {
     const opt = document.createElement('option');
@@ -62,7 +70,24 @@ async function loadTaskBranches() {
     taskBaseSelect.appendChild(opt);
   }
   taskBaseSelect.value = branches.includes(saved) ? saved : current;
+  // Existing branches can be picked as the task's branch: the task adds its commits to it.
+  document
+    .getElementById('task-branch-options')
+    .replaceChildren(...branches.map((name) => Object.assign(document.createElement('option'), { value: name })));
+  taskBranches = branches;
+  syncBranchHint();
 }
+
+// With an existing branch, "Desde" does not apply: the task continues that branch.
+let taskBranches = [];
+function syncBranchHint() {
+  const existing = taskBranches.includes(taskBranchInput.value.trim());
+  taskBaseSelect.disabled = existing;
+  taskBaseSelect.title = existing
+    ? 'La tarea continúa la rama existente elegida en «Rama»'
+    : 'Rama base de la que sale la tarea';
+}
+taskBranchInput.addEventListener('input', syncBranchHint);
 
 // Before sending: which stages the task will have and which agent and model will run each one.
 const taskPlanRow = document.getElementById('task-plan-row');
@@ -102,14 +127,20 @@ function syncTaskControls() {
   const isTask = chatKindSelect.value !== 'chat';
   for (const el of document.querySelectorAll('.task-only')) el.hidden = !isTask;
   for (const el of document.querySelectorAll('.chat-only')) el.hidden = isTask;
+  // Effort is a Claude setting: local models ignore it.
+  document.getElementById('chat-effort-field').hidden = isTask || chatModelSelect.value.startsWith('local:');
   input.placeholder = isTask
     ? 'Describe la tarea: qué quieres, criterios de aceptación, ficheros relevantes…'
-    : 'Envía un mensaje o arrastra una imagen';
+    : 'Envía un mensaje o arrastra ficheros';
   renderTaskPlan();
   if (isTask) loadTaskBranches().catch(() => {});
 }
 
-taskBaseSelect.addEventListener('change', () => localStorage.setItem('optimia:task-base', taskBaseSelect.value));
+// The base branch chosen last, per repo: "develop" in one repo says nothing about another.
+function taskBaseKey() {
+  return `optimia:task-base:${currentProjectId || defaultProjectId || 'default'}`;
+}
+taskBaseSelect.addEventListener('change', () => localStorage.setItem(taskBaseKey(), taskBaseSelect.value));
 chatKindSelect.addEventListener('change', () => {
   localStorage.setItem('optimia:chat-kind', chatKindSelect.value);
   syncTaskControls();
@@ -147,6 +178,7 @@ async function createTaskFromChat(kind, text) {
   }
   applyTaskFromServer(data);
   taskBranchInput.value = '';
+  syncBranchHint();
   renderTasks();
   appendMessage(
     'system',
@@ -177,14 +209,22 @@ function notifyTaskInChat(task, prevStatus) {
 function sendCurrentInput() {
   const text = input.value.trim();
   if (chatKindSelect.value !== 'chat') return createTaskFromChat(chatKindSelect.value, text);
-  if ((!text && pendingImages.length === 0) || !currentChatId || !wsOpen || waitingForResult) return;
+  const ready = pendingFiles.filter((f) => f.status === 'ready');
+  if ((!text && pendingImages.length === 0 && !ready.length) || !currentChatId || !wsOpen || waitingForResult) return;
+  if (pendingFiles.some((f) => f.status === 'uploading')) {
+    appendMessage('system', 'Espera a que terminen de subirse los adjuntos.');
+    return;
+  }
   const images = pendingImages.map(({ mediaType, base64Data }) => ({ mediaType, base64Data }));
   const previewUrls = pendingImages.map((img) => img.dataUrl);
-  appendMessage('user', text, previewUrls);
-  ws.send(wsPayload({ type: 'user_message', chatId: currentChatId, text, images }));
+  appendMessage('user', text, previewUrls, ready);
+  ws.send(
+    wsPayload({ type: 'user_message', chatId: currentChatId, text, images, attachments: ready.map((f) => f.id) })
+  );
   input.value = '';
   input.style.height = 'auto';
   pendingImages = [];
+  pendingFiles = [];
   renderAttachments();
   setWaiting(true);
 }
@@ -241,7 +281,7 @@ function replayChat(chat) {
   for (const m of chat.messages) {
     if (m.role === 'user') {
       const previews = (m.images || []).map((img) => `data:${img.mediaType};base64,${img.base64Data}`);
-      appendMessage('user', m.text, previews);
+      appendMessage('user', m.text, previews, m.attachments || []);
     } else if (m.role === 'claude_event') {
       handleClaudeEvent(m.event);
     }
@@ -249,9 +289,11 @@ function replayChat(chat) {
 }
 
 async function selectChat(chatId) {
+  const pid = currentProjectId;
   currentChatId = chatId;
   renderChatTabs();
   const chat = await fetch(apiPath(`/api/chats/${chatId}`)).then((r) => r.json());
+  if (pid !== currentProjectId || chatId !== currentChatId) return;
   replayChat(chat);
   setWaiting(false);
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -270,7 +312,9 @@ async function createAndSelectChat() {
 }
 
 async function loadInitialChats() {
+  const pid = currentProjectId;
   const list = await fetch(apiPath('/api/chats')).then((r) => r.json());
+  if (pid !== currentProjectId) return;
   chatsMeta.clear();
   for (const meta of list) chatsMeta.set(meta.id, meta);
   const mostRecent = list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];

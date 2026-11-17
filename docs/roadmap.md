@@ -1,29 +1,41 @@
 # optimia: roadmap
 
-## Hecho en 2.0
+## Done in 2.0
 
-- Workbenches y chat y agentes en cualquier repo.
-- Catálogo de agentes con modelo por agente, pipelines (código, bug, tests,
-  documentación, auditoría, agente propio) y etapa de verificación.
-- Vigilancia de solo lectura (planos 1 y 2), dashboard, diffs en vivo, timeline,
-  avisos, métricas, notificaciones y modo compacto.
-- Explorador de ficheros con vistas previas, portapapeles, deshacer y papelera.
-- Seguridad de la API local (Host, Origin y token), CI con lint, formato, tests
-  unitarios, bats, e2e y gitleaks.
+- Workbenches, with chat and agents in any repo.
+- Agent catalog with a model per agent, pipelines (code, bug, tests, documentation, audit,
+  custom agent) and a verification stage.
+- Read-only supervision (planes 1 and 2), dashboard, live diffs, timeline, signals, metrics,
+  notifications and the compact glance window.
+- File explorer with previews, clipboard, undo and trash.
+- Local API security (Host, Origin and token); CI with lint, format, unit tests, bats, e2e
+  and gitleaks.
 
-## Siguiente
+## Done in 2.1
 
-- **Atajos de teclado** para cambiar de vista, de repo y de fichero en Cambios.
-- **Búsqueda** en el explorador y en el timeline (por nombre y por contenido).
-- **Comentarios en el diff** que se envían al agente de la tarea como respuesta.
-- **Varios proyectos en la misma pestaña** sin recargar: migrar la vista de proyecto
-  (`web/js/project/`) a módulos ES.
-- **Ventanas separadas** para la consola de un agente y para el diff de una tarea.
-- **Windows**: probar y documentar la vigilancia en NTFS y con WSL.
-- **Más motores**: Codex y OpenCode como motores de agente, igual que Claude y Ollama.
+- Task delivery as pull requests (drafted PR and Jira texts), "commit only" and several
+  tasks per branch.
+- Project and personal wikis kept up to date by an agent; export and import of all the
+  knowledge.
+- ECC bundled: improved agents, `@agent`, skills and commands.
+- Chat attachments (PDF, Office, images, any file).
+- LM Studio, OS sandbox for agents, approvable safety policy.
+- Switching repos without reloading.
+
+## Next
+
+- **Spanish and English UI**: the browser's language by default, selectable in Settings.
+- **Auto-sync of the knowledge** between machines (work, home…), on top of the export format.
+- **A video of every capability** for the README and the release notes.
+- **Keyboard shortcuts** to change view, repo and file in Changes.
+- **Search** in the explorer and the timeline (by name and by content).
+- **Diff comments** sent to the task's agent as an answer.
+- **Separate windows** for an agent's console and a task's diff.
+- **Windows**: test and document file watching on NTFS and WSL.
+- **More engines**: Codex and OpenCode as agent engines.
 
 ## Ideas
 
-- Presupuesto de coste por tarea y por agente, con aviso al acercarse.
-- Reglas de avisos propias (patrones y gravedad) por repo.
-- Exportar el timeline como informe de la jornada.
+- Cost budget per task and per agent, with a warning when close.
+- Custom signal rules (patterns and severity) per repo.
+- Export the timeline as a report of the day.

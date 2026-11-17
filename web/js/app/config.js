@@ -90,6 +90,7 @@ export async function importFile(file) {
     toast(`${file.name} no es un fichero JSON válido`, { kind: 'error' });
     return;
   }
+  if (config?.format === 'optimia-knowledge') return importKnowledgeFile(file, config);
   let preview;
   try {
     preview = await api.post('/api/config/import', { config, apply: false });
@@ -149,6 +150,66 @@ export async function importFile(file) {
           }
           toast('Configuración importada');
           // Every view reads settings and agents on load: start from a clean page.
+          setTimeout(() => location.reload(), 600);
+          return true;
+        }
+      }
+    ]
+  });
+}
+
+// The knowledge bundle (configuration + wikis + memories): a merge, shown before it happens.
+async function importKnowledgeFile(file, bundle) {
+  let preview;
+  try {
+    preview = await api.post('/api/knowledge/import', { bundle, apply: false });
+  } catch (err) {
+    toast(`No se puede importar ${file.name}: ${err.message}`, { kind: 'error' });
+    return;
+  }
+  const when = preview.exportedAt ? new Date(preview.exportedAt).toLocaleString() : 'fecha desconocida';
+  const pages = (list) => list.map((p) => `${p.wiki === 'personal' ? 'personal' : p.wiki} · ${p.path}`);
+  const mems = (list) => list.map((m) => `${m.key}${m.repo ? ` (${m.repo})` : ' (aún no está en este equipo)'}`);
+  const counts = (o) => o.add.length + o.update.length;
+  let withConfig = Boolean(preview.config);
+  openSheet({
+    title: 'Importar conocimiento',
+    className: 'import-sheet',
+    body: [
+      h('p', { class: 'muted' }, `${file.name} · exportado el ${when}`),
+      h(
+        'p',
+        {},
+        `${counts(preview.pages)} páginas de wiki y ${counts(preview.memories)} memorias nuevas o más recientes. Lo que ya tienes y es más reciente se conserva.`
+      ),
+      list('Páginas nuevas', pages(preview.pages.add)),
+      list('Páginas que se actualizan', pages(preview.pages.update)),
+      list('Se conserva tu versión (es más reciente)', pages(preview.pages.keep)),
+      list('Memorias nuevas', mems(preview.memories.add)),
+      list('Memorias que se actualizan', mems(preview.memories.update)),
+      preview.config
+        ? h(
+            'label',
+            { class: 'check-row' },
+            h('input', { type: 'checkbox', checked: true, onchange: (e) => (withConfig = e.target.checked) }),
+            'Importar también la configuración (instrucciones, agentes, modelos y avisos)'
+          )
+        : null,
+      h('p', { class: 'muted' }, 'Antes se guarda una copia de todo lo que se sustituye.')
+    ],
+    actions: [
+      { label: 'Cancelar' },
+      {
+        label: 'Importar',
+        primary: true,
+        onClick: async () => {
+          try {
+            await api.post('/api/knowledge/import', { bundle, apply: true, withConfig });
+          } catch (err) {
+            toast(`No se pudo importar: ${err.message}`, { kind: 'error' });
+            return false;
+          }
+          toast('Conocimiento importado');
           setTimeout(() => location.reload(), 600);
           return true;
         }
@@ -324,8 +385,13 @@ async function renderGeneralPane() {
   const host = document.getElementById('general-pane');
   if (!host) return;
   let checkEnabled = true;
+  let sandbox = null;
+  let wikiPrefs = null;
   try {
-    checkEnabled = (await api.get('/api/settings')).layers.global.updates.check;
+    const global = (await api.get('/api/settings')).layers.global;
+    checkEnabled = global.updates.check;
+    wikiPrefs = global.wiki;
+    sandbox = (await api.get('/api/config/status')).sandbox;
   } catch {
     /* keep the default */
   }
@@ -372,6 +438,38 @@ async function renderGeneralPane() {
         'Avisar cuando haya una versión nueva (consulta el registro de npm una vez al día)'
       )
     ),
+    renderSecurityField(sandbox),
+    renderWikiField(wikiPrefs),
+    renderEccField(),
+    h(
+      'div',
+      { class: 'settings-field' },
+      h('label', {}, 'Todo tu conocimiento'),
+      h(
+        'div',
+        { class: 'muted' },
+        'Un fichero con la configuración, las wikis (la personal y las de todos tus proyectos) y la memoria de cada repo, para llevarlo a otro equipo (trabajo, casa…). Al importarlo se combina con lo que ya tienes: gana lo más reciente. Guárdalo en un sitio privado.'
+      ),
+      h(
+        'div',
+        { class: 'general-actions' },
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'primary',
+            onclick: () => {
+              const a = h('a', { href: `/api/knowledge/export${includeSecrets ? '?secrets=1' : ''}`, download: '' });
+              document.body.append(a);
+              a.click();
+              a.remove();
+            }
+          },
+          'Exportar conocimiento…'
+        ),
+        h('button', { type: 'button', onclick: pickConfigFile }, 'Importar…')
+      )
+    ),
     h(
       'div',
       { class: 'settings-field' },
@@ -412,6 +510,167 @@ async function renderGeneralPane() {
         h('button', { type: 'button', onclick: pickConfigFile }, 'Importar configuración…')
       )
     )
+  );
+}
+
+// ECC (Everything Claude Code, MIT), bundled: which of its skills and commands every session gets.
+let eccFilter = '';
+function renderEccField() {
+  const host = h('div', { class: 'settings-field', id: 'ecc-field' }, h('label', {}, 'Skills de ECC'));
+  const body = h('div', {}, h('div', { class: 'muted' }, 'Cargando…'));
+  host.append(body);
+  const save = async (patch) => paint(await api.patch('/api/ecc', patch));
+  function paint(st) {
+    if (!st.available) {
+      body.replaceChildren(h('div', { class: 'muted' }, 'Esta instalación no incluye ECC.'));
+      return;
+    }
+    const on = st.skills.filter((s) => s.enabled);
+    const chars = on.reduce((n, s) => n + Math.min(s.description.length, 400), 0);
+    const list = h('div', { class: 'ecc-skill-list' });
+    const fill = () => {
+      const q = eccFilter.toLowerCase();
+      list.replaceChildren(
+        ...st.skills
+          .filter((s) => !q || s.name.includes(q) || s.description.toLowerCase().includes(q))
+          .map((s) =>
+            h(
+              'label',
+              { class: 'check-row ecc-skill', title: s.description },
+              h('input', {
+                type: 'checkbox',
+                checked: s.enabled,
+                onchange: (e) => {
+                  const names = new Set(on.map((x) => x.name));
+                  if (e.target.checked) names.add(s.name);
+                  else names.delete(s.name);
+                  save({ skills: [...names] });
+                }
+              }),
+              h('code', {}, s.name),
+              h('span', { class: 'muted' }, ` ${s.description.slice(0, 110)}${s.description.length > 110 ? '…' : ''}`)
+            )
+          )
+      );
+    };
+    fill();
+    body.replaceChildren(
+      h(
+        'div',
+        { class: 'muted' },
+        `${st.skills.length} skills, ${st.commands.count} comandos y ${st.agents} agentes de Everything Claude Code (licencia MIT), incluidos en optimia. `,
+        `Las skills activas llegan al chat y a los agentes (/nombre). ${on.length} activas: unos ${Math.round(chars / 4 / 100) * 100 || on.length * 30} tokens por sesión. Los agentes de ECC están en Ajustes › Agentes y con @ en el chat.`
+      ),
+      h('input', {
+        type: 'search',
+        placeholder: 'Buscar skills (react, docker, security…)',
+        'aria-label': 'Buscar skills de ECC',
+        value: eccFilter,
+        oninput: (e) => {
+          eccFilter = e.target.value;
+          fill();
+        }
+      }),
+      list,
+      h(
+        'label',
+        { class: 'check-row' },
+        h('input', {
+          type: 'checkbox',
+          checked: st.commands.enabled,
+          onchange: (e) => save({ commands: e.target.checked })
+        }),
+        `Incluir también sus ${st.commands.count} comandos (/code-review, /tdd, /plan…)`
+      ),
+      h(
+        'div',
+        { class: 'general-actions' },
+        h('button', { type: 'button', onclick: () => save({ skills: null }) }, 'Volver a la selección recomendada'),
+        h('button', { type: 'button', onclick: () => save({ skills: [] }) }, 'Ninguna')
+      )
+    );
+  }
+  api
+    .get('/api/ecc')
+    .then(paint)
+    .catch((err) => body.replaceChildren(h('div', { class: 'error-text' }, err.message)));
+  return host;
+}
+
+// Wikis: kept up to date by an agent after each task.
+function renderWikiField(prefs) {
+  if (!prefs) return null;
+  const toggle = (key, label) =>
+    h(
+      'label',
+      { class: 'check-row' },
+      h('input', {
+        type: 'checkbox',
+        checked: prefs[key],
+        onchange: (e) => api.patch('/api/settings', { scope: 'global', wiki: { [key]: e.target.checked } })
+      }),
+      label
+    );
+  return h(
+    'div',
+    { class: 'settings-field' },
+    h('label', {}, 'Wiki'),
+    h(
+      'div',
+      { class: 'muted' },
+      'Tras cada tarea con commit (o cada informe), el agente Bibliotecario actualiza la wiki del proyecto y, si aprende algo general, tu wiki personal. Puedes cambiar su modelo y su prompt en Ajustes › Agentes.'
+    ),
+    toggle('autoUpdate', 'Actualizar las wikis al terminar cada tarea'),
+    toggle('preferLocal', 'Usar el modelo local cuando esté disponible (más barato); si no puede, Claude')
+  );
+}
+
+// Security: the OS sandbox of the agents (Bash can only write inside the task's worktree).
+function renderSecurityField(sandbox) {
+  if (!sandbox) return null;
+  const state = sandbox.available
+    ? 'Disponible en este equipo.'
+    : sandbox.unsupported
+      ? 'No disponible en este sistema.'
+      : `No disponible: falta ${sandbox.missing.join(' y ')}.`;
+  return h(
+    'div',
+    { class: 'settings-field', id: 'security-field' },
+    h('label', { for: 'setting-sandbox' }, 'Seguridad de los agentes'),
+    h(
+      'div',
+      { class: 'muted' },
+      'Los agentes ejecutan sus comandos en el sandbox del sistema de Claude Code: solo pueden escribir dentro del worktree de su tarea. ',
+      state,
+      sandbox.install ? h('div', {}, 'Instálalo con: ', h('code', {}, sandbox.install)) : null
+    ),
+    h(
+      'select',
+      {
+        id: 'setting-sandbox',
+        onchange: async (e) => {
+          await api.patch('/api/settings', { scope: 'global', security: { sandbox: e.target.value } });
+          renderGeneralPane();
+        }
+      },
+      h(
+        'option',
+        { value: 'required', selected: sandbox.mode !== 'off' },
+        'Obligatorio: sin sandbox los agentes no arrancan'
+      ),
+      h(
+        'option',
+        { value: 'off', selected: sandbox.mode === 'off' },
+        'Desactivado: los agentes trabajan sin sandbox (riesgo)'
+      )
+    ),
+    sandbox.mode === 'off'
+      ? h(
+          'div',
+          { class: 'error-text' },
+          'Sin sandbox, solo las reglas de optimia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).'
+        )
+      : null
   );
 }
 

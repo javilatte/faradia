@@ -125,7 +125,20 @@ function sanitizeGlobal(raw) {
       noGo: strList(g.preferences?.noGo)
     },
     // Notify about new versions (asks the npm registry once a day).
-    updates: { check: g.updates?.check !== false }
+    updates: { check: g.updates?.check !== false },
+    // Agents run in Claude Code's OS sandbox (writes only in their worktree). "required": an agent
+    // does not start without it; "off": agents run unsandboxed (explicit choice of the user).
+    // ECC skills and commands given to every session (null skills = the default selection).
+    ecc: {
+      skills: Array.isArray(g.ecc?.skills) ? g.ecc.skills.filter((x) => typeof x === 'string').slice(0, 400) : null,
+      commands: g.ecc?.commands === true
+    },
+    // Wikis: an agent updates them after each task, with the local model when there is one.
+    wiki: { autoUpdate: g.wiki?.autoUpdate !== false, preferLocal: g.wiki?.preferLocal !== false },
+    // OPTIMIA_AGENT_SANDBOX=off forces it off (test runs with a fake claude).
+    security: {
+      sandbox: g.security?.sandbox === 'off' || process.env.OPTIMIA_AGENT_SANDBOX === 'off' ? 'off' : 'required'
+    }
   };
 }
 
@@ -149,6 +162,9 @@ function saveGlobalSettings(patch = {}) {
   if (patch.preferences?.instructions !== undefined) next.preferences.instructions = patch.preferences.instructions;
   if (patch.preferences?.noGo !== undefined) next.preferences.noGo = patch.preferences.noGo;
   next.updates = { ...current.updates, ...(patch.updates || {}) };
+  next.security = { ...current.security, ...(patch.security || {}) };
+  next.wiki = { ...current.wiki, ...(patch.wiki || {}) };
+  next.ecc = { ...current.ecc, ...(patch.ecc || {}) };
   const clean = sanitizeGlobal(next);
   writeJson(globalSettingsPath(), clean);
   return clean;
@@ -264,6 +280,9 @@ function effectiveFrom(global, project) {
   return {
     ui: global.ui,
     ai,
+    security: global.security,
+    wiki: global.wiki,
+    ecc: global.ecc,
     preferences: {
       // The repo's instructions are added to those for all repos.
       instructions: [globalInstructions, projectInstructions].filter(Boolean).join('\n\n'),

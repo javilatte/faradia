@@ -469,3 +469,9 @@ registerView('files', {
     }
   }
 });
+
+// The repo opened in the sidebar is the one shown here as well.
+window.addEventListener('optimia:project-changed', (e) => {
+  if (root && !root.hidden) setProject(e.detail.projectId).catch(() => {});
+  else projectId = null;
+});

@@ -6,6 +6,7 @@ const { configDir } = require('../store/globalPaths');
 const { loadGlobalSettings, saveGlobalSettings, globalSettingsPath } = require('../store/settingsStore');
 const { loadPrefs, savePrefs } = require('../store/globalPrefs');
 const catalog = require('../agents/catalog');
+const { eccAgents } = require('../ecc/library');
 const { MAPPABLE } = require('../agents/stageMap');
 const { STAGES } = require('../bridge/taskStages');
 const pkg = require('../../package.json');
@@ -129,7 +130,7 @@ function validateConfig(raw) {
   }
   const stageMap = {};
   const warnings = [];
-  const known = new Set([...catalog.BUILTIN_AGENTS.map((a) => a.id), ...ids]);
+  const known = new Set([...catalog.BUILTIN_AGENTS.map((a) => a.id), ...eccAgents().map((a) => a.id), ...ids]);
   for (const [stage, agentId] of Object.entries(raw.stageMap && typeof raw.stageMap === 'object' ? raw.stageMap : {})) {
     if (!MAPPABLE.includes(stage)) {
       warnings.push(`etapa desconocida "${stage}": se ignora`);
@@ -161,7 +162,7 @@ function previewImport(raw) {
   const current = loadGlobalSettings();
   const currentAgents = new Map(globalAgentFiles().map((a) => [a.id, a.content]));
   const importIds = new Set(cfg.agents.map((a) => a.id));
-  const builtin = new Set(catalog.BUILTIN_AGENTS.map((a) => a.id));
+  const builtin = new Set([...catalog.BUILTIN_AGENTS.map((a) => a.id), ...eccAgents().map((a) => a.id)]);
   const label = (id, name) => (builtin.has(id) ? `${name} (ajustes del agente por defecto)` : name);
   const s = cfg.settings;
   const changes = [];

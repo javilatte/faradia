@@ -7,6 +7,7 @@ const { checkClaudeCapabilities } = require('./bridge/claudeVersion');
 const { createApp } = require('./runtime/projectApp');
 const { ProjectRegistry } = require('./runtime/registry');
 const { openInBrowser, serveStatic, sendJson, readJsonBody } = require('./http/util');
+const { handleWikiRoutes } = require('./http/wikiRoutes');
 const security = require('./http/security');
 const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRoutes');
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
@@ -94,13 +95,25 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       }
     }
 
-    if (url.pathname.startsWith('/api/workbenches') || url.pathname === '/api/scan') {
+    if (
+      url.pathname.startsWith('/api/workbenches') ||
+      url.pathname === '/api/scan' ||
+      url.pathname === '/api/pick-folder'
+    ) {
       const handled = await handleWorkbenchRoutes(req, res, url, {
         registry,
         onChange: () => {
           sendToClients({ type: 'workbenches_changed' });
           monitor?.sync().catch(() => {});
         }
+      });
+      if (handled !== null) return handled;
+    }
+
+    if (url.pathname.startsWith('/api/wiki')) {
+      const handled = await handleWikiRoutes(req, res, url, {
+        registry,
+        onChange: (change) => sendToClients({ type: 'wiki_changed', ...change })
       });
       if (handled !== null) return handled;
     }
@@ -139,7 +152,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       return sendJson(res, 200, savePrefs(body));
     }
 
-    if (url.pathname.startsWith('/api/config/') || url.pathname === '/api/update') {
+    if (
+      url.pathname.startsWith('/api/config/') ||
+      url.pathname.startsWith('/api/knowledge/') ||
+      url.pathname === '/api/ecc' ||
+      url.pathname === '/api/update'
+    ) {
       const handled = await handleConfigRoutes(req, res, url);
       if (handled !== null) return handled;
     }
@@ -179,7 +197,9 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     // The link optimia prints carries ?token=: it is stored in a cookie and removed from the URL.
     const given = url.searchParams.get('token');
     if (given !== null) {
-      const headers = { Location: url.pathname };
+      // The rest of the query (?p=<project>) is kept.
+      url.searchParams.delete('token');
+      const headers = { Location: `${url.pathname}${url.search}` };
       if (security.safeEqual(given, sessionToken)) {
         headers['Set-Cookie'] = security.sessionCookie(sessionToken, actualPort);
       }

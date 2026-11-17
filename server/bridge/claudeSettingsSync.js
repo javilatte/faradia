@@ -3,6 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { hookWorks, HARD_DENY, FALLBACK_DENY } = require('./policy');
+const { sandboxSettings } = require('./sandbox');
+const { loadGlobalSettings } = require('../store/settingsStore');
 
 // Baseline allow-list and mode — not user-editable via the Settings UI for
 // now ("No-go files & commands" only edits the deny side). Mirrors what the
@@ -58,6 +61,19 @@ function agentClaudeSettingsPath(projectRoot) {
 }
 
 // Path of the repo's .claude/settings.json (only to read, import or clean up).
+// The same node that runs optimia (with nvm, "node" may not be on the PATH the hook gets).
+function policyHookCommand() {
+  const quote = (p) => `"${p.replace(/(["\\$`])/g, '\\$1')}"`;
+  return `${quote(process.execPath)} ${quote(path.join(__dirname, 'policyHook.js'))}`;
+}
+
+// Checked once per process: the hook script and node do not change while optimia runs.
+let hookCheck = null;
+function policyHookWorks() {
+  if (hookCheck === null) hookCheck = hookWorks(policyHookCommand());
+  return hookCheck;
+}
+
 function claudeSettingsPath(projectRoot) {
   return path.join(projectRoot, '.claude', 'settings.json');
 }
@@ -84,9 +100,18 @@ function syncClaudeSettings(projectRoot, noGo) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const settings = buildClaudeSettings(noGo);
   fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
+  // Agents: the safety policy (policy.js) runs as a hook so the user can approve exceptions; if the
+  // hook cannot run, plain deny rules take its place (fail closed). Commit, push, merge and rebase
+  // are always denied. The OS sandbox keeps Bash writes inside the worktree.
+  const hookOk = policyHookWorks();
+  const sandbox = sandboxSettings(loadGlobalSettings().security.sandbox);
   const agents = {
     enableAllProjectMcpServers: true,
-    permissions: { deny: settings.permissions.deny }
+    permissions: { deny: [...settings.permissions.deny, ...HARD_DENY, ...(hookOk ? [] : FALLBACK_DENY)] },
+    ...(hookOk
+      ? { hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: policyHookCommand() }] }] } }
+      : {}),
+    ...(sandbox ? { sandbox } : {})
   };
   fs.writeFileSync(agentClaudeSettingsPath(projectRoot), JSON.stringify(agents, null, 2) + '\n');
   cleanupLegacyClaudeSettings(projectRoot, noGo);
@@ -134,6 +159,8 @@ function cleanupLegacyClaudeSettings(projectRoot, noGo = []) {
 }
 
 module.exports = {
+  policyHookCommand,
+  policyHookWorks,
   claudeSettingsPath,
   optimiaClaudeSettingsPath,
   agentClaudeSettingsPath,
