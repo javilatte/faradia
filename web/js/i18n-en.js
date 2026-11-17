@@ -5,6 +5,7 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'Árbol de trabajo o worktree de una tarea': "Working tree or a task's worktree",
     Carpeta: 'Folder',
     Ver: 'View',
     'Árbol de trabajo': 'Working tree',

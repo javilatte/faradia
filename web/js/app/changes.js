@@ -441,7 +441,12 @@ function scheduleRefresh() {
 }
 
 on('monitor_state', (e) => e.projectId === sel.projectId && !sel.taskId && scheduleRefresh());
-on('monitor_worktree_state', (e) => e.projectId === sel.projectId && e.taskId === sel.taskId && scheduleRefresh());
+on('monitor_worktree_state', (e) => {
+  if (e.projectId !== sel.projectId) return;
+  // A worktree the selector does not list yet (an agent just started): refresh to offer it.
+  const known = monitorRepos.find((r) => r.projectId === e.projectId)?.worktrees?.some((w) => w.taskId === e.taskId);
+  if (e.taskId === sel.taskId || !known) scheduleRefresh();
+});
 on('monitor_activity', (e) => e.projectId === sel.projectId && (e.taskId || null) === sel.taskId && scheduleRefresh());
 
 registerView('changes', {
