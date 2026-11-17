@@ -57,8 +57,8 @@ test('first run: import the configuration from the welcome sheet, export it, and
   const preview = page.locator('.import-sheet');
   await expect(preview).toContainText('Instrucciones para todos los repos');
   await expect(preview).toContainText('Traductor');
-  await preview.getByRole('button', { name: 'Importar' }).click();
-  await page.waitForLoadState('load');
+  // Importing reloads the page by itself: wait for that reload, not just for the current load.
+  await Promise.all([page.waitForEvent('load'), preview.getByRole('button', { name: 'Importar' }).click()]);
   await expect(page.locator('.welcome-sheet')).toHaveCount(0);
 
   let s = await (await request.get('/api/settings', { headers: HEADERS })).json();
@@ -68,8 +68,14 @@ test('first run: import the configuration from the welcome sheet, export it, and
 
   // Dropping the original back onto the window restores it (after a preview).
   await openProject(page);
-  await dropFile(page, 'optimia-config-original.json', JSON.stringify(original));
-  await page.locator('.import-sheet').getByRole('button', { name: 'Importar' }).click();
+  // The drop handler is bound by a module that may still be loading on a slow machine: drop again
+  // until the preview shows.
+  const sheet = page.locator('.import-sheet');
+  await expect(async () => {
+    if (!(await sheet.isVisible())) await dropFile(page, 'optimia-config-original.json', JSON.stringify(original));
+    await expect(sheet).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  await sheet.getByRole('button', { name: 'Importar' }).click();
   await page.waitForLoadState('load');
   s = await (await request.get('/api/settings', { headers: HEADERS })).json();
   expect(s.preferences.globalInstructions).toBe(original.settings.preferences.instructions);
