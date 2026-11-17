@@ -63,6 +63,6 @@ test('enabled ECC skills reach every session through --add-dir; none, no folder'
   settings.ecc = { skills: ['tdd-workflow'], commands: false };
   const repo = mkTmpDir('ecc-repo');
   t.after(() => rmTmpDir(repo));
-  assert.deepEqual(buildSessionOptions(settings, repo).addDirs, [dir]);
+  assert.equal(buildSessionOptions(settings, repo).addDirs[0], dir);
   assert.ok(!fs.existsSync(path.join(dir, '.claude', 'commands')), 'rebuilt when the selection changes');
 });

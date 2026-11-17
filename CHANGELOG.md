@@ -1,6 +1,21 @@
 # Changelog
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/).
+Format based on [Keep a Changelog](https://keepachangelog.com/).
+
+## [2.1.1] - 2026-11-17
+
+### Added
+- **English interface**: Settings › Appearance › Language (Automatic, Español, English). Automatic follows the browser's language.
+- The chat and every agent know where the project and personal wikis are and read them on demand (Read/Grep), instead of rediscovering what is already written there.
+
+### Changed
+- The default workbench is called "Mi espacio" (renamed from "Por defecto" on its own), and the workbench selector no longer shows the number of repos.
+- Tighter, kerned Optimia logo.
+- 4K screenshots in the README; the README and the older CHANGELOG entries are fully in English.
+
+### Fixed
+- optimia warns on start when the agents' sandbox is missing (`bubblewrap` / `socat` on Linux) and says how to install it.
+- A flaky end-to-end test on macOS.
 
 ## [2.1.0] - 2026-11-17
 
@@ -24,95 +39,95 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.0.1] - 2026-11-15
 
-Correcciones para macOS.
+macOS fixes.
 
 ### Fixed
-- Si la terminal integrada no puede arrancar, optimia muestra el motivo en la interfaz en vez de cerrarse; un error en cualquier mensaje del WebSocket ya no tumba el servidor.
-- La terminal integrada no arrancaba en macOS (`posix_spawnp failed`): `node-pty` 1.1.0 trae su `spawn-helper` para macOS sin permiso de ejecución. optimia se lo da antes de abrir la terminal y, si no puede, explica cómo arreglarlo.
-- En macOS, la vigilancia de ficheros podía no ver un fichero creado justo después de su carpeta, así que el dashboard, la vista Cambios y el timeline no lo mostraban. En macOS y Windows se usa ahora la vigilancia recursiva nativa del sistema, sin los cambios dentro de carpetas que git ignora; en Linux se sigue vigilando carpeta a carpeta.
+- If the built-in terminal cannot start, optimia shows why in the UI instead of exiting; an error in any WebSocket message no longer brings the server down.
+- The built-in terminal did not start on macOS (`posix_spawnp failed`): `node-pty` 1.1.0 ships its macOS `spawn-helper` without the executable bit. optimia sets it before opening the terminal and, if it cannot, explains how to fix it.
+- On macOS, file watching could miss a file created right after its folder, so the dashboard, Changes and the timeline did not show it. macOS and Windows now use the system's native recursive watching, without changes inside folders git ignores; Linux still watches folder by folder.
 
 ### Changed
-- La CI ejecuta todas las suites también en macOS.
+- CI runs every suite on macOS too.
 
 ## [2.0.0] - 2026-11-15
 
-Supervisión de agentes y de varios repos a la vez. Cambio incompatible con 1.x en la API local (ver "Cambios incompatibles").
+Supervision of agents and of several repos at once. Breaking change to the 1.x local API (see "Breaking changes").
 
 ### Added
-- **Workbenches**: conjuntos de repos con nombre, en `~/.config/optimia/workbenches.json`. Se añaden a mano o buscando repos git bajo una carpeta, y el chat y los agentes funcionan en cualquier repo del workbench (selector en la barra superior).
-- **Agentes configurables**: diez agentes por defecto (Planificador, Implementador, Verificador, Revisor, Redactor de commits, Investigador, Redactor de documentación, Depurador, Escritor de tests y Auditor), cada uno con su motor (Claude o local), modelo, effort, acceso y prompt de rol. Se pueden ajustar o crear agentes propios por proyecto o para todos (Ajustes > Agentes), y elegir qué agente hace cada etapa.
-- **Pipelines nuevos**: bug (diagnosticar, implementar, verificar), tests, auditoría (solo informe) y agente propio, y una etapa de verificación que ejecuta tests, lint y build y da un veredicto. Cada tarjeta muestra qué agente y modelo hizo cada etapa.
-- **Dashboard** con el estado git en vivo de cada repo, la actividad de los agentes en sus worktrees, la actividad de las últimas 24 h y los avisos recientes.
-- **Diffs en vivo** (vista Cambios) de repos y worktrees de tareas: en línea o lado a lado, con contexto o el fichero entero, resaltado de sintaxis con Shiki y mapa de cambios.
-- **Timeline** de ficheros, commits, ramas, lista de vigilancia, tareas, avisos y cambios huérfanos, con filtros e historial de commits.
-- **Avisos pasivos**: borrados grandes, ficheros sensibles (marcados si git los commitearía), posibles secretos (reglas propias y gitleaks si está instalado; nunca se guarda el valor) y cambios en tests. Con notificaciones del sistema y modo compacto (glance).
-- **Lista de vigilancia** por repo (plano 2) para ficheros que git ignora.
-- **Explorador de ficheros** con vistas previas (markdown, código, imagen, audio, vídeo, PDF), portapapeles, renombrar, copiar, mover y borrar con Deshacer, y papelera restaurable.
-- CI en GitHub Actions (lint, formato, unitarios, bats, e2e con Playwright y gitleaks), ESLint y Prettier, `docs/design.md` y `docs/roadmap.md`.
-- `OPTIMIA_NO_OPEN=1` para arrancar sin abrir el navegador, y `--port` / `OPTIMIA_PORT` para fijar el puerto.
-- Diseño según las Human Interface Guidelines de Apple para macOS: barra lateral con las vistas y los repos, barra de herramientas con el título de la vista, colores semánticos con modo claro y oscuro, "Aumentar contraste" y "Reducir transparencia", escala tipográfica del sistema, botones push, menús desplegables, controles segmentados y anillos de foco. Atajos ⌥1…⌥5 (vistas), ⌘, (Ajustes) y ⌃⌘S (barra lateral).
-- Ajustes y agentes se guardan al momento, sin botón Guardar, y Ajustes se abre en el último apartado visitado.
-- El compositor muestra, antes de enviar una tarea, sus etapas y qué agente y modelo hará cada una, con un enlace para cambiarlos.
-- Las tarjetas de tarea muestran el pipeline con el estado de cada etapa y su agente y modelo; el chat y los informes se ven como markdown.
-- "Proponer mensaje de commit" rellena el campo de commit con un mensaje Conventional Commits que sigue el idioma del repo; sin él, el tipo se deduce del tipo de tarea.
-- Fusionar una tarea hace fast-forward cuando la base no ha avanzado, borra después su worktree y su rama, y la tarea pasa al grupo "Hechas".
-- Effort `xhigh` y `max`.
-- **Configuración global y por repo**: `~/.config/optimia/settings.json` guarda lo común (apariencia, modelo y effort, IA local, instrucciones de flujo de trabajo y lista "Prohibido") y cada repo solo lo que cambia; sus instrucciones y prohibiciones se suman a las globales. Ajustes tiene un selector "Todos los repos / Solo este repo" (también para agentes y pipelines), y cada campo dice si se hereda, con "Restablecer" y "Usar en todos los repos". Los `settings.json` antiguos se migran solos.
-- **Fichero de configuración**: Ajustes > General exporta todo lo global (ajustes, instrucciones y "Prohibido" comunes, agentes globales, pipelines y avisos) a un JSON privado, sin repos ni memoria, y sin la cabecera de autenticación de la IA local salvo que se pida. Se importa arrastrándolo a la ventana: antes se ve qué cambia y se guarda una copia de la configuración actual. En una instalación nueva, una hoja de bienvenida lo ofrece.
-- **Aviso de versiones nuevas**: optimia consulta el registro de npm una vez al día como mucho y avisa en la barra de herramientas con el comando para actualizar y las novedades. Se desactiva en Ajustes > General o con `OPTIMIA_NO_UPDATE_CHECK=1`.
-- **Conocer este repo**: un agente de solo lectura estudia el repo (comandos, estructura, convenciones, trampas) y propone su memoria, que se guarda con un clic. El tablero vacío de un repo sin memoria lo sugiere.
+- **Workbenches**: named sets of repos in `~/.config/optimia/workbenches.json`, added by hand or by searching a folder; chat and agents work in any repo of the workbench.
+- **Configurable agents**: ten default agents (Planner, Implementer, Verifier, Reviewer, Commit writer, Researcher, Documentation writer, Debugger, Test writer and Auditor), each with its engine (Claude or local), model, effort, access and role prompt. They can be tuned, or your own created, per project or for all, and you choose which agent runs each stage.
+- **New pipelines**: bug (diagnose, implement, verify), tests, audit (report only) and custom agent, plus a verification stage that runs tests, lint and build and gives a verdict. Each card shows which agent and model ran every stage.
+- **Dashboard** with each repo's live git state, the agents' activity in their worktrees, the last 24 h of activity and recent signals.
+- **Live diffs** (Changes) of repos and task worktrees: inline or side by side, with context or the whole file, Shiki highlighting and a change map.
+- **Timeline** of files, commits, branches, watchlist, tasks, signals and orphaned changes, with filters and commit history.
+- **Passive signals**: large deletes, sensitive files (flagged if git would commit them), possible secrets (own rules plus gitleaks when installed; the value is never stored) and test changes. With system notifications and a compact glance window.
+- **Watchlist** per repo (plane 2) for files git ignores.
+- **File explorer** with previews (markdown, code, image, audio, video, PDF), clipboard, rename, copy, move and delete with Undo, and a restorable trash.
+- CI on GitHub Actions (lint, format, unit, bats, Playwright e2e and gitleaks), ESLint and Prettier, `docs/design.md` and `docs/roadmap.md`.
+- `OPTIMIA_NO_OPEN=1` to start without opening the browser, and `--port` / `OPTIMIA_PORT` to set the port.
+- Design following Apple's Human Interface Guidelines for macOS: sidebar with views and repos, toolbar with the view title, semantic colors with light and dark modes, Increase Contrast and Reduce Transparency, the system type scale, push buttons, pop-up menus, segmented controls and focus rings. Shortcuts ⌥1…⌥5 (views), ⌘, (Settings) and ⌃⌘S (sidebar).
+- Settings and agents save at once, without a Save button, and Settings opens on the last pane visited.
+- Before sending a task, the composer shows its stages and which agent and model will run each one.
+- Task cards show the pipeline with each stage's state, agent and model; chat and reports render as markdown.
+- "Suggest commit message" fills in a Conventional Commits message in the repo's language; without it, the type comes from the task type.
+- Merging a task fast-forwards when the base has not moved, then removes its worktree and branch, and the task moves to "Done".
+- Efforts `xhigh` and `max`.
+- **Global and per-repo settings**: `~/.config/optimia/settings.json` holds what is shared (appearance, model and effort, local AI, workflow instructions and the "Forbidden" list) and each repo only what it changes; its instructions and prohibitions add to the global ones. Settings has an "All repos / Only this repo" switch (also for agents and pipelines), and each field says whether it is inherited, with "Reset" and "Use in every repo". Old `settings.json` files are migrated.
+- **Configuration file**: Settings > General exports everything global (settings, shared instructions and "Forbidden" list, global agents, pipelines and signals) to a private JSON, without repos or memory, and without the local AI auth header unless asked. Dropping it on the window imports it, after a preview and a backup. A new install offers it in a welcome sheet.
+- **New version notice**: optimia asks the npm registry at most once a day and shows a notice in the toolbar with the update command and the release notes. Off in Settings > General or with `OPTIMIA_NO_UPDATE_CHECK=1`.
+- **Learn this repo**: a read-only agent studies the repo (commands, structure, conventions, pitfalls) and proposes its memory, saved with one click. A new repo's empty board suggests it.
 
 ### Changed
-- Requiere Node 22 o posterior.
-- Los modelos locales se pasan por su nombre real de Ollama, sin el alias `claude-haiku-4-5`, así que cada agente puede usar un modelo local distinto a la vez.
-- `web/app.js` se divide en `web/js/project/`; las vistas nuevas son módulos ES en `web/js/app/`.
+- Requires Node 22 or later.
+- Local models are passed by their real Ollama name, without the `claude-haiku-4-5` alias, so each agent can use a different local model at once.
+- `web/app.js` is split into `web/js/project/`; the new views are ES modules in `web/js/app/`.
 
 ### Fixed
-- Cada etapa recibe el encargo original del usuario, no solo el plan de la anterior.
-- Una acción prohibida para los agentes ya no detiene la etapa: el agente recibe la denegación y sigue (la etapa solo se para si insiste).
-- Abrir Ajustes ya no borra lo que se empieza a escribir mientras carga.
-- El servidor MCP de tareas arranca con el mismo `node` que optimia (con nvm, `node` puede no estar en el PATH).
-- El timeline ignora los ficheros temporales de escrituras atómicas y editores.
+- Every stage gets the user's original request, not only the previous stage's plan.
+- An action forbidden to agents no longer stops the stage: the agent gets the denial and carries on.
+- Opening Settings no longer wipes what you start typing while it loads.
+- The tasks MCP server starts with the same `node` as optimia (with nvm, `node` may not be on the PATH).
+- The timeline ignores temporary files of atomic writes and editors.
 
 ### Security
-- La API local y el WebSocket comprueban el `Host` (contra DNS rebinding), el `Origin` (contra CSRF) y un token por ejecución (cabecera o cookie `SameSite=Strict`).
-- optimia ya no escribe en el repo: los permisos de sus sesiones (lista "Prohibido" incluida) van en `.optimia/claude-settings*.json` y se pasan con `claude --settings`. Antes reescribía `.claude/settings.json` (configuración compartida del proyecto, sustituyendo su lista `deny`) y lo copiaba a los worktrees, donde acababa en los commits. Un `.claude/settings.json` generado por versiones anteriores, sin seguimiento en git, se borra solo.
-- `.optimia` se excluye en `.git/info/exclude` en vez de editar el `.gitignore` del repo, y el enlace `.codegraph` solo se crea si se activa CodeGraph.
-- Los agentes de las tareas no heredan los conectores MCP de la cuenta de claude.ai del usuario (Gmail, Drive, Slack…): solo el MCP de optimia y el `.mcp.json` del repo (`--strict-mcp-config`).
-- Las etapas de solo lectura bloquean las herramientas de edición explícitamente.
-- El commit de una tarea respeta `.gitignore`: un fichero ignorado solo entra si se marca en la tarjeta.
+- The local API and the WebSocket check `Host` (DNS rebinding), `Origin` (CSRF) and a per-run token (header or `SameSite=Strict` cookie).
+- optimia no longer writes to the repo: its sessions' permissions (the "Forbidden" list included) live in `.optimia/claude-settings*.json`, passed with `claude --settings`. It used to rewrite `.claude/settings.json` (shared project configuration) and copy it into worktrees, where it ended up in commits. A `.claude/settings.json` generated by older versions and not tracked by git is removed.
+- `.optimia` is excluded in `.git/info/exclude` instead of editing the repo's `.gitignore`, and the `.codegraph` link is only created when CodeGraph is enabled.
+- Task agents do not inherit the user's claude.ai MCP connectors (Gmail, Drive, Slack…): only optimia's MCP server and the repo's `.mcp.json` (`--strict-mcp-config`).
+- Read-only stages block the edit tools explicitly.
+- A task's commit respects `.gitignore`: an ignored file only goes in if ticked on the card.
 
-### Cambios incompatibles
-- Los clientes de la API tienen que enviar `X-Optimia-Token`: el token sale en el enlace que imprime optimia al arrancar.
-- La API de un proyecto concreto vive en `/api/projects/:id/*`; `/api/*` sigue apuntando al proyecto de arranque.
+### Breaking changes
+- API clients must send `X-Optimia-Token`: the token is in the link optimia prints on start.
+- A specific project's API lives at `/api/projects/:id/*`; `/api/*` still points at the launch project.
 
 ## [1.0.1] - 2026-11-01
 
 ### Added
-- Registro por proyecto en `.optimia/logs/optimia.log` (JSON por línea, rotado a 5 MB): peticiones a la API, etapas de tareas, permisos denegados, cambios en archivos, commits, fusiones, preguntas y respuestas (texto recortado a 500 caracteres).
-- Pestaña "Registro" en Ajustes para consultarlo, con filtros por cambios en archivos, preguntas y respuestas.
+- Per-project log in `.optimia/logs/optimia.log` (one JSON per line, rotated at 5 MB): API requests, task stages, denied permissions, file changes, commits, merges, questions and answers (text cut at 500 characters).
+- A "Log" pane in Settings to read it, with filters for file changes, questions and answers.
 
 ### Fixed
-- Fusionar una tarea ya no exige cambiar la rama del checkout principal: se hace en un worktree temporal sobre la rama base.
+- Merging a task no longer requires switching the main checkout's branch: it happens in a temporary worktree on the base branch.
 
 ## [1.0.0] - 2026-10-31
 
-Reescritura completa del flujo de optimia. Cambio incompatible con versiones anteriores.
+Full rewrite of optimia's workflow. Breaking change.
 
 ### Added
-- Interfaz web local: `optimia` arranca un servidor Node (HTTP + WebSocket) y abre el navegador en vez de lanzar un wizard de terminal.
-- Chat en vivo contra un proceso `claude` CLI real (long-lived, NDJSON por WebSocket), con soporte de multi-turno dentro de la misma sesión.
-- Puente de IA local vía Ollama (endpoint `/v1/messages` compatible con la Anthropic Messages API).
-- Soporte de imágenes/capturas en el chat (paste y drag-and-drop), enviadas como bloques de imagen inline al proceso `claude`.
-- Panel de Settings en la web: modelo/effort de Claude, IA local, Instructions, Memory (`.optimia/memory.md`), No-go (patrones de `permissions.deny`), y gestión de Skills (`.claude/skills/`).
-- Migración automática de las preferencias existentes de un proyecto (`.optimia/system-prompt.md`, `permissions.deny` de `.claude/settings.json`) a los nuevos campos de Settings, con vista previa antes de aplicar.
-- Panel kanban de tareas para agentes de codificación, con worktrees de git por tarea.
-- `bin/optimia` reescrito como launcher Node delgado: crea `.optimia/`, ofrece activar/inicializar/sincronizar CodeGraph, y arranca el servidor.
+- Local web UI: `optimia` starts a Node server (HTTP + WebSocket) and opens the browser instead of a terminal wizard.
+- Live chat with a real `claude` CLI process (long-lived, NDJSON over WebSocket), multi-turn within one session.
+- Local AI bridge through Ollama (`/v1/messages` endpoint compatible with the Anthropic Messages API).
+- Images and screenshots in the chat (paste and drag and drop), sent as inline image blocks.
+- Settings panel: Claude model/effort, local AI, Instructions, Memory (`.optimia/memory.md`), No-go (`permissions.deny` patterns) and Skills (`.claude/skills/`).
+- Automatic migration of a project's existing preferences (`.optimia/system-prompt.md`, `permissions.deny` of `.claude/settings.json`), with a preview before applying.
+- Kanban board of coding agent tasks, with a git worktree per task.
+- `bin/optimia` rewritten as a thin Node launcher: creates `.optimia/`, offers to enable/initialize/sync CodeGraph, and starts the server.
 
 ### Removed
-- Soporte para opencode, Gemini CLI, GitHub Copilot CLI y `headroom`. Solo quedan **Claude Code** e **IA local** (Ollama).
-- El wizard interactivo de preguntas al arrancar (`ask_quick_questions`) y los subcomandos `tools`/`config`/`repos`/`agents` de la CLI — la configuración ahora vive en la interfaz web.
-- `openwiki` y la generación de `AGENTS.md`/`GEMINI.md`/`security.md` para otras herramientas.
+- Support for opencode, Gemini CLI, GitHub Copilot CLI and `headroom`. Only **Claude Code** and **local AI** (Ollama) remain.
+- The interactive start-up wizard (`ask_quick_questions`) and the `tools`/`config`/`repos`/`agents` CLI subcommands: configuration lives in the web UI.
+- `openwiki` and the generation of `AGENTS.md`/`GEMINI.md`/`security.md` for other tools.
 
 ### Changed
-- `optimia` ya no usa la API de Claude directamente: siempre orquesta el CLI real `claude` como subproceso.
+- `optimia` no longer uses the Claude API directly: it always drives the real `claude` CLI as a subprocess.

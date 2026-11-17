@@ -8,6 +8,8 @@ const { createApp } = require('./runtime/projectApp');
 const { ProjectRegistry } = require('./runtime/registry');
 const { openInBrowser, serveStatic, sendJson, readJsonBody } = require('./http/util');
 const { handleWikiRoutes } = require('./http/wikiRoutes');
+const { sandboxProblem } = require('./bridge/sandbox');
+const { loadGlobalSettings } = require('./store/settingsStore');
 const security = require('./http/security');
 const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRoutes');
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
@@ -317,6 +319,9 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       const url = `http://127.0.0.1:${actualPort}`;
       const openUrl = `${url}/?token=${sessionToken}`;
       console.log(`optimia running at ${openUrl} (project: ${projectRoot})`);
+      // Agents need the OS sandbox: say so on start, not only when a task fails.
+      const sandboxNote = sandboxProblem(loadGlobalSettings().security.sandbox);
+      if (sandboxNote) console.warn(`\n⚠ ${sandboxNote}\n`);
       rt.log.info('server.start', { url, port: actualPort, projectRoot });
       if (open) openInBrowser(openUrl);
       startMonitor();

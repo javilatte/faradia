@@ -9,7 +9,9 @@ const { configDir } = require('./globalPaths');
 // A workbench is a named set of repos looked at together ("Work", "Client X"...). A repo can be in
 // several. Stored in ~/.config/optimia/workbenches.json, outside any repo.
 
-const DEFAULT_NAME = 'Por defecto';
+const DEFAULT_NAME = 'Mi espacio';
+// Name of the default workbench before 2.1.1, renamed when read.
+const LEGACY_DEFAULT_NAME = 'Por defecto';
 // Folders never walked when looking for repos: heavy or generated.
 const SKIP_DIRS = new Set([
   'node_modules',
@@ -42,6 +44,7 @@ function load() {
   try {
     const data = JSON.parse(fs.readFileSync(storePath(), 'utf8'));
     if (!Array.isArray(data.workbenches)) return emptyStore();
+    for (const wb of data.workbenches) if (wb.name === LEGACY_DEFAULT_NAME) wb.name = DEFAULT_NAME;
     return { ...emptyStore(), ...data };
   } catch {
     return emptyStore();
@@ -188,7 +191,7 @@ function removeRepo(id, repoPath) {
 }
 
 // The project optimia is launched from is always in some workbench: if it is in none, it goes into
-// "Por defecto" (created if needed).
+// "Mi espacio" (created if needed).
 function ensureLaunchRepo(root) {
   const store = load();
   const repo = normalizeRepo(root);

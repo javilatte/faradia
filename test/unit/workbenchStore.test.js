@@ -26,7 +26,7 @@ function makeRepo(parent, rel) {
   return fs.realpathSync(dir);
 }
 
-test('ensureLaunchRepo: creates "Por defecto" with the repo and makes it active', (t) => {
+test('ensureLaunchRepo: creates "Mi espacio" with the repo and makes it active', (t) => {
   const wb = freshStore(t);
   const repo = mkTmpDir('wb-launch');
   t.after(() => rmTmpDir(repo));

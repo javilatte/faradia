@@ -166,9 +166,7 @@ function renderSwitcher() {
         }
       }
     },
-    state.workbenches.map((w) =>
-      h('option', { value: w.id, selected: w.id === state.activeWorkbenchId }, `${w.name} (${w.repos.length})`)
-    )
+    state.workbenches.map((w) => h('option', { value: w.id, selected: w.id === state.activeWorkbenchId }, w.name))
   );
   host.append(
     wbSelect,
