@@ -15,9 +15,9 @@ function makeRepo(dir) {
   execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: dir });
 }
 
-test('the launch project shows up in the "Por defecto" workbench', async ({ page }) => {
+test('the launch project shows up in the "Mi espacio" workbench', async ({ page }) => {
   await page.goto('/?token=e2e-token');
-  await expect(page.locator('#wb-select')).toContainText('Por defecto');
+  await expect(page.locator('#wb-select')).toContainText('Mi espacio');
   await expect(page.locator('#repo-list .repo-item.active')).toContainText('demo');
   await expect(page.locator('#main-nav')).toContainText('Chat y agentes');
   await expect(page.locator('#view-title')).toHaveText('Chat y agentes');
@@ -115,7 +115,7 @@ test('switching repos is instant: no reload, each repo keeps its chat and draft,
     page
       .locator('#wb-select')
       .selectOption(await page.locator('#wb-select option', { hasText: name }).getAttribute('value'));
-  await pickWorkbench('Por defecto');
+  await pickWorkbench('Mi espacio');
   await expect(page.locator('#project-label')).toHaveText('demo');
   await pickWorkbench('Cambio rápido');
   await expect(page.locator('#project-label')).toHaveText('uno');

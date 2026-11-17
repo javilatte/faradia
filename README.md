@@ -105,7 +105,7 @@ npx @javilatte/optimia
 | [`claude`](https://claude.ai/code) (Claude Code CLI) | yes | chats and agents are real `claude` subprocesses — optimia never calls the Anthropic API directly |
 | [LM Studio](https://lmstudio.ai) ≥ 0.4 or [Ollama](https://ollama.com) ≥ 0.14 | optional | local models for the chat or for any agent (both serve the Anthropic Messages API that `claude` needs) |
 | [`gh`](https://cli.github.com) | optional | opens the pull request of a task from its card (without it, optimia pushes the branch and opens the page to create it) |
-| `bubblewrap` and `socat` (Linux) | recommended | Claude Code's OS sandbox for the agents (`sudo apt install bubblewrap socat`); built in on macOS. Without it agents do not start unless you turn the sandbox off in Settings › General |
+| `bubblewrap` and `socat` (Linux) | recommended | Claude Code's OS sandbox for the agents (`sudo apt install bubblewrap socat`); built in on macOS. Without it agents do not start unless you turn the sandbox off in Settings → General |
 | [`gitleaks`](https://github.com/gitleaks/gitleaks) | optional | extra secret detection rules on top of the built-in ones |
 
 ---
@@ -114,12 +114,12 @@ npx @javilatte/optimia
 
 | View | What it does |
 |---|---|
-| **Chat y agentes** | Chat with Claude (with attachments, `@agent` and `/skill`) and the board of agent tasks for the selected repo. |
+| **Chat & agents** | Chat with Claude (with attachments, `@agent` and `/skill`) and the board of agent tasks for the selected repo. |
 | **Dashboard** | One card per repo of the active workbench: branch, ahead/behind, changes, lines ±, last commit, live activity (including agents in their worktrees), 24 h activity and recent signals. |
-| **Cambios** | Live diff of any repo or task worktree: inline or side by side, with context or the whole file, syntax highlighting and a change map. It refreshes by itself while files change. Commits open here too. |
+| **Changes** | Live diff of any repo or task worktree: inline or side by side, with context or the whole file, syntax highlighting and a change map. It refreshes by itself while files change. Commits open here too. |
 | **Wiki** | The project's wiki and your personal one: tree, search, link map, reading and editing. |
 | **Timeline** | Chronological feed of changed files, commits, branch switches, watchlist events, agent task updates, signals and orphaned changes, with filters and the commit history of each repo. |
-| **Archivos** | File tree with previews (markdown, code, images, audio, video, PDF), copy path, a file clipboard, rename/copy/move/delete with **Undo**, and a trash you can restore from. |
+| **Files** | File tree with previews (markdown, code, images, audio, video, PDF), copy path, a file clipboard, rename/copy/move/delete with **Undo**, and a trash you can restore from. |
 
 The **glance** button in the top bar opens a small window with one line per repo,
 for a corner of your screen.
@@ -133,11 +133,11 @@ own git worktree:
 
 | Task type | Pipeline |
 |---|---|
-| Código (`coding`) | plan → implement → verify |
+| Code (`coding`) | plan → implement → verify |
 | Bug (`bugfix`) | diagnose → implement → verify |
 | Tests (`tests`) | plan → write tests → verify |
-| Documentación (`documentation`) | research → (choose format and target) → write |
-| Auditoría (`audit`) | audit → report (no changes) |
+| Documentation (`documentation`) | research → (choose format and target) → write |
+| Audit (`audit`) | audit → report (no changes) |
 | Agente propio (`custom`) | one stage with one of your agents |
 
 Review, commit preparation and the PR / Jira description run on demand once a task
@@ -145,7 +145,7 @@ is ready. The verifier runs
 the project's tests, lint and build and gives a verdict; disable it to skip that
 stage. Each task card shows which agent and model ran every stage.
 
-In **Ajustes → Agentes** you can change any agent's engine (Claude or local), model,
+In **Settings → Agents** you can change any agent's engine (Claude or local), model,
 effort and role prompt, choose which agent runs each stage, and create your own
 agents — for this project or for all of them. Agents are plain Markdown files with
 frontmatter:
@@ -157,7 +157,7 @@ frontmatter:
 
 ### Local models
 
-**Ajustes → IA local → Detectar servidores locales** finds LM Studio and Ollama on
+**Settings → Local AI → Detect local servers** finds LM Studio and Ollama on
 this machine and lists their models; the chat's model selector lists them too,
 under the Claude models. Any agent can use a local model, and several agents can use
 different ones at the same time. Your Claude account never reaches the local server:
@@ -173,16 +173,16 @@ blocked and lets you allow it. Read-only stages cannot edit files. Task
 agents only see optimia's MCP server and your repo's `.mcp.json`, not the
 connectors of your claude.ai account.
 
-Commit and delivery are always your action, from the task card. "Proponer mensaje de
-commit" fills in a Conventional Commits message in the repo's language; the commit
+Commit and delivery are always your action, from the task card. "Suggest commit
+message" fills in a Conventional Commits message in the repo's language; the commit
 respects `.gitignore` (ignored files only go in if you tick them).
 
 After the commit, a repo with a remote delivers the task as a **pull request**:
 
-- **Pull request** tab: "Redactar con IA" drafts the title and description from the
+- **Pull request** tab: "Draft with AI" drafts the title and description from the
   request, the plan, the verification and the branch diff. It follows the repo's PR
   template and leaves the internal process of the task out. Optional notes steer it
-  ("no menciones la migración"). "Crear PR" pushes the branch and opens the PR with
+  ("don't mention the migration"). "Create PR" pushes the branch and opens the PR with
   `gh` (draft if you want); later commits update it. Without `gh`, or on GitLab and
   Bitbucket, the branch is pushed and the page to create the PR opens.
 - **Jira** tab: a separate comment for the ticket (what was done, how to test it,
@@ -197,19 +197,19 @@ then removes the task's worktree and branch.
 ## One workflow, every repo
 
 Configuration has two layers, so every repo works the same way and each one can
-still have what is its own. Settings has a **Todos los repos / Solo este repo**
+still have what is its own. Settings has a **All repos / Only this repo**
 switch:
 
 | | All repos (global) | This repo |
 |---|---|---|
-| Model, effort, local AI | the default for every repo | only what this repo changes; each field says whether it is inherited, with **Restablecer** and **Usar en todos los repos** |
+| Model, effort, local AI | the default for every repo | only what this repo changes; each field says whether it is inherited, with **Reset** and **Use in every repo** |
 | Instructions | the common workflow (commit style, how to verify, language…) | extra instructions, added after the global ones and winning on conflict |
-| Prohibido (no-go) | denied for every repo | added on top of the global list |
+| Forbidden (no-go) | denied for every repo | added on top of the global list |
 | Agents and pipelines | which agent and model runs each stage | per-repo overrides |
 | Memory | — | the repo's own knowledge: commands, structure, conventions, pitfalls |
 | Appearance, signals | global | — |
 
-**Conocer este repo** (Ajustes → Memoria, or the empty board of a new repo) runs a
+**Learn this repo** (Settings → Memory, or the empty board of a new repo) runs a
 read-only agent that studies the repo and proposes its memory; you save it with one
 click and can edit it later. Quick changes from the composer (model, effort) are
 stored where the value lives: in the repo if it overrides it, otherwise for all repos.
@@ -219,14 +219,14 @@ read: only what differs from the defaults stays as a repo override.
 
 ### Your configuration file
 
-**Ajustes → General → Exportar configuración…** saves everything global in one
+**Settings → General → Export configuration…** saves everything global in one
 JSON file: settings, common instructions and no-go list, global agents, the stage
 map and signal preferences. It leaves out your repos, their memory and anything
 tied to this machine; the local AI auth header only goes in if you tick it. Keep
 the file somewhere private — it holds your instructions and your agents' prompts.
 
-To import it, **drop it anywhere on the optimia window** (or use Importar
-configuración…). optimia shows what will change and backs up the current
+To import it, **drop it anywhere on the optimia window** (or use Import
+configuration…). optimia shows what will change and backs up the current
 configuration to `~/.config/optimia/backups/` first. On a fresh install, the
 welcome sheet offers exactly that.
 
@@ -234,21 +234,21 @@ welcome sheet offers exactly that.
 
 optimia asks the npm registry at most once a day whether a newer version exists and
 shows a notice in the toolbar with the install command and the release notes. Turn
-it off in Ajustes → General, or with `OPTIMIA_NO_UPDATE_CHECK=1`.
+it off in Settings → General, or with `OPTIMIA_NO_UPDATE_CHECK=1`.
 
 ## Delivering tasks
 
 After the agents finish, you review and commit from the card. In a repo with a remote:
 
-- **Pull request**: "Redactar con IA" drafts the title and description from the request,
+- **Pull request**: "Draft with AI" drafts the title and description from the request,
   the plan, the verification and the branch diff, following the repo's PR template and
-  leaving the task's internal process out. Optional notes steer it. "Crear PR" pushes the
+  leaving the task's internal process out. Optional notes steer it. "Create PR" pushes the
   branch and opens the PR with `gh` (draft if you want); later commits update it. Without
   `gh`, or on GitLab and Bitbucket, the branch is pushed and the page to open it shows up.
 - **Jira**: a separate comment for the ticket (what was done, how to test it, what is
   pending), copied to the clipboard.
-- **Solo commit**: the task ends with its commit on its branch. Type an existing branch in
-  the task's "Rama" field and the next task continues it: several tasks, one branch.
+- **Commit only**: the task ends with its commit on its branch. Type an existing branch in
+  the task's "Branch" field and the next task continues it: several tasks, one branch.
 
 A repo without a remote merges locally instead.
 
@@ -256,12 +256,12 @@ A repo without a remote merges locally instead.
 
 The **Wiki** view has two wikis: the project's and your personal one. Pages are markdown
 linked with `[[Page]]`; browse them as a tree, search them, see them as a map, read and
-edit them. After each committed task (and each report), the *Bibliotecario* agent updates
+edit them. After each committed task (and each report), the *Librarian* agent updates
 the project wiki, and your personal wiki when it learns something general. It uses your
 local model when one is configured and answering; otherwise, or if it fails, Claude Haiku.
 
 Wikis live outside the repos (`~/.local/share/optimia/knowledge`), keyed by the project's
-git remote, so a project has the same wiki on every machine. **Settings › General ›
+git remote, so a project has the same wiki on every machine. **Settings → General →
 Export knowledge** writes one file with your configuration, every wiki and each repo's
 memory; importing it merges by date (the newer side wins, replaced items are backed up).
 
@@ -273,8 +273,8 @@ memory; importing it merges by date (the newer side wins, replaced items are bac
 - optimia's agents follow the method of their ECC counterpart (Reviewer ← code-reviewer,
   Planner ← planner + architect, Verifier ← build-error-resolver, Test writer ←
   tdd-guide, Auditor ← security-reviewer + performance-optimizer…);
-- its 72 agents are in Settings › Agents; type `@` in the chat to call any of them;
-- its skills (a general-purpose set by default, any of the 327 selectable in Settings ›
+- its 72 agents are in Settings → Agents; type `@` in the chat to call any of them;
+- its skills (a general-purpose set by default, any of the 327 selectable in Settings →
   General) and, optionally, its commands reach every session.
 
 ## Attachments
@@ -301,7 +301,7 @@ Supervision is **read-only**: optimia never writes to a repo to monitor it.
   default).
 
 Thresholds, rules, notifications and the watchlist live in
-**Ajustes → Avisos y vigilancia**. Folders are watched one by one (not with a
+**Settings → Signals and watchlist**. Folders are watched one by one (not with a
 recursive watch that would put a watcher on every `node_modules` folder).
 
 ---
@@ -322,7 +322,7 @@ Agents are contained in layers:
   write inside the task's worktree. Required by default (`failIfUnavailable`).
 - **Policy hook**: destructive commands (`rm`, `sudo`, `git reset --hard`, discarding
   changes…) are blocked anywhere in a command line, the agent is told why and carries on.
-  The card lists them and "Permitir" approves that exact command for the repo. Approvals
+  The card lists them and "Allow" approves that exact command for the repo. Approvals
   are fixed when a stage starts, so an agent cannot grant itself one; if the hook cannot
   run, plain deny rules take its place.
 - **Never approvable**: commit, push, merge and rebase (deny rules plus a git hook).
@@ -344,7 +344,7 @@ with a sandbox CSP.
 ├── tasks.json, chats.json       kanban and chat state
 ├── agents/                      project agents and stage map
 ├── worktrees/                   one git worktree per agent task
-└── logs/optimia.log             activity log (Ajustes → Registro)
+└── logs/optimia.log             activity log (Settings → Log)
 
 ~/.config/optimia/               global
 ├── settings.json                appearance, model/effort, local AI, common instructions and no-go list
@@ -360,7 +360,7 @@ with a sandbox CSP.
 
 optimia leaves your repo alone: `.optimia` is excluded through `.git/info/exclude`
 (never your `.gitignore`), and the Claude Code permissions of its own sessions —
-including the "Prohibido" list — live in `.optimia/claude-settings*.json` and are
+including the "Forbidden" list — live in `.optimia/claude-settings*.json` and are
 passed with `claude --settings`, so your project's `.claude/` is never touched.
 
 ---
