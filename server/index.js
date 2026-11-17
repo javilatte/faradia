@@ -155,7 +155,6 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     if (
       url.pathname.startsWith('/api/config/') ||
       url.pathname.startsWith('/api/knowledge/') ||
-      url.pathname.startsWith('/api/tools/') ||
       url.pathname === '/api/update'
     ) {
       const handled = await handleConfigRoutes(req, res, url);

@@ -128,8 +128,6 @@ function sanitizeGlobal(raw) {
     updates: { check: g.updates?.check !== false },
     // Agents run in Claude Code's OS sandbox (writes only in their worktree). "required": an agent
     // does not start without it; "off": agents run unsandboxed (explicit choice of the user).
-    // Claude Code plugins enabled in optimia's sessions (see bridge/plugins.js).
-    tools: { ecc: g.tools?.ecc === true },
     // Wikis: an agent updates them after each task, with the local model when there is one.
     wiki: { autoUpdate: g.wiki?.autoUpdate !== false, preferLocal: g.wiki?.preferLocal !== false },
     // OPTIMIA_AGENT_SANDBOX=off forces it off (test runs with a fake claude).
@@ -161,7 +159,6 @@ function saveGlobalSettings(patch = {}) {
   next.updates = { ...current.updates, ...(patch.updates || {}) };
   next.security = { ...current.security, ...(patch.security || {}) };
   next.wiki = { ...current.wiki, ...(patch.wiki || {}) };
-  next.tools = { ...current.tools, ...(patch.tools || {}) };
   const clean = sanitizeGlobal(next);
   writeJson(globalSettingsPath(), clean);
   return clean;

@@ -5,7 +5,6 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { hookWorks, HARD_DENY, FALLBACK_DENY } = require('./policy');
 const { sandboxSettings } = require('./sandbox');
-const { enabledPluginsSetting } = require('./plugins');
 const { loadGlobalSettings } = require('../store/settingsStore');
 
 // Baseline allow-list and mode — not user-editable via the Settings UI for
@@ -99,24 +98,20 @@ function buildClaudeSettings(noGo) {
 function syncClaudeSettings(projectRoot, noGo) {
   const file = optimiaClaudeSettingsPath(projectRoot);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const global = loadGlobalSettings();
-  // Plugins enabled only in optimia's sessions (ECC...).
-  const plugins = enabledPluginsSetting(global.tools);
-  const settings = { ...buildClaudeSettings(noGo), ...(plugins ? { enabledPlugins: plugins } : {}) };
+  const settings = buildClaudeSettings(noGo);
   fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
   // Agents: the safety policy (policy.js) runs as a hook so the user can approve exceptions; if the
   // hook cannot run, plain deny rules take its place (fail closed). Commit, push, merge and rebase
   // are always denied. The OS sandbox keeps Bash writes inside the worktree.
   const hookOk = policyHookWorks();
-  const sandbox = sandboxSettings(global.security.sandbox);
+  const sandbox = sandboxSettings(loadGlobalSettings().security.sandbox);
   const agents = {
     enableAllProjectMcpServers: true,
     permissions: { deny: [...settings.permissions.deny, ...HARD_DENY, ...(hookOk ? [] : FALLBACK_DENY)] },
     ...(hookOk
       ? { hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: policyHookCommand() }] }] } }
       : {}),
-    ...(sandbox ? { sandbox } : {}),
-    ...(plugins ? { enabledPlugins: plugins } : {})
+    ...(sandbox ? { sandbox } : {})
   };
   fs.writeFileSync(agentClaudeSettingsPath(projectRoot), JSON.stringify(agents, null, 2) + '\n');
   cleanupLegacyClaudeSettings(projectRoot, noGo);
