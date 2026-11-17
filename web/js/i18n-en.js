@@ -539,6 +539,7 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^Agente: (.+)$', 'Agent: $1'],
     [
       '^"(.+)" necesita tu respuesta\\. Contéstala en su tarjeta del panel de agentes\\.$',
       '"$1" needs your answer. Reply on its card in the agents panel.'
