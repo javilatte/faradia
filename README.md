@@ -25,6 +25,7 @@
 
 <p align="center">
   <a href="https://optimia.jagoan.es/media/optimia-promo-v2.2.mp4"><b>▶ Watch optimia in one minute</b></a>
+  &nbsp;·&nbsp; <a href="https://optimia.jagoan.es/media/optimia-promo-v2.2-4k.mp4">4K</a>
   &nbsp;·&nbsp; real agents on a real two-repo project, sped up
 </p>
 
