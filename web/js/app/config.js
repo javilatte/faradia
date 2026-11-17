@@ -90,6 +90,7 @@ export async function importFile(file) {
     toast(`${file.name} no es un fichero JSON válido`, { kind: 'error' });
     return;
   }
+  if (config?.format === 'optimia-knowledge') return importKnowledgeFile(file, config);
   let preview;
   try {
     preview = await api.post('/api/config/import', { config, apply: false });
@@ -149,6 +150,66 @@ export async function importFile(file) {
           }
           toast('Configuración importada');
           // Every view reads settings and agents on load: start from a clean page.
+          setTimeout(() => location.reload(), 600);
+          return true;
+        }
+      }
+    ]
+  });
+}
+
+// The knowledge bundle (configuration + wikis + memories): a merge, shown before it happens.
+async function importKnowledgeFile(file, bundle) {
+  let preview;
+  try {
+    preview = await api.post('/api/knowledge/import', { bundle, apply: false });
+  } catch (err) {
+    toast(`No se puede importar ${file.name}: ${err.message}`, { kind: 'error' });
+    return;
+  }
+  const when = preview.exportedAt ? new Date(preview.exportedAt).toLocaleString() : 'fecha desconocida';
+  const pages = (list) => list.map((p) => `${p.wiki === 'personal' ? 'personal' : p.wiki} · ${p.path}`);
+  const mems = (list) => list.map((m) => `${m.key}${m.repo ? ` (${m.repo})` : ' (aún no está en este equipo)'}`);
+  const counts = (o) => o.add.length + o.update.length;
+  let withConfig = Boolean(preview.config);
+  openSheet({
+    title: 'Importar conocimiento',
+    className: 'import-sheet',
+    body: [
+      h('p', { class: 'muted' }, `${file.name} · exportado el ${when}`),
+      h(
+        'p',
+        {},
+        `${counts(preview.pages)} páginas de wiki y ${counts(preview.memories)} memorias nuevas o más recientes. Lo que ya tienes y es más reciente se conserva.`
+      ),
+      list('Páginas nuevas', pages(preview.pages.add)),
+      list('Páginas que se actualizan', pages(preview.pages.update)),
+      list('Se conserva tu versión (es más reciente)', pages(preview.pages.keep)),
+      list('Memorias nuevas', mems(preview.memories.add)),
+      list('Memorias que se actualizan', mems(preview.memories.update)),
+      preview.config
+        ? h(
+            'label',
+            { class: 'check-row' },
+            h('input', { type: 'checkbox', checked: true, onchange: (e) => (withConfig = e.target.checked) }),
+            'Importar también la configuración (instrucciones, agentes, modelos y avisos)'
+          )
+        : null,
+      h('p', { class: 'muted' }, 'Antes se guarda una copia de todo lo que se sustituye.')
+    ],
+    actions: [
+      { label: 'Cancelar' },
+      {
+        label: 'Importar',
+        primary: true,
+        onClick: async () => {
+          try {
+            await api.post('/api/knowledge/import', { bundle, apply: true, withConfig });
+          } catch (err) {
+            toast(`No se pudo importar: ${err.message}`, { kind: 'error' });
+            return false;
+          }
+          toast('Conocimiento importado');
           setTimeout(() => location.reload(), 600);
           return true;
         }
@@ -379,6 +440,35 @@ async function renderGeneralPane() {
     ),
     renderSecurityField(sandbox),
     renderWikiField(wikiPrefs),
+    h(
+      'div',
+      { class: 'settings-field' },
+      h('label', {}, 'Todo tu conocimiento'),
+      h(
+        'div',
+        { class: 'muted' },
+        'Un fichero con la configuración, las wikis (la personal y las de todos tus proyectos) y la memoria de cada repo, para llevarlo a otro equipo (trabajo, casa…). Al importarlo se combina con lo que ya tienes: gana lo más reciente. Guárdalo en un sitio privado.'
+      ),
+      h(
+        'div',
+        { class: 'general-actions' },
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'primary',
+            onclick: () => {
+              const a = h('a', { href: `/api/knowledge/export${includeSecrets ? '?secrets=1' : ''}`, download: '' });
+              document.body.append(a);
+              a.click();
+              a.remove();
+            }
+          },
+          'Exportar conocimiento…'
+        ),
+        h('button', { type: 'button', onclick: pickConfigFile }, 'Importar…')
+      )
+    ),
     h(
       'div',
       { class: 'settings-field' },

@@ -152,7 +152,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       return sendJson(res, 200, savePrefs(body));
     }
 
-    if (url.pathname.startsWith('/api/config/') || url.pathname === '/api/update') {
+    if (
+      url.pathname.startsWith('/api/config/') ||
+      url.pathname.startsWith('/api/knowledge/') ||
+      url.pathname === '/api/update'
+    ) {
       const handled = await handleConfigRoutes(req, res, url);
       if (handled !== null) return handled;
     }

@@ -32,6 +32,7 @@ const { ensureGitGuardHooks } = require('../bridge/gitGuard');
 const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
 const { sandboxProblem } = require('../bridge/sandbox');
 const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
+const { adoptPendingMemory } = require('../knowledge/bundle');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
 const {
   STAGE_PHASE,
@@ -105,6 +106,12 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   ensureOptimiaExcluded(projectRoot);
   // Permissions of optimia's sessions, passed with --settings (nothing in the repo).
   syncClaudeSettings(projectRoot, loadSettings(projectRoot).preferences.noGo);
+  // A memory imported from another machine before this repo existed here.
+  try {
+    adoptPendingMemory(projectRoot);
+  } catch {
+    /* not critical */
+  }
   const log = logger.createLogger(projectRoot);
   writeMcpConfig(projectRoot, { port, projectId, token });
   // Both task and chat sessions are project-wide (one ClaudeSession per
