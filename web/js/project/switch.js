@@ -31,7 +31,7 @@ async function switchProject(projectId, { push = true } = {}) {
 
   // Agents board.
   tasks.clear();
-  taskLogs.clear();
+  taskActivity.clear();
   openTaskLogs.clear();
   chatAgents.clear();
   agentCatalog = null;

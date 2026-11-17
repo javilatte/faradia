@@ -35,37 +35,11 @@ function stepLabelFor(event) {
   return null;
 }
 
-// What each task agent does, line by line, since the tab was opened.
-const taskLogs = new Map();
+// What each task agent does lives in activity.js (taskActivity); the toggle state is here.
 const openTaskLogs = new Set();
-const TASK_LOG_MAX = 200;
-
-function describeTaskEvent(event) {
-  if (event.type === 'assistant') {
-    const lines = [];
-    for (const block of event.message?.content || []) {
-      if (block.type === 'text' && block.text?.trim()) lines.push(block.text.trim().slice(0, 300));
-      if (block.type === 'tool_use') {
-        const detail =
-          block.input?.command || block.input?.description || block.input?.file_path || block.input?.pattern || '';
-        lines.push(`→ ${block.name}${detail ? `: ${String(detail).slice(0, 200)}` : ''}`);
-      }
-    }
-    return lines;
-  }
-  if (event.type === 'result') return [event.is_error ? '— turno con error —' : '— turno completado —'];
-  if (event.type === 'system' && event.subtype === 'permission_denied')
-    return [`× bloqueado: ${event.tool_name || 'herramienta'}`];
-  return [];
-}
 
 function logTaskEvent(taskId, event) {
-  const lines = describeTaskEvent(event);
-  if (!lines.length) return;
-  const log = taskLogs.get(taskId) || [];
-  log.push(...lines);
-  if (log.length > TASK_LOG_MAX) log.splice(0, log.length - TASK_LOG_MAX);
-  taskLogs.set(taskId, log);
+  recordActivity(taskId, event);
 }
 
 // The project's agent catalog (GET /api/agents): stages, pipelines and which agent runs each stage.
@@ -988,26 +962,26 @@ function renderTaskWorkspace(taskId, task) {
       box.appendChild(row);
     }
   }
-  const logRow = document.createElement('div');
-  logRow.className = 'task-actions';
+  const running = task.status === 'in_progress';
+  if (running && !openTaskLogs.has(taskId)) box.appendChild(renderActivity(taskId, { live: true }));
+  const count = activityCount(taskId);
   const open = openTaskLogs.has(taskId);
-  logRow.appendChild(
-    actionButton(open ? 'Ocultar registro' : 'Ver registro del agente', {
-      onClick: () => {
-        if (open) openTaskLogs.delete(taskId);
-        else openTaskLogs.add(taskId);
-        renderTasks();
-      }
-    })
-  );
-  box.appendChild(logRow);
-  if (open) {
-    const log = document.createElement('pre');
-    log.className = 'task-log';
-    const lines = taskLogs.get(taskId) || [];
-    log.textContent = lines.length ? lines.join('\n') : 'Sin actividad registrada desde que abriste esta pestaña.';
-    box.appendChild(log);
+  if (count || !running) {
+    const logRow = document.createElement('div');
+    logRow.className = 'task-actions';
+    const label = open ? 'Ocultar actividad' : running ? 'Ver toda la actividad' : 'Ver actividad del agente';
+    logRow.appendChild(
+      actionButton(label, {
+        onClick: () => {
+          if (open) openTaskLogs.delete(taskId);
+          else openTaskLogs.add(taskId);
+          renderTasks();
+        }
+      })
+    );
+    box.appendChild(logRow);
   }
+  if (open) box.appendChild(renderActivity(taskId));
   return box;
 }
 
