@@ -211,7 +211,16 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       const projectId = msg.projectId || defaultProjectId;
       const rt = registry.runtime(projectId);
       if (!rt) return ws.send(JSON.stringify({ type: 'client_error', error: 'proyecto desconocido', projectId }));
-      if (rt.handleWsMessage(msg, ws) === false) {
+      // An error handling one message is answered to that client; it never brings the server down.
+      let handled;
+      try {
+        handled = rt.handleWsMessage(msg, ws);
+      } catch (err) {
+        rt.log.error('ws.message_failed', { type: msg.type, error: err.message });
+        ws.send(JSON.stringify({ type: 'client_error', error: err.message, projectId }));
+        return;
+      }
+      if (handled === false) {
         ws.send(JSON.stringify({ type: 'client_error', error: `unknown message type: ${msg.type}`, projectId }));
       }
     });

@@ -62,5 +62,9 @@ window.TerminalView = {
   },
   handleExit() {
     if (term) term.write('\r\n\x1b[31m[sesión de terminal terminada]\x1b[0m\r\n');
+  },
+  handleError(message) {
+    ensureTerminal();
+    term.write(`\r\n\x1b[31m${message}\x1b[0m\r\n`);
   }
 };
