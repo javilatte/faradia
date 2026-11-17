@@ -67,7 +67,16 @@ function memoryFromOutput(text) {
 
 function createApp(
   projectRoot,
-  { onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskRun, onTaskApprove, onTaskAllow, onChatDeleted } = {},
+  {
+    onTaskCreated,
+    onTaskUpdated,
+    onTaskDeleted,
+    onTaskRun,
+    onTaskApprove,
+    onTaskAllow,
+    onTaskCommitted,
+    onChatDeleted
+  } = {},
   log = logger
 ) {
   return async function handler(req, res) {
@@ -115,7 +124,8 @@ function createApp(
           ai: body.ai,
           preferences: body.preferences,
           updates: body.updates,
-          security: body.security
+          security: body.security,
+          wiki: body.wiki
         });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
@@ -396,6 +406,8 @@ function createApp(
         return sendJson(res, 409, { error: `no se pudo hacer commit: ${err.message}` });
       }
       log.info('task.commit', { taskId, sha, files: filesChangedBy(task.worktreePath, sha) });
+      // The wikis learn from every accepted change (in the background).
+      onTaskCommitted?.(task, { sha, dir: task.worktreePath });
       return sendJson(
         res,
         200,

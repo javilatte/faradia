@@ -10,6 +10,7 @@ import { initConfig } from './config.js';
 import './agents.js';
 import './dashboard.js';
 import './changes.js';
+import './wiki.js';
 import './timeline.js';
 import './signals.js';
 import './files.js';
@@ -22,6 +23,7 @@ const NAV_ICONS = {
   dashboard: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   changes: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M13 10v6M10 18h6',
   timeline: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
+  wiki: 'M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2zM13 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5zM7 8h2M7 11h2M16 8h2M16 11h2',
   files: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'
 };
 

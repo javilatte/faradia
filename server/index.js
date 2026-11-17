@@ -7,6 +7,7 @@ const { checkClaudeCapabilities } = require('./bridge/claudeVersion');
 const { createApp } = require('./runtime/projectApp');
 const { ProjectRegistry } = require('./runtime/registry');
 const { openInBrowser, serveStatic, sendJson, readJsonBody } = require('./http/util');
+const { handleWikiRoutes } = require('./http/wikiRoutes');
 const security = require('./http/security');
 const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRoutes');
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
@@ -105,6 +106,14 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
           sendToClients({ type: 'workbenches_changed' });
           monitor?.sync().catch(() => {});
         }
+      });
+      if (handled !== null) return handled;
+    }
+
+    if (url.pathname.startsWith('/api/wiki')) {
+      const handled = await handleWikiRoutes(req, res, url, {
+        registry,
+        onChange: (change) => sendToClients({ type: 'wiki_changed', ...change })
       });
       if (handled !== null) return handled;
     }

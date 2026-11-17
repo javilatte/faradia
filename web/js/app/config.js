@@ -325,8 +325,11 @@ async function renderGeneralPane() {
   if (!host) return;
   let checkEnabled = true;
   let sandbox = null;
+  let wikiPrefs = null;
   try {
-    checkEnabled = (await api.get('/api/settings')).layers.global.updates.check;
+    const global = (await api.get('/api/settings')).layers.global;
+    checkEnabled = global.updates.check;
+    wikiPrefs = global.wiki;
     sandbox = (await api.get('/api/config/status')).sandbox;
   } catch {
     /* keep the default */
@@ -375,6 +378,7 @@ async function renderGeneralPane() {
       )
     ),
     renderSecurityField(sandbox),
+    renderWikiField(wikiPrefs),
     h(
       'div',
       { class: 'settings-field' },
@@ -415,6 +419,34 @@ async function renderGeneralPane() {
         h('button', { type: 'button', onclick: pickConfigFile }, 'Importar configuración…')
       )
     )
+  );
+}
+
+// Wikis: kept up to date by an agent after each task.
+function renderWikiField(prefs) {
+  if (!prefs) return null;
+  const toggle = (key, label) =>
+    h(
+      'label',
+      { class: 'check-row' },
+      h('input', {
+        type: 'checkbox',
+        checked: prefs[key],
+        onchange: (e) => api.patch('/api/settings', { scope: 'global', wiki: { [key]: e.target.checked } })
+      }),
+      label
+    );
+  return h(
+    'div',
+    { class: 'settings-field' },
+    h('label', {}, 'Wiki'),
+    h(
+      'div',
+      { class: 'muted' },
+      'Tras cada tarea con commit (o cada informe), el agente Bibliotecario actualiza la wiki del proyecto y, si aprende algo general, tu wiki personal. Puedes cambiar su modelo y su prompt en Ajustes › Agentes.'
+    ),
+    toggle('autoUpdate', 'Actualizar las wikis al terminar cada tarea'),
+    toggle('preferLocal', 'Usar el modelo local cuando esté disponible (más barato); si no puede, Claude')
   );
 }
 

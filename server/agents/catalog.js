@@ -91,6 +91,18 @@ const BUILTIN_AGENTS = [
       'Eres el Redactor de PR y Jira. Escribes para el lector concreto: quien revisa el código en la PR, quien sigue el ticket en Jira. Claro, breve y sin relleno; nunca inventes cambios que no estén en el diff.'
   },
   {
+    id: 'wiki-keeper',
+    name: 'Bibliotecario',
+    description:
+      'Mantiene la wiki del proyecto (y la personal) al día tras cada tarea. Usa el modelo local si hay uno; si no, este modelo de Claude.',
+    engine: 'claude',
+    model: 'haiku',
+    effort: 'low',
+    access: 'read',
+    prompt:
+      'Eres el Bibliotecario. Conviertes el trabajo de cada tarea en conocimiento duradero y fácil de encontrar: páginas cortas, bien enlazadas, sin duplicados, con la fuente citada. Mejor actualizar una página existente que crear otra.'
+  },
+  {
     id: 'researcher',
     name: 'Investigador',
     description: 'Reúne hechos verificados y huecos de información antes de redactar documentación.',

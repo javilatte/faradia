@@ -15,6 +15,7 @@ const { ClaudeSession } = require('../bridge/claudeProcess');
 const { PtySession } = require('../bridge/ptySession');
 const { buildSessionOptions } = require('../bridge/sessionOptions');
 const { resolveStageAgent, skippedStages } = require('../agents/stageMap');
+const { loadAgents } = require('../agents/catalog');
 const { createTaskWorktree, stageForReview, changedFiles, ignoredAmong } = require('../bridge/worktree');
 const logger = require('../bridge/logger');
 
@@ -30,6 +31,7 @@ function relPath(base, p) {
 const { ensureGitGuardHooks } = require('../bridge/gitGuard');
 const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
 const { sandboxProblem } = require('../bridge/sandbox');
+const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
 const {
   STAGE_PHASE,
@@ -176,6 +178,26 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     const canRetry = retry && !taskSessions.has(taskId) && task.stage && task.status !== 'in_progress';
     if (canRetry) return runTaskStage(taskId, { stage: task.stage });
     return { task: updated };
+  }
+
+  // The wiki agent (wikiUpdater.js) turns a committed task, or a delivered report, into wiki pages.
+  function updateWiki(task, change) {
+    const settings = loadSettings(projectRoot);
+    const agent = loadAgents(projectRoot).find((a) => a.id === 'wiki-keeper');
+    if (agent && agent.enabled === false) return;
+    enqueueWikiUpdate({
+      projectRoot,
+      task,
+      change,
+      settings,
+      agent,
+      log,
+      onDone: (outcome) => {
+        const updated = updateTask(projectRoot, task.id, { wikiUpdate: outcome });
+        if (updated) broadcast({ type: 'task_updated', task: updated });
+        broadcast({ type: 'wiki_changed', scope: 'project', key: outcome.key, pages: outcome.pages });
+      }
+    }).catch((err) => log.error('wiki.update_failed', { taskId: task.id, error: err.message }));
   }
 
   // Starts a stage of the task's pipeline (see bridge/taskStages.js) in its worktree. One Claude
@@ -470,6 +492,10 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       error: patch.error || null
     });
     broadcast({ type: 'task_updated', task: updated });
+    // A report (audit, repo study, read-only agent) is knowledge too: it goes to the wiki.
+    if (updated && patch.status === 'ready_to_test' && patch.reportOnly && !patch.error && text.trim()) {
+      updateWiki(updated, { report: text });
+    }
 
     if (next) {
       const result = runTaskStage(taskId, { stage: next });
@@ -663,6 +689,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       onTaskRun: runTaskStage,
       onTaskApprove: approveAndRetryTask,
       onTaskAllow: allowBlocked,
+      onTaskCommitted: (task, change) => updateWiki(task, change),
       onTaskUpdated: (task) => broadcast({ type: 'task_updated', task }),
       onTaskDeleted: killTaskSession,
       onChatDeleted: killChatSession

@@ -128,6 +128,8 @@ function sanitizeGlobal(raw) {
     updates: { check: g.updates?.check !== false },
     // Agents run in Claude Code's OS sandbox (writes only in their worktree). "required": an agent
     // does not start without it; "off": agents run unsandboxed (explicit choice of the user).
+    // Wikis: an agent updates them after each task, with the local model when there is one.
+    wiki: { autoUpdate: g.wiki?.autoUpdate !== false, preferLocal: g.wiki?.preferLocal !== false },
     // OPTIMIA_AGENT_SANDBOX=off forces it off (test runs with a fake claude).
     security: {
       sandbox: g.security?.sandbox === 'off' || process.env.OPTIMIA_AGENT_SANDBOX === 'off' ? 'off' : 'required'
@@ -156,6 +158,7 @@ function saveGlobalSettings(patch = {}) {
   if (patch.preferences?.noGo !== undefined) next.preferences.noGo = patch.preferences.noGo;
   next.updates = { ...current.updates, ...(patch.updates || {}) };
   next.security = { ...current.security, ...(patch.security || {}) };
+  next.wiki = { ...current.wiki, ...(patch.wiki || {}) };
   const clean = sanitizeGlobal(next);
   writeJson(globalSettingsPath(), clean);
   return clean;
@@ -272,6 +275,7 @@ function effectiveFrom(global, project) {
     ui: global.ui,
     ai,
     security: global.security,
+    wiki: global.wiki,
     preferences: {
       // The repo's instructions are added to those for all repos.
       instructions: [globalInstructions, projectInstructions].filter(Boolean).join('\n\n'),
