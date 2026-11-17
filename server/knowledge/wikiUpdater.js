@@ -58,6 +58,7 @@ function buildPrompt({ project, projectRel, task, change }) {
       '- La wiki personal solo si la tarea enseña algo general y reutilizable fuera de este proyecto (una técnica, una preferencia del usuario). Casi nunca.',
       '- No copies código entero: explica y enlaza a los ficheros (ruta:línea).',
       '- Si la tarea no aporta nada que merezca quedar, solo añade la línea al log.',
+      '- Escribe en el idioma de las páginas que ya existen; si la wiki está vacía, en el idioma del encargo de la tarea.',
       '- No uses Bash ni salgas de esta carpeta.'
     ].join('\n'),
     `Tarea (${task.type}): ${task.title}\nEncargo:\n${cut(task.instruction, MAX_TEXT_CHARS)}`,
@@ -103,7 +104,7 @@ async function pickEngine(settings, agent, { preferLocal = true, list = listMode
   };
 }
 
-function runSession({ cwd, engine, prompt, systemPrompt, Session = ClaudeSession }) {
+function runSession({ cwd, engine, prompt, systemPrompt, addDirs = [], onEvent, Session = ClaudeSession }) {
   return new Promise((resolve) => {
     const session = new Session({
       projectRoot: cwd,
@@ -112,6 +113,7 @@ function runSession({ cwd, engine, prompt, systemPrompt, Session = ClaudeSession
       baseUrl: engine.baseUrl,
       authHeader: engine.authHeader,
       systemPrompt,
+      addDirs,
       strictMcpConfig: true,
       extraAllowedTools: WIKI_TOOLS,
       disallowedTools: NO_TOOLS
@@ -122,6 +124,7 @@ function runSession({ cwd, engine, prompt, systemPrompt, Session = ClaudeSession
     }, TIMEOUT_MS);
     timer.unref?.();
     session.on('event', (event) => {
+      onEvent?.(event);
       if (event.type !== 'result') return;
       clearTimeout(timer);
       session.close?.();
@@ -139,6 +142,22 @@ function runSession({ cwd, engine, prompt, systemPrompt, Session = ClaudeSession
     });
     session.send(prompt);
   });
+}
+
+// Runs one wiki session: the local model first (when preferred and available), a cheap Claude model
+// if the local one cannot do it.
+async function runWithFallback({ prompt, agent, settings, prefs, log, logId, addDirs, onEvent, Session }) {
+  const systemPrompt = agent?.prompt ? `## Tu rol: ${agent.name}\n${agent.prompt}` : undefined;
+  const first = await pickEngine(settings, agent, { preferLocal: prefs.preferLocal !== false });
+  let engine = first;
+  let result = await runSession({ cwd: wiki.wikisDir(), engine, prompt, systemPrompt, addDirs, onEvent, Session });
+  if (!result.ok && first.engine === 'local') {
+    // The local model could not do it (too small, or it failed): a cheap Claude model takes over.
+    log?.warn('wiki.local_failed', { id: logId, error: result.error });
+    engine = await pickEngine(settings, agent, { preferLocal: false });
+    result = await runSession({ cwd: wiki.wikisDir(), engine, prompt, systemPrompt, addDirs, onEvent, Session });
+  }
+  return { engine, result };
 }
 
 let chain = Promise.resolve();
@@ -160,16 +179,7 @@ function enqueueWikiUpdate({ projectRoot, task, change, settings, agent, log, on
       task,
       change: { ...change, ...detail }
     });
-    const systemPrompt = agent?.prompt ? `## Tu rol: ${agent.name}\n${agent.prompt}` : undefined;
-    const first = await pickEngine(settings, agent, { preferLocal: prefs.preferLocal !== false });
-    let engine = first;
-    let result = await runSession({ cwd: wiki.wikisDir(), engine, prompt, systemPrompt, Session });
-    if (!result.ok && first.engine === 'local') {
-      // The local model could not do it (too small, or it failed): a cheap Claude model takes over.
-      log?.warn('wiki.local_failed', { taskId: task.id, error: result.error });
-      engine = await pickEngine(settings, agent, { preferLocal: false });
-      result = await runSession({ cwd: wiki.wikisDir(), engine, prompt, systemPrompt, Session });
-    }
+    const { engine, result } = await runWithFallback({ prompt, agent, settings, prefs, log, logId: task.id, Session });
     const outcome = {
       at: new Date().toISOString(),
       engine: engine.engine,
@@ -186,4 +196,84 @@ function enqueueWikiUpdate({ projectRoot, task, change, settings, agent, log, on
   return run;
 }
 
-module.exports = { buildPrompt, parsePages, pickEngine, enqueueWikiUpdate, commitSummary };
+function buildFromRepoPrompt({ project, projectRel, projectRoot, lang }) {
+  return [
+    'Etapa de CREACIÓN DE LA WIKI. Trabajas en la carpeta de wikis de optimia (tu directorio actual).',
+    `- Wiki del proyecto «${project}»: ${projectRel}/ (index.md es la portada; log.md el registro).`,
+    `- El código del proyecto está en ${projectRoot} (solo lectura: no lo cambies).`,
+    'Explora el repositorio y escribe la wiki que necesitaría alguien que llega nuevo al proyecto: qué es, cómo está organizado, cómo funciona por dentro y cómo se trabaja en él.',
+    [
+      'Páginas (adáptalas a lo que encuentres; entre 8 y 16):',
+      '- index.md: qué es el proyecto, para quién, y el mapa de la wiki con una línea por página.',
+      '- arquitectura.md: piezas, cómo se comunican y por qué está hecho así.',
+      '- modulos/<módulo>.md: una por módulo o carpeta importante: responsabilidad, ficheros clave (ruta:línea), dependencias.',
+      '- flujos/<flujo>.md: los recorridos importantes de principio a fin (p. ej. una petición, el login, un despliegue).',
+      '- datos.md: modelo de datos y dónde vive.',
+      '- api.md o interfaz.md si aplica: endpoints, comandos o pantallas.',
+      '- desarrollo.md: cómo arrancarlo, probarlo y las convenciones del código.',
+      '- glosario.md: términos del dominio.'
+    ].join('\n'),
+    [
+      'Reglas:',
+      `- Escribe la wiki en ${lang === 'en' ? 'inglés' : 'español'} (los nombres de fichero también).`,
+      '- Si la wiki ya tiene páginas, léelas y complétalas en vez de duplicarlas.',
+      '- Enlaza mucho entre páginas con [[Página]]: cada página enlaza al menos a otras dos y a las que la mencionan.',
+      '- Páginas concretas, con un título "# ...". Explica y enlaza a los ficheros (ruta:línea); no copies código entero.',
+      '- Lo que deduzcas sin poder confirmarlo, márcalo como suposición.',
+      `- Añade al final de ${projectRel}/log.md una línea: "- <fecha> · wiki creada a partir del repositorio: <número> páginas".`,
+      '- No uses Bash ni escribas fuera de la carpeta de la wiki.'
+    ].join('\n'),
+    'Termina con una línea "PÁGINAS: <rutas tocadas separadas por comas>".'
+  ].join('\n\n');
+}
+
+/**
+ * Queues the wiki agent to write the project wiki from the repository itself (the first time, or to
+ * fill gaps). Resolves with {engine, model, pages, error?}.
+ */
+function enqueueWikiBuild({ projectRoot, settings, agent, lang, log, onEvent, onDone, Session }) {
+  const prefs = settings.wiki || {};
+  const target = wiki.ensureWiki(wiki.wikiFor('project', projectRoot), projectRoot);
+  const job = async () => {
+    const prompt = buildFromRepoPrompt({
+      project: target.title,
+      projectRel: path.relative(wiki.wikisDir(), target.dir).split(path.sep).join('/'),
+      projectRoot,
+      lang
+    });
+    const { engine, result } = await runWithFallback({
+      prompt,
+      agent,
+      settings,
+      prefs,
+      log,
+      logId: 'build',
+      addDirs: [projectRoot],
+      onEvent,
+      Session
+    });
+    const outcome = {
+      at: new Date().toISOString(),
+      engine: engine.engine,
+      model: engine.model,
+      pages: result.ok ? parsePages(result.text) : [],
+      ...(result.ok ? {} : { error: result.error })
+    };
+    log?.info('wiki.build', outcome);
+    onDone?.({ key: target.key, ...outcome });
+    return outcome;
+  };
+  const run = chain.then(job, job);
+  chain = run.catch(() => {});
+  return run;
+}
+
+module.exports = {
+  buildPrompt,
+  buildFromRepoPrompt,
+  parsePages,
+  pickEngine,
+  enqueueWikiUpdate,
+  enqueueWikiBuild,
+  commitSummary
+};

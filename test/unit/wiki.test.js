@@ -8,7 +8,7 @@ const { EventEmitter } = require('events');
 const { execFileSync } = require('child_process');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 const wiki = require('../../server/knowledge/wikiStore');
-const { enqueueWikiUpdate, parsePages, pickEngine } = require('../../server/knowledge/wikiUpdater');
+const { enqueueWikiUpdate, enqueueWikiBuild, parsePages, pickEngine } = require('../../server/knowledge/wikiUpdater');
 const { defaultSettings } = require('../../server/store/settingsStore');
 
 function isolated(t) {
@@ -174,4 +174,23 @@ test('enqueueWikiUpdate: nothing when auto-update is off', async (t) => {
   const settings = defaultSettings();
   settings.wiki = { autoUpdate: false };
   assert.equal(await enqueueWikiUpdate({ projectRoot: repo(t), task: {}, change: {}, settings }), null);
+});
+
+test('enqueueWikiBuild: the agent writes the wiki from the repo, read-only on the code, and its events are relayed', async (t) => {
+  isolated(t);
+  const root = repo(t, 'https://github.com/acme/api.git');
+  const calls = [];
+  const events = [];
+  const outcome = await enqueueWikiBuild({
+    projectRoot: root,
+    settings: defaultSettings(),
+    agent: { name: 'Bibliotecario', prompt: 'rol', model: 'haiku', effort: 'low' },
+    onEvent: (e) => events.push(e.type),
+    Session: fakeSession(calls)
+  });
+  assert.deepEqual(outcome.pages, ['projects/github.com-acme-api/login.md']);
+  assert.deepEqual(calls[0].addDirs, [root], 'the agent can read the repository');
+  assert.ok(calls[0].disallowedTools.includes('Bash'));
+  assert.match(calls[0].projectRoot, /wikis$/);
+  assert.deepEqual(events, ['result']);
 });

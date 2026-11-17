@@ -12,8 +12,9 @@ const { sendJson, readJsonBody } = require('./util');
 //   GET    /api/wiki/search?scope=&projectId=&q=  [{path, title, score, snippet}]
 //   GET    /api/wiki/graph?scope=&projectId=      {nodes, edges, missing}
 //   GET    /api/wiki/projects                     every project wiki on this machine
+//   POST   /api/wiki/build {projectId, lang}           the wiki agent writes the project wiki from the repo
 
-async function handleWikiRoutes(req, res, url, { registry, onChange }) {
+async function handleWikiRoutes(req, res, url, { registry, onChange, onBuild }) {
   const p = url.pathname;
   if (!p.startsWith('/api/wiki')) return null;
 
@@ -22,7 +23,7 @@ async function handleWikiRoutes(req, res, url, { registry, onChange }) {
   }
 
   let body = null;
-  if (req.method === 'PUT' || req.method === 'DELETE') {
+  if (req.method === 'PUT' || req.method === 'DELETE' || req.method === 'POST') {
     body = await readJsonBody(req).catch(() => null);
     if (!body) return sendJson(res, 400, { error: 'invalid JSON body' });
   }
@@ -60,6 +61,10 @@ async function handleWikiRoutes(req, res, url, { registry, onChange }) {
     }
     if (p === '/api/wiki/search' && req.method === 'GET') {
       return sendJson(res, 200, { results: wiki.search(target, q.get('q')) });
+    }
+    if (p === '/api/wiki/build' && req.method === 'POST') {
+      if (target.scope !== 'project' || !onBuild) return sendJson(res, 400, { error: 'solo la wiki del proyecto' });
+      return sendJson(res, 202, onBuild(projectId, registry.info(projectId).root, body?.lang));
     }
     if (p === '/api/wiki/graph' && req.method === 'GET') {
       return sendJson(res, 200, wiki.graph(target));

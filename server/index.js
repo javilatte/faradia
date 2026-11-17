@@ -9,7 +9,9 @@ const { ProjectRegistry } = require('./runtime/registry');
 const { openInBrowser, serveStatic, sendJson, readJsonBody } = require('./http/util');
 const { handleWikiRoutes } = require('./http/wikiRoutes');
 const { sandboxProblem } = require('./bridge/sandbox');
-const { loadGlobalSettings } = require('./store/settingsStore');
+const { loadGlobalSettings, loadSettings } = require('./store/settingsStore');
+const { loadAgents } = require('./agents/catalog');
+const { enqueueWikiBuild } = require('./knowledge/wikiUpdater');
 const security = require('./http/security');
 const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRoutes');
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
@@ -43,6 +45,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   let defaultProjectId = null;
   let actualPort = null;
 
+  const wikiBuilds = new Set();
   function sendToClients(payload) {
     // Tasks that change state go to the timeline too.
     if (payload.type === 'task_updated' && payload.task && timeline) {
@@ -115,7 +118,29 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     if (url.pathname.startsWith('/api/wiki')) {
       const handled = await handleWikiRoutes(req, res, url, {
         registry,
-        onChange: (change) => sendToClients({ type: 'wiki_changed', ...change })
+        onChange: (change) => sendToClients({ type: 'wiki_changed', ...change }),
+        onBuild: (projectId, root, lang) => {
+          if (wikiBuilds.has(projectId)) return { running: true };
+          wikiBuilds.add(projectId);
+          const agent = loadAgents(root).find((a) => a.id === 'wiki-keeper');
+          sendToClients({ type: 'wiki_build', projectId, state: 'running' });
+          enqueueWikiBuild({
+            projectRoot: root,
+            settings: loadSettings(root),
+            agent,
+            lang: lang === 'en' ? 'en' : 'es',
+            onEvent: (event) => sendToClients({ type: 'wiki_build_event', projectId, event }),
+            onDone: (outcome) => {
+              wikiBuilds.delete(projectId);
+              sendToClients({ type: 'wiki_build', projectId, state: 'done', ...outcome });
+              sendToClients({ type: 'wiki_changed', scope: 'project', key: outcome.key, pages: outcome.pages });
+            }
+          }).catch((err) => {
+            wikiBuilds.delete(projectId);
+            sendToClients({ type: 'wiki_build', projectId, state: 'done', error: err.message });
+          });
+          return { running: true };
+        }
       });
       if (handled !== null) return handled;
     }
