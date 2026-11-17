@@ -177,10 +177,12 @@
                   <input
                     type="text"
                     id="task-branch-input"
-                    placeholder="automática"
-                    title="Nombre de la rama de la tarea; vacío = optimia/task-xxxx"
+                    list="task-branch-options"
+                    placeholder="nueva automática"
+                    title="Vacío = rama nueva optimia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama)."
                     spellcheck="false"
                   />
+                  <datalist id="task-branch-options"></datalist>
                 </label>
               </div>
               <div class="task-plan-row task-only" id="task-plan-row" hidden></div>

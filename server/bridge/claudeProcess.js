@@ -33,7 +33,8 @@ class ClaudeSession extends EventEmitter {
     strictMcpConfig = false,
     extraAllowedTools = [],
     disallowedTools = [],
-    gitHooksPath
+    gitHooksPath,
+    extraEnv = {}
   } = {}) {
     super();
     this.projectRoot = projectRoot;
@@ -79,7 +80,7 @@ class ClaudeSession extends EventEmitter {
     if (allowedTools.length) args.push('--allowedTools', allowedTools.join(','));
     if (disallowedTools.length) args.push('--disallowedTools', disallowedTools.join(','));
 
-    const env = { ...process.env };
+    const env = { ...process.env, ...extraEnv };
     // Task sessions only: the hook blocks commits and pushes even when the command comes with flags
     // (git -c ...) that text rules do not cover.
     if (gitHooksPath) {

@@ -50,6 +50,9 @@ process.env.OPTIMIA_NO_UPDATE_CHECK = '1';
 // Skip the first-run welcome sheet (test/e2e/config.spec.js brings it back on purpose).
 fs.mkdirSync(path.join(home, '.config', 'optimia'), { recursive: true });
 fs.writeFileSync(path.join(home, '.config', 'optimia', 'state.json'), JSON.stringify({ welcomed: 'e2e' }));
+// The fake claude has no sandbox to run in: agents run without it in the e2e tests (the sandbox
+// requirement itself is covered by unit tests).
+process.env.OPTIMIA_AGENT_SANDBOX = 'off';
 // Specs find this run through this file (see test/e2e/helpers.js).
 fs.writeFileSync(path.join(os.tmpdir(), `optimia-e2e-current-${PORT}.txt`), tmp);
 // Every call to the fake claude is recorded here (arguments and folder), for the agent tests.

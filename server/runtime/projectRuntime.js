@@ -6,6 +6,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { parseDenial, approvedCommands } = require('../bridge/policy');
 const { loadSettings, loadProjectLayer, saveProjectSettings } = require('../store/settingsStore');
 const { loadTasks, updateTask, updateTaskPhase } = require('../store/taskStore');
 const { loadChat, updateChatMeta, appendMessage } = require('../store/chatStore');
@@ -27,12 +29,14 @@ function relPath(base, p) {
 }
 const { ensureGitGuardHooks } = require('../bridge/gitGuard');
 const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
+const { sandboxProblem } = require('../bridge/sandbox');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
 const {
   STAGE_PHASE,
   firstStage,
   stageTools,
   stageDisallowed,
+  stageAccess,
   approvalRule,
   canRun,
   buildStagePrompt,
@@ -84,9 +88,6 @@ function ensureOptimiaExcluded(projectRoot) {
     /* not a git repo or not writable: nothing to exclude */
   }
 }
-
-// Policy denials tolerated in a stage before stopping it.
-const MAX_POLICY_DENIALS = 5;
 
 // Closes the last run of `stage` in stageRuns with a status.
 function closeLastRun(task, stage, status) {
@@ -140,6 +141,43 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     }
   }
 
+  function recordBlocked(taskId, entry) {
+    const current = loadTasks(projectRoot).find((t) => t.id === taskId);
+    if (!current) return;
+    const list = current.blockedCommands || [];
+    // The same command blocked again in the same stage is one entry.
+    if (list.some((b) => b.stage === entry.stage && b.tool === entry.tool && b.fullCommand === entry.fullCommand))
+      return;
+    const updated = updateTask(projectRoot, taskId, {
+      blockedCommands: [...list, { ...entry, id: crypto.randomUUID(), at: new Date().toISOString() }].slice(-20)
+    });
+    if (updated) broadcast({ type: 'task_updated', task: updated });
+  }
+
+  // "Permitir" on a blocked action: the exact command (or tool) is approved for this repo, from the
+  // next stage on ("Permitir y repetir etapa" runs it again now).
+  function allowBlocked(taskId, { blockedId, retry = false } = {}) {
+    const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+    if (!task) return { error: 'task not found', code: 404 };
+    const entry = (task.blockedCommands || []).find((b) => b.id === blockedId);
+    if (!entry) return { error: 'no se encontró esa acción bloqueada', code: 404 };
+    if (!entry.approvable) return { error: 'esta acción no se puede permitir a los agentes', code: 400 };
+    const rule = approvalRule(entry.tool, entry.fullCommand);
+    if (!rule) return { error: 'esta acción no se puede permitir desde la tarjeta', code: 400 };
+    const approvedNow = loadProjectLayer(projectRoot).preferences.approvedTools;
+    if (!approvedNow.includes(rule)) {
+      saveProjectSettings(projectRoot, { preferences: { approvedTools: [...approvedNow, rule] } });
+    }
+    log.info('task.allow', { taskId, rule });
+    const updated = updateTask(projectRoot, taskId, {
+      blockedCommands: task.blockedCommands.map((b) => (b.id === blockedId ? { ...b, allowed: true } : b))
+    });
+    broadcast({ type: 'task_updated', task: updated });
+    const canRetry = retry && !taskSessions.has(taskId) && task.stage && task.status !== 'in_progress';
+    if (canRetry) return runTaskStage(taskId, { stage: task.stage });
+    return { task: updated };
+  }
+
   // Starts a stage of the task's pipeline (see bridge/taskStages.js) in its worktree. One Claude
   // session per stage; when it ends, the stage decides the next state and, if needed, starts the
   // next stage automatically. Returns { task } or { error, code } for the HTTP route to answer.
@@ -147,6 +185,13 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     const task = loadTasks(projectRoot).find((t) => t.id === taskId);
     if (!task) return { error: 'task not found', code: 404 };
     if (taskSessions.has(taskId)) return { error: 'la tarea ya tiene un agente en marcha', code: 409 };
+
+    const blockedBySandbox = sandboxProblem(loadSettings(projectRoot).security.sandbox);
+    if (blockedBySandbox) {
+      const updated = updateTask(projectRoot, taskId, { status: 'pending', stage, error: blockedBySandbox });
+      if (updated) broadcast({ type: 'task_updated', task: updated });
+      return { error: blockedBySandbox, code: 412 };
+    }
 
     const effectiveDocOptions = stage === 'write' ? docOptions || task.docOptions : undefined;
     const problem = canRun(task, stage, { answer, docOptions: effectiveDocOptions });
@@ -165,7 +210,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       try {
         const worktree = createTaskWorktree(projectRoot, task.id, {
           baseRef: task.baseBranch,
-          branchName: task.branchName
+          branchName: task.branchName,
+          existingBranch: task.existingBranch
         });
         worktreeDir = worktree.dir;
         branch = worktree.branch;
@@ -203,6 +249,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     opts.extraAllowedTools = [...stageTools(stage, agent), ...approved];
     opts.disallowedTools = stageDisallowed(stage, agent);
     opts.gitHooksPath = ensureGitGuardHooks(projectRoot);
+    // Exceptions to the safety policy approved from the cards, fixed for the whole stage.
+    opts.extraEnv = { OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)) };
     const session = new ClaudeSession(opts);
     taskSessions.set(taskId, session);
     updateTaskPhase(projectRoot, taskId, STAGE_PHASE[stage], 'active');
@@ -260,44 +308,50 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
           }
         }
       }
+      // Commands the safety policy blocked (policyHook.js): the agent got the reason and goes on;
+      // the card shows them with "Permitir" when they can be approved.
+      if (event.type === 'user') {
+        for (const block of event.message?.content || []) {
+          if (block.type !== 'tool_result' || !block.is_error) continue;
+          const text = Array.isArray(block.content)
+            ? block.content.map((c) => c.text || '').join('\n')
+            : String(block.content || '');
+          const rule = parseDenial(text);
+          if (!rule) continue;
+          const use = toolUses.get(block.tool_use_id);
+          recordBlocked(taskId, {
+            stage,
+            tool: 'Bash',
+            command: use?.input?.command ? cut(use.input.command) : undefined,
+            fullCommand: use?.input?.command,
+            reason: rule.reason,
+            policy: rule.id,
+            approvable: rule.approvable
+          });
+        }
+      }
       if (event.type === 'result') finishTaskStage(taskId, stage, worktreeDir, session, event);
-      // A task is not interactive: if the stage needs a permission it does not have, it stops and
-      // the card offers to approve it and retry. The terminal is not opened.
+      // A tool the stage is not allowed to use (an MCP tool of the repo, a read-only stage trying
+      // to edit...): the agent gets the denial and goes on, as in Claude Code. Nothing stops the
+      // stage; the card lists it and, when it can be approved, offers "Permitir".
       if (event.type === 'system' && event.subtype === 'permission_denied' && !session._stageDone) {
         const tool = event.tool_name || 'una herramienta';
         const use = toolUses.get(event.tool_use_id);
         const command = use?.name === 'Bash' ? use.input?.command : undefined;
-        // Bash is free in every stage: what still gets denied is policy (destructive commands,
-        // commits...) and cannot be approved from the card. As in plain Claude Code, the agent
-        // receives the denial and takes another path; the stage stops only if it insists too much.
-        const rule = tool === 'Bash' ? null : approvalRule(tool);
-        const approvedNow = loadSettings(projectRoot).preferences.approvedTools || [];
-        const alreadyApproved = rule !== null && approvedNow.includes(rule);
-        session._denials = (session._denials || 0) + 1;
-        log.warn('task.stage.denied', { taskId, stage, tool, command: cut(command), alreadyApproved });
-        const blocked = { stage, tool, command: command ? cut(command) : undefined, at: new Date().toISOString() };
-        const policyDenial = !rule || alreadyApproved;
-        if (policyDenial && session._denials < MAX_POLICY_DENIALS) {
-          const current = loadTasks(projectRoot).find((t) => t.id === taskId);
-          const updated = updateTask(projectRoot, taskId, {
-            blockedCommands: [...(current?.blockedCommands || []), blocked].slice(-20)
-          });
-          if (updated) broadcast({ type: 'task_updated', task: updated });
-          return;
-        }
-        session._stageDone = true;
-        session.kill();
-        if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
-        const current = loadTasks(projectRoot).find((t) => t.id === taskId);
-        const updated = updateTask(projectRoot, taskId, {
-          status: 'pending',
-          stageRuns: closeLastRun(current, stage, 'blocked'),
-          error: policyDenial
-            ? `la etapa "${stage}" se detuvo: el agente insistió en acciones prohibidas para los agentes (la última: ${command ? cut(command) : tool}). Reinténtala con más indicaciones o cambia de agente.`
-            : `la etapa "${stage}" necesita permiso para ${tool}.`,
-          pendingPermission: policyDenial ? null : { tool }
+        const rule = approvalRule(tool, command);
+        const readOnlyEdit =
+          ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'].includes(tool) && stageAccess(stage, agent) !== 'edit';
+        log.warn('task.stage.denied', { taskId, stage, tool, command: cut(command) });
+        recordBlocked(taskId, {
+          stage,
+          tool,
+          command: command ? cut(command) : undefined,
+          fullCommand: command,
+          reason: readOnlyEdit
+            ? 'editar ficheros en una etapa de solo lectura'
+            : `usar ${tool}, que esta etapa no tiene permitido`,
+          approvable: Boolean(rule) && !readOnlyEdit
         });
-        if (updated) broadcast({ type: 'task_updated', task: updated });
       }
     });
     session.on('error', (err) => {
@@ -316,6 +370,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         error: `la etapa "${stage}" terminó sin completarse`
       });
       if (current) broadcast({ type: 'task_updated', task: current });
+      if (current && !session._killedByUser) retryOnce(taskId, stage);
     });
 
     session._startedAt = Date.now();
@@ -419,7 +474,23 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     if (next) {
       const result = runTaskStage(taskId, { stage: next });
       if (result.error) broadcast({ type: 'task_error', taskId, error: result.error });
+    } else if (event.is_error === true) {
+      retryOnce(taskId, stage);
     }
+  }
+
+  // A stage that fails (API error, a crash) is repeated once by itself before asking the user.
+  function retryOnce(taskId, stage) {
+    const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+    const tries = task?.autoRetries?.[stage] || 0;
+    if (!task || tries >= 1) return;
+    updateTask(projectRoot, taskId, { autoRetries: { ...(task.autoRetries || {}), [stage]: tries + 1 } });
+    log.info('task.stage.auto_retry', { taskId, stage });
+    setTimeout(() => {
+      if (taskSessions.has(taskId)) return;
+      const result = runTaskStage(taskId, { stage });
+      if (result.error) broadcast({ type: 'task_error', taskId, error: result.error });
+    }, 3000).unref?.();
   }
 
   function startTaskSession(task) {
@@ -591,6 +662,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       onTaskCreated: startTaskSession,
       onTaskRun: runTaskStage,
       onTaskApprove: approveAndRetryTask,
+      onTaskAllow: allowBlocked,
       onTaskUpdated: (task) => broadcast({ type: 'task_updated', task }),
       onTaskDeleted: killTaskSession,
       onChatDeleted: killChatSession

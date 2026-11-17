@@ -62,7 +62,24 @@ async function loadTaskBranches() {
     taskBaseSelect.appendChild(opt);
   }
   taskBaseSelect.value = branches.includes(saved) ? saved : current;
+  // Existing branches can be picked as the task's branch: the task adds its commits to it.
+  document
+    .getElementById('task-branch-options')
+    .replaceChildren(...branches.map((name) => Object.assign(document.createElement('option'), { value: name })));
+  taskBranches = branches;
+  syncBranchHint();
 }
+
+// With an existing branch, "Desde" does not apply: the task continues that branch.
+let taskBranches = [];
+function syncBranchHint() {
+  const existing = taskBranches.includes(taskBranchInput.value.trim());
+  taskBaseSelect.disabled = existing;
+  taskBaseSelect.title = existing
+    ? 'La tarea continúa la rama existente elegida en «Rama»'
+    : 'Rama base de la que sale la tarea';
+}
+taskBranchInput.addEventListener('input', syncBranchHint);
 
 // Before sending: which stages the task will have and which agent and model will run each one.
 const taskPlanRow = document.getElementById('task-plan-row');
@@ -153,6 +170,7 @@ async function createTaskFromChat(kind, text) {
   }
   applyTaskFromServer(data);
   taskBranchInput.value = '';
+  syncBranchHint();
   renderTasks();
   appendMessage(
     'system',

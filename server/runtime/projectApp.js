@@ -23,7 +23,8 @@ const {
   commitTaskWorktree,
   worktreeIsClean,
   mergeTaskBranch,
-  filesChangedBy
+  filesChangedBy,
+  worktreeOfBranch
 } = require('../bridge/worktree');
 const { pickFile } = require('../bridge/filePicker');
 const logger = require('../bridge/logger');
@@ -39,6 +40,13 @@ const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
 const { isKnownType, TASK_TYPES, DESCRIBE_TARGETS } = require('../bridge/taskStages');
 const { remoteInfo, ghReady, deliverPullRequest } = require('../bridge/delivery');
+
+// Removing a task never loses work: a shared branch, or commits that are neither merged nor
+// pushed, keep their branch.
+function keepsBranch(task) {
+  if (task.existingBranch) return true;
+  return Boolean(task.lastCommit && !task.mergedInto && !task.pr);
+}
 
 // gh's login is checked at most once a minute: it takes a while and rarely changes.
 let ghCache = { at: 0, ready: false };
@@ -59,7 +67,7 @@ function memoryFromOutput(text) {
 
 function createApp(
   projectRoot,
-  { onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskRun, onTaskApprove, onChatDeleted } = {},
+  { onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskRun, onTaskApprove, onTaskAllow, onChatDeleted } = {},
   log = logger
 ) {
   return async function handler(req, res) {
@@ -102,7 +110,13 @@ function createApp(
       }
       const list = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
       if (body.scope === 'global') {
-        saveGlobalSettings({ ui: body.ui, ai: body.ai, preferences: body.preferences, updates: body.updates });
+        saveGlobalSettings({
+          ui: body.ui,
+          ai: body.ai,
+          preferences: body.preferences,
+          updates: body.updates,
+          security: body.security
+        });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
         if (body.ui) return sendJson(res, 400, { error: 'la apariencia es la misma para todos los repos' });
@@ -198,16 +212,35 @@ function createApp(
         if (!agent.enabled) return sendJson(res, 409, { error: `el agente "${agent.name}" está desactivado` });
       }
       const git = listLocalBranches(projectRoot);
+      // Without a base, the branch checked out now (what the worktree would branch off anyway).
+      if (!body.baseBranch && git.current && git.current !== 'HEAD') body.baseBranch = git.current;
       if (body.baseBranch && !git.branches.includes(body.baseBranch)) {
         return sendJson(res, 400, { error: `la rama base "${body.baseBranch}" no existe` });
       }
+      let existingBranch = false;
       if (body.branchName) {
         const problem = branchNameProblem(body.branchName);
         if (problem) return sendJson(res, 400, { error: problem });
-        if (git.branches.includes(body.branchName))
-          return sendJson(res, 409, { error: `ya existe la rama ${body.branchName}` });
+        // An existing branch: the task adds its work to it (a branch with several tasks).
+        if (git.branches.includes(body.branchName)) {
+          const busy = loadTasks(projectRoot).find(
+            (t) => t.branch === body.branchName && t.worktreePath && !t.mergedInto && !t.deliveredAs
+          );
+          if (busy) {
+            return sendJson(res, 409, {
+              error: `la tarea «${busy.title}» ya trabaja en la rama ${body.branchName}: haz su commit antes de lanzar otra en la misma rama`
+            });
+          }
+          const openAt = worktreeOfBranch(projectRoot, body.branchName);
+          if (openAt) {
+            return sendJson(res, 409, {
+              error: `la rama ${body.branchName} está abierta en ${openAt}: cambia allí de rama o elige otra`
+            });
+          }
+          existingBranch = true;
+        }
       }
-      const task = addTask(projectRoot, body);
+      const task = addTask(projectRoot, { ...body, existingBranch });
       onTaskCreated?.(task);
       return sendJson(res, 201, task);
     }
@@ -221,6 +254,16 @@ function createApp(
       const result = onTaskRun ? onTaskRun(taskId, body) : { error: 'not supported', code: 501 };
       if (result.error) return sendJson(res, result.code || 409, { error: result.error });
       return sendJson(res, 202, result.task);
+    }
+
+    // POST /api/tasks/:id/allow {blockedId, retry?}: approves an action the safety policy blocked.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/allow') && req.method === 'POST') {
+      const taskId = url.pathname.split('/')[3];
+      const body = await readJsonBody(req).catch(() => null);
+      if (!body || typeof body.blockedId !== 'string') return sendJson(res, 400, { error: 'blockedId is required' });
+      const result = onTaskAllow ? onTaskAllow(taskId, body) : { error: 'not supported', code: 501 };
+      if (result.error) return sendJson(res, result.code || 409, { error: result.error });
+      return sendJson(res, 200, result.task);
     }
 
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/approve') && req.method === 'POST') {
@@ -257,7 +300,7 @@ function createApp(
       if (!task) return sendJson(res, 404, { error: 'task not found' });
       onTaskDeleted?.(taskId); // kills any live session before its worktree goes away
       try {
-        removeTaskWorktree(projectRoot, task);
+        removeTaskWorktree(projectRoot, task, { keepBranch: keepsBranch(task) });
       } catch (err) {
         log.error('task.delete_failed', { taskId, error: err.message });
         return sendJson(res, 500, { error: `no se pudo limpiar el worktree: ${err.message}` });
@@ -443,6 +486,35 @@ function createApp(
       );
     }
 
+    // "Solo commit": the task ends with its commit on its branch, without a PR or a merge (e.g. one
+    // of several tasks of the same branch). The worktree goes; the branch stays.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/finish') && req.method === 'POST') {
+      const taskId = url.pathname.split('/')[3];
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task) return sendJson(res, 404, { error: 'task not found' });
+      if (!task.lastCommit) return sendJson(res, 409, { error: 'haz commit de la tarea antes de terminarla' });
+      if (task.worktreePath && !worktreeIsClean(task.worktreePath))
+        return sendJson(res, 409, { error: 'quedan cambios sin commitear en la tarea' });
+      onTaskDeleted?.(taskId);
+      let cleaned = true;
+      try {
+        removeTaskWorktree(projectRoot, task, { keepBranch: true });
+      } catch (err) {
+        cleaned = false;
+        log.warn('task.cleanup_failed', { taskId, error: err.message });
+      }
+      log.info('task.finish', { taskId, branch: task.branch, commit: task.lastCommit });
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, {
+          deliveredAs: 'commit',
+          doneAt: new Date().toISOString(),
+          ...(cleaned ? { worktreePath: null } : {})
+        })
+      );
+    }
+
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/merge') && req.method === 'POST') {
       const taskId = url.pathname.split('/')[3];
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
@@ -464,7 +536,7 @@ function createApp(
       onTaskDeleted?.(taskId);
       let cleaned = true;
       try {
-        removeTaskWorktree(projectRoot, task);
+        removeTaskWorktree(projectRoot, task, { keepBranch: Boolean(task.existingBranch) });
       } catch (err) {
         cleaned = false;
         log.warn('task.cleanup_failed', { taskId, error: err.message });

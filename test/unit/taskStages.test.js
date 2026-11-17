@@ -13,7 +13,6 @@ const {
   buildStagePrompt,
   answerPrompt,
   stageTools,
-  stageDisallowed,
   approvalRule,
   decideAfterStage
 } = require('../../server/bridge/taskStages');
@@ -213,19 +212,6 @@ test('stageTools: implementation can edit and use Bash without asking per comman
   assert.ok(impl.includes('Bash'));
 });
 
-test('stageDisallowed: blocks commits, pushes and destructive actions, also with git -c', () => {
-  const deny = stageDisallowed();
-  for (const rule of [
-    'Bash(git commit*)',
-    'Bash(git push*)',
-    'Bash(git -c * commit*)',
-    'Bash(git reset --hard*)',
-    'Bash(rm *)'
-  ]) {
-    assert.ok(deny.includes(rule), `falta ${rule}`);
-  }
-});
-
 test('stageTools: read stages can query tokensave but not edit it', () => {
   const plan = stageTools('plan');
   assert.ok(plan.includes('mcp__tokensave__tokensave_context'));
@@ -316,7 +302,7 @@ test('stageDisallowed: read-only stages block the edit tools, edit stages do not
   }
   for (const stage of ['implement', 'write-tests', 'write', 'verify'])
     assert.ok(!stageDisallowed(stage).includes('Edit'));
-  assert.ok(stageDisallowed('plan').includes('Bash(git commit*)'));
+  assert.ok(!stageDisallowed('implement').some((r) => r.startsWith('Bash(')), 'Bash policy lives in the hook');
 });
 
 test('onboard: read-only study, report, hidden from the selector and without session details', () => {

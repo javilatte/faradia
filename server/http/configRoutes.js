@@ -3,6 +3,7 @@
 const portable = require('../config/portable');
 const { checkForUpdate } = require('../config/updateCheck');
 const { loadGlobalSettings } = require('../store/settingsStore');
+const { sandboxStatus } = require('../bridge/sandbox');
 const { sendJson, readJsonBody } = require('./util');
 const pkg = require('../../package.json');
 
@@ -16,7 +17,11 @@ const pkg = require('../../package.json');
 async function handleConfigRoutes(req, res, url) {
   const p = url.pathname;
   if (p === '/api/config/status' && req.method === 'GET') {
-    return sendJson(res, 200, { firstRun: portable.isFirstRun(), version: pkg.version });
+    return sendJson(res, 200, {
+      firstRun: portable.isFirstRun(),
+      version: pkg.version,
+      sandbox: { mode: loadGlobalSettings().security.sandbox, ...sandboxStatus() }
+    });
   }
   if (p === '/api/config/welcome' && req.method === 'POST') {
     portable.markWelcomed();

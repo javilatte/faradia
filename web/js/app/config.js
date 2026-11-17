@@ -324,8 +324,10 @@ async function renderGeneralPane() {
   const host = document.getElementById('general-pane');
   if (!host) return;
   let checkEnabled = true;
+  let sandbox = null;
   try {
     checkEnabled = (await api.get('/api/settings')).layers.global.updates.check;
+    sandbox = (await api.get('/api/config/status')).sandbox;
   } catch {
     /* keep the default */
   }
@@ -372,6 +374,7 @@ async function renderGeneralPane() {
         'Avisar cuando haya una versión nueva (consulta el registro de npm una vez al día)'
       )
     ),
+    renderSecurityField(sandbox),
     h(
       'div',
       { class: 'settings-field' },
@@ -412,6 +415,55 @@ async function renderGeneralPane() {
         h('button', { type: 'button', onclick: pickConfigFile }, 'Importar configuración…')
       )
     )
+  );
+}
+
+// Security: the OS sandbox of the agents (Bash can only write inside the task's worktree).
+function renderSecurityField(sandbox) {
+  if (!sandbox) return null;
+  const state = sandbox.available
+    ? 'Disponible en este equipo.'
+    : sandbox.unsupported
+      ? 'No disponible en este sistema.'
+      : `No disponible: falta ${sandbox.missing.join(' y ')}.`;
+  return h(
+    'div',
+    { class: 'settings-field', id: 'security-field' },
+    h('label', { for: 'setting-sandbox' }, 'Seguridad de los agentes'),
+    h(
+      'div',
+      { class: 'muted' },
+      'Los agentes ejecutan sus comandos en el sandbox del sistema de Claude Code: solo pueden escribir dentro del worktree de su tarea. ',
+      state,
+      sandbox.install ? h('div', {}, 'Instálalo con: ', h('code', {}, sandbox.install)) : null
+    ),
+    h(
+      'select',
+      {
+        id: 'setting-sandbox',
+        onchange: async (e) => {
+          await api.patch('/api/settings', { scope: 'global', security: { sandbox: e.target.value } });
+          renderGeneralPane();
+        }
+      },
+      h(
+        'option',
+        { value: 'required', selected: sandbox.mode !== 'off' },
+        'Obligatorio: sin sandbox los agentes no arrancan'
+      ),
+      h(
+        'option',
+        { value: 'off', selected: sandbox.mode === 'off' },
+        'Desactivado: los agentes trabajan sin sandbox (riesgo)'
+      )
+    ),
+    sandbox.mode === 'off'
+      ? h(
+          'div',
+          { class: 'error-text' },
+          'Sin sandbox, solo las reglas de optimia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).'
+        )
+      : null
   );
 }
 

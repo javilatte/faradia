@@ -63,8 +63,8 @@ const ASK_RULE = (phase) =>
 
 // Tools each stage may use without asking. A headless session has nowhere to answer a permission
 // prompt, so Bash is allowed in every stage: what a stage must not do is blocked with
-// STAGE_DISALLOWED (plus the git hook for commits and pushes), not with an allow list that would
-// require approving every command.
+// the safety policy (policy.js, plus the git hook for commits and pushes), not with an allow list
+// that would require approving every command.
 const READ_TOOLS = [
   'Read',
   'Glob',
@@ -85,28 +85,10 @@ const READ_TOOLS = [
 const EDIT_TOOLS = ['Edit', 'MultiEdit', 'Write'];
 // Denials that win over any allow rule. They match the command text, so the `git -c ...` variants
 // are listed too.
-const STAGE_DISALLOWED = [
-  'Bash(rm *)',
-  'Bash(sudo *)',
-  'Bash(chmod -R *)',
-  'Bash(find * -delete*)',
-  'Bash(git reset --hard*)',
-  'Bash(git clean *)',
-  'Bash(git checkout -- *)',
-  'Bash(git restore *)',
-  'Bash(git branch -D *)',
-  'Bash(git branch -d *)',
-  'Bash(git worktree remove *)',
-  'Bash(git stash drop*)',
-  'Bash(git commit*)',
-  'Bash(git push*)',
-  'Bash(git merge*)',
-  'Bash(git rebase*)',
-  'Bash(git -c * commit*)',
-  'Bash(git -c * push*)',
-  'Bash(git -c * merge*)',
-  'Bash(git -c * rebase*)'
-];
+// Destructive commands, commits and pushes are not deny rules any more: the PreToolUse hook of
+// policy.js blocks them, explains why to the agent and lets the user approve exact commands from the
+// card. The git hook (gitGuard.js) still blocks commits and pushes at the git level.
+const STAGE_DISALLOWED = [];
 
 function isKnownType(type) {
   return Object.prototype.hasOwnProperty.call(TASK_TYPES, type);
@@ -324,8 +306,12 @@ function parseDescription(text, target) {
   return { title, body };
 }
 
+// Agents work with as little human intervention as possible: they stop only for missing details.
+const AUTONOMY_RULE =
+  'Trabaja de forma autónoma: decide tú los detalles razonables y anótalos en tu respuesta. Para solo si falta concreción o contexto que no puedas deducir del repo. Si una acción queda bloqueada por seguridad, no te detengas: sigue por otro camino y, si era imprescindible, di al final qué necesitabas y para qué (el usuario puede permitirla desde la tarjeta).';
+
 function buildStagePrompt(task, stage, opts = {}) {
-  return `${buildStageBody(task, stage, opts)}\n\n${SHELL_RULE}`;
+  return `${buildStageBody(task, stage, opts)}\n\n${AUTONOMY_RULE}\n\n${SHELL_RULE}`;
 }
 
 // What the previous stage wrote and the implementation stage needs.

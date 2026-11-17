@@ -323,22 +323,68 @@ const TASK_TYPE_LABEL = {
   onboard: 'Conocer el repo'
 };
 
-// Actions the agent policy denied in the current stage: the agent took another path, but it is
-// worth knowing (and seeing if it repeats).
-function renderBlockedCommands(task) {
-  const list = (task.blockedCommands || []).filter((b) => b.stage === task.stage);
-  if (!list.length || task.status !== 'in_progress') return null;
+// Actions the safety policy blocked: the agent went on another way. Each one says what the agent
+// wanted to do and why it was blocked and, when it can be approved, offers "Permitir" (for this exact
+// command in this repo). Shown while the task is open; the ones of earlier stages are kept too.
+function renderBlockedCommands(taskId, task) {
+  const list = (task.blockedCommands || []).filter((b) => !b.allowed || b.stage === task.stage);
+  if (!list.length || task.mergedInto || task.deliveredAs) return null;
+  const pending = list.filter((b) => !b.allowed);
   const box = document.createElement('details');
   box.className = 'blocked-commands';
+  box.open = pending.some((b) => b.approvable);
   const summary = document.createElement('summary');
-  summary.textContent = `${list.length} ${list.length === 1 ? 'acción denegada' : 'acciones denegadas'} al agente (sigue por otro camino)`;
+  summary.textContent = pending.length
+    ? `${pending.length} ${pending.length === 1 ? 'acción bloqueada' : 'acciones bloqueadas'} por seguridad · el agente siguió sin ${pending.length === 1 ? 'ella' : 'ellas'}`
+    : 'Acciones permitidas en esta tarea';
   box.appendChild(summary);
   for (const b of list) {
-    const row = document.createElement('code');
-    row.textContent = b.command || b.tool;
+    const row = document.createElement('div');
+    row.className = 'blocked-row';
+    const what = document.createElement('div');
+    const code = document.createElement('code');
+    code.textContent = b.command || b.tool;
+    const why = document.createElement('div');
+    why.className = 'task-meta';
+    why.textContent = b.allowed
+      ? 'Permitido en este repo.'
+      : `Quería ${b.reason || `usar ${b.tool}`} (etapa ${STAGE_LABELS[b.stage] || b.stage}).`;
+    what.append(code, why);
+    row.appendChild(what);
+    if (!b.allowed && b.approvable) {
+      const actions = document.createElement('div');
+      actions.className = 'task-actions';
+      actions.appendChild(actionButton('Permitir', { onClick: () => allowBlocked(taskId, b.id, false) }));
+      if (task.status !== 'in_progress') {
+        actions.appendChild(
+          actionButton('Permitir y repetir etapa', { primary: true, onClick: () => allowBlocked(taskId, b.id, true) })
+        );
+      }
+      row.appendChild(actions);
+    } else if (!b.allowed) {
+      const note = document.createElement('div');
+      note.className = 'task-meta';
+      note.textContent = 'No se puede permitir a los agentes.';
+      row.appendChild(note);
+    }
     box.appendChild(row);
   }
   return box;
+}
+
+async function allowBlocked(taskId, blockedId, retry) {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/allow`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blockedId, retry })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    appendMessage('system', `No se pudo permitir: ${data.error || res.status}`);
+    return;
+  }
+  applyTaskFromServer(data);
+  renderTasks();
 }
 
 function stripVerdict(text) {
@@ -616,16 +662,21 @@ function renderCommitAndMerge(taskId, task) {
     // No remote: there is nowhere to open a PR, the task is merged locally.
     const note = document.createElement('div');
     note.className = 'task-meta';
-    note.textContent = 'Este repo no tiene remoto: la tarea se fusiona en local.';
+    note.textContent = task.existingBranch
+      ? `La tarea trabaja en la rama ${task.branch}, compartida con otras tareas.`
+      : 'Este repo no tiene remoto: la tarea se fusiona en local o se queda en su rama.';
     const row = document.createElement('div');
     row.className = 'task-actions';
-    row.appendChild(
-      actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, {
-        primary: true,
-        disabled: Boolean(task.uncommitted),
-        onClick: () => mergeTask(taskId)
-      })
-    );
+    if (!task.existingBranch) {
+      row.appendChild(
+        actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, {
+          primary: true,
+          disabled: Boolean(task.uncommitted),
+          onClick: () => mergeTask(taskId)
+        })
+      );
+    }
+    row.appendChild(commitOnlyButton(taskId, task, Boolean(task.existingBranch)));
     box.append(note, row);
   }
   return box;
@@ -746,6 +797,7 @@ function renderDelivery(taskId, task) {
     if (!pr) {
       row.appendChild(send(createLabel, true));
       if (viaGh) row.appendChild(draftLabel);
+      row.appendChild(commitOnlyButton(taskId, task, false));
     } else {
       row.appendChild(
         actionButton('Ver PR', { primary: !behind, onClick: () => window.open(pr.url, '_blank', 'noopener') })
@@ -802,6 +854,30 @@ function renderDelivery(taskId, task) {
     wrap.appendChild(row);
   }
   return wrap;
+}
+
+// "Solo commit": the task ends with its commit on its branch (one of several tasks of a branch, or
+// a PR opened later). The branch stays; only the worktree goes.
+function commitOnlyButton(taskId, task, primary) {
+  const btn = actionButton('Solo commit', {
+    primary,
+    disabled: Boolean(task.uncommitted),
+    onClick: () => finishTask(taskId)
+  });
+  btn.title = `Termina la tarea con su commit en ${task.branch}, sin PR ni fusión. La rama se conserva.`;
+  return btn;
+}
+
+async function finishTask(taskId) {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/finish`), { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    appendMessage('system', `No se pudo terminar la tarea: ${data.error || res.status}`);
+    return;
+  }
+  applyTaskFromServer(data);
+  renderTasks();
+  appendMessage('system', `Tarea terminada: su commit queda en la rama ${data.branch}.`);
 }
 
 async function createPullRequest(taskId, { title, body, draft }) {
@@ -1013,7 +1089,7 @@ function buildTaskCard(taskId, task, lastStep) {
   }
   const pipeline = renderPipeline(task);
   if (pipeline) card.appendChild(pipeline);
-  const blocked = renderBlockedCommands(task);
+  const blocked = renderBlockedCommands(taskId, task);
   if (blocked) card.appendChild(blocked);
   const verification = renderVerification(task);
   if (verification) card.appendChild(verification);
@@ -1086,8 +1162,12 @@ function buildDoneCard(taskId, task) {
   if (pipeline) card.appendChild(pipeline);
   const meta = document.createElement('div');
   meta.className = 'task-meta';
-  const how = task.fastForward === false ? 'con commit de merge' : 'en línea (fast-forward)';
-  meta.textContent = `✓ Fusionada en ${task.mergedInto} ${how} · ${task.lastCommitMessage || ''}`;
+  if (task.mergedInto) {
+    const how = task.fastForward === false ? 'con commit de merge' : 'en línea (fast-forward)';
+    meta.textContent = `✓ Fusionada en ${task.mergedInto} ${how} · ${task.lastCommitMessage || ''}`;
+  } else {
+    meta.textContent = `✓ Commit en ${task.branch} · ${task.lastCommitMessage || ''}`;
+  }
   card.appendChild(meta);
   if (task.mergedFiles?.length) {
     const files = document.createElement('div');
@@ -1197,7 +1277,7 @@ function renderTasks() {
   colReadyToTest.innerHTML = '';
   const done = [];
   for (const [taskId, { task, lastStep }] of tasks) {
-    if (task.mergedInto) {
+    if (task.mergedInto || task.deliveredAs) {
       done.push(buildDoneCard(taskId, task));
       continue;
     }

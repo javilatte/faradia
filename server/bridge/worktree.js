@@ -17,9 +17,14 @@ function git(projectRoot, args) {
  * collide on uncommitted changes in the main checkout. Branches off whatever
  * the project's current HEAD is at creation time.
  */
-function createTaskWorktree(projectRoot, taskId, { baseRef, branchName } = {}) {
+function createTaskWorktree(projectRoot, taskId, { baseRef, branchName, existingBranch = false } = {}) {
   const dir = worktreeDir(projectRoot, taskId);
   const branch = branchName || `optimia/task-${taskId.slice(0, 8)}`;
+  if (existingBranch) {
+    // A branch shared by several tasks: the task continues where the previous one left it.
+    git(projectRoot, ['worktree', 'add', dir, branch]);
+    return { dir, branch };
+  }
   const base = baseRef || git(projectRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
   git(projectRoot, ['worktree', 'add', '-b', branch, dir, base]);
   // The session's permissions come with --settings (.optimia/claude-settings-agents.json): nothing
@@ -42,12 +47,12 @@ function stageForReview(worktreeDirPath) {
  * Removes a task's worktree (including any staged or uncommitted changes) and
  * its branch. Callers must have confirmed with the user first.
  */
-function removeTaskWorktree(projectRoot, { worktreePath, branch }) {
+function removeTaskWorktree(projectRoot, { worktreePath, branch }, { keepBranch = false } = {}) {
   if (worktreePath && fs.existsSync(worktreePath)) {
     git(projectRoot, ['worktree', 'remove', '--force', worktreePath]);
   }
   git(projectRoot, ['worktree', 'prune']);
-  if (branch) {
+  if (branch && !keepBranch) {
     const exists = (() => {
       try {
         git(projectRoot, ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`]);
@@ -186,6 +191,7 @@ function changedFiles(dir) {
 }
 
 module.exports = {
+  worktreeOfBranch,
   worktreeDir,
   createTaskWorktree,
   stageForReview,
