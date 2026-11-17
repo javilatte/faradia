@@ -1553,6 +1553,8 @@ select,
   grid-template-columns: 14px minmax(0, 1fr);
   gap: 6px;
   align-items: start;
+}
+.act-row.fresh {
   animation: act-in 0.28s ease-out;
 }
 @keyframes act-in {
@@ -1771,7 +1773,7 @@ select,
   color: var(--red);
 }
 @media (prefers-reduced-motion: reduce) {
-  .act-row,
+  .act-row.fresh,
   .act-think.live .act-glyph,
   .act-tool.status-running .act-glyph {
     animation: none;

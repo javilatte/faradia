@@ -310,7 +310,13 @@ function renderActivity(taskId, { live = false } = {}) {
     return feed;
   }
   const shown = live ? items.slice(-ACTIVITY_LIVE_ROWS) : items;
-  for (const item of shown) feed.appendChild(renderActivityItem(item, live));
+  for (const item of shown) {
+    const row = renderActivityItem(item, live);
+    // Cards are rebuilt on every event: only rows the user has not seen yet slide in.
+    if (!item.seen) row.classList.add('fresh');
+    item.seen = true;
+    feed.appendChild(row);
+  }
   if (!live) requestAnimationFrame(() => (feed.scrollTop = feed.scrollHeight));
   return feed;
 }

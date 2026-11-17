@@ -5,6 +5,23 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    ver: 'view',
+    ahora: 'now',
+    Abrir: 'Open',
+    Compacta: 'Compact',
+    Ampliada: 'Expanded',
+    'hacer commit, push, merge o rebase: los haces tú desde la tarjeta (Commit, Crear PR)':
+      'commit, push, merge or rebase: you do those from the card (Commit, Create PR)',
+    'borrar stashes': 'delete stashes',
+    'borrar worktrees': 'delete worktrees',
+    'borrar ramas': 'delete branches',
+    'descartar cambios de ficheros': 'discard file changes',
+    'borrar ficheros sin seguimiento (git clean)': 'delete untracked files (git clean)',
+    'descartar cambios (git reset --hard)': 'discard changes (git reset --hard)',
+    'borrar ficheros con find': 'delete files with find',
+    'cambiar permisos en bloque': 'change permissions recursively',
+    'ejecutar como administrador (sudo)': 'run as administrator (sudo)',
+    'borrar ficheros': 'delete files',
     bloqueada: 'blocked',
     hecha: 'done',
     'en marcha': 'started',
@@ -545,6 +562,9 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^(\\d+) ficheros?$', '$1 files'],
+    ['^(\\d+) ficheros? · (.+)$', '$1 files · $2'],
+    ['^Un agente ha cambiado (\\d+) ficheros? de test$', 'An agent changed $1 test files'],
     ['^Agente: (.+)$', 'Agent: $1'],
     [
       '^"(.+)" necesita tu respuesta\\. Contéstala en su tarjeta del panel de agentes\\.$',

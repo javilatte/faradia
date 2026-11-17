@@ -1,10 +1,12 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { ClaudeSession } = require('../bridge/claudeProcess');
 const { listModelsAt } = require('../bridge/localAi');
 const wiki = require('./wikiStore');
+const { requestLanguage } = require('../bridge/taskStages');
 
 // Keeps the wikis up to date: after a task is committed (or delivers a report), an agent reads what
 // changed and updates the project's wiki (and, rarely, the personal one). It prefers the local model
@@ -58,7 +60,7 @@ function buildPrompt({ project, projectRel, task, change }) {
       '- La wiki personal solo si la tarea enseña algo general y reutilizable fuera de este proyecto (una técnica, una preferencia del usuario). Casi nunca.',
       '- No copies código entero: explica y enlaza a los ficheros (ruta:línea).',
       '- Si la tarea no aporta nada que merezca quedar, solo añade la línea al log.',
-      '- Escribe en el idioma de las páginas que ya existen; si la wiki está vacía, en el idioma del encargo de la tarea.',
+      `- Escribe en ${requestLanguage(`${task.title || ''}\n${task.instruction || ''}`) === 'en' ? 'inglés' : 'español'}, el idioma del encargo (títulos, carpetas y nombres de fichero también).`,
       '- No uses Bash ni salgas de esta carpeta.'
     ].join('\n'),
     `Tarea (${task.type}): ${task.title}\nEncargo:\n${cut(task.instruction, MAX_TEXT_CHARS)}`,
@@ -234,6 +236,15 @@ function buildFromRepoPrompt({ project, projectRel, projectRoot, lang }) {
 function enqueueWikiBuild({ projectRoot, settings, agent, lang, log, onEvent, onDone, Session }) {
   const prefs = settings.wiki || {};
   const target = wiki.ensureWiki(wiki.wikiFor('project', projectRoot), projectRoot);
+  // The empty wiki's log starts in Spanish: in an English wiki its title follows the wiki.
+  const logFile = path.join(target.dir, 'log.md');
+  try {
+    if (lang === 'en' && fs.readFileSync(logFile, 'utf8') === '# Registro de mantenimiento\n\n') {
+      fs.writeFileSync(logFile, '# Maintenance log\n\n');
+    }
+  } catch {
+    /* no log yet */
+  }
   const job = async () => {
     const prompt = buildFromRepoPrompt({
       project: target.title,
