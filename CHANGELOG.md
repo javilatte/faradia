@@ -2,6 +2,17 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.1] - 2026-11-17
+
+### Changed
+- The default workbench is called "Mi espacio" (renamed from "Por defecto" on its own), and the workbench selector no longer shows the number of repos.
+- Tighter, kerned Optimia logo.
+- 4K screenshots in the README; the README and the older CHANGELOG entries are fully in English.
+
+### Fixed
+- optimia warns on start when the agents' sandbox is missing (`bubblewrap` / `socat` on Linux) and says how to install it.
+- A flaky end-to-end test on macOS.
+
 ## [2.1.0] - 2026-11-17
 
 ### Added
