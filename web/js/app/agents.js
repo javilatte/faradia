@@ -118,7 +118,7 @@ function modelControl(agent, draft) {
       h('input', {
         list: listId,
         value: draft.model || '',
-        placeholder: 'qwen2.5-coder:7b',
+        placeholder: localModels[0]?.name || 'qwen2.5-coder:7b',
         'aria-label': `Modelo local de ${agent.name}`,
         spellcheck: 'false',
         oninput: (e) => (draft.model = e.target.value.trim()),
@@ -127,7 +127,7 @@ function modelControl(agent, draft) {
       h(
         'datalist',
         { id: listId },
-        localModels.map((m) => h('option', { value: m.name }, m.size))
+        localModels.map((m) => h('option', { value: m.name }, m.size ? `${(m.size / 1e9).toFixed(1)} GB` : ''))
       )
     );
   }

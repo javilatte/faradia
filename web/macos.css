@@ -1022,3 +1022,23 @@ body {
   font-size: var(--text-body);
   font-weight: 400;
 }
+
+/* Settings > Local AI */
+.settings-help {
+  margin: 0 0 12px;
+  font-size: var(--text-callout);
+}
+.local-ai-servers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: var(--text-callout);
+  color: var(--secondary-label);
+}
+.local-ai-server {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

@@ -45,9 +45,9 @@ function localDefaults(ai) {
  * given, its engine, model, effort and role prompt win over the general AI settings, which are left
  * for the chat.
  *
- * Local models: the current claude CLI (verified with 2.1.x) sends the model name as is to
- * ANTHROPIC_BASE_URL, Ollama names like "qwen2.5-coder:7b" included, so the ensureOllamaAlias alias
- * is no longer needed and each agent can use a different local model at the same time.
+ * Local models (Ollama, LM Studio): the current claude CLI (verified with 2.1.x) sends the model
+ * name as is to ANTHROPIC_BASE_URL ("qwen2.5-coder:7b", "google/gemma-4-12b"), so each agent can use
+ * a different local model at the same time. See localAi.js for the environment of those sessions.
  */
 function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;

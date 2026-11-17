@@ -33,7 +33,7 @@ const thinkingOrb = document.getElementById('thinking-orb');
 
 // Same list the Settings "Claude Code" pane offers (web/index.html's
 // setting-claude-model) — a verified set of recognized model names, not a
-// guess. Local mode instead lists whatever Ollama actually has pulled (see
+// guess. Local mode instead lists the models of the local server, Ollama or LM Studio (see
 // GET /api/local-models), since there's no fixed list to hardcode there.
 const CLAUDE_MODEL_OPTIONS = [
   ['default', 'Por defecto'],
@@ -43,38 +43,59 @@ const CLAUDE_MODEL_OPTIONS = [
   ['haiku', 'haiku']
 ];
 
+// One selector for every model the chat can use: Claude's and, below, the ones of the local servers
+// running on this machine (Ollama, LM Studio). Picking a local model switches the chat to it.
+function formatBytes(n) {
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.round(n / 1e6)} MB`;
+}
+
 async function populateChatModelSelect(settings) {
   chatModelSelect.innerHTML = '';
-  if (settings.ai.mode === 'local') {
-    const models = await fetch(apiPath('/api/local-models'))
-      .then((r) => r.json())
-      .catch(() => []);
-    if (models.length === 0) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = 'Sin modelos locales (ollama pull ...)';
-      chatModelSelect.appendChild(opt);
-      chatModelSelect.disabled = true;
-      return;
-    }
-    chatModelSelect.disabled = false;
-    for (const m of models) {
-      const opt = document.createElement('option');
-      opt.value = m.name;
-      opt.textContent = `${m.name} (${m.size})`;
-      chatModelSelect.appendChild(opt);
-    }
-    chatModelSelect.value = settings.ai.localAi.model || models[0].name;
-  } else {
-    chatModelSelect.disabled = false;
-    for (const [value, label] of CLAUDE_MODEL_OPTIONS) {
-      const opt = document.createElement('option');
-      opt.value = value;
-      opt.textContent = label;
-      chatModelSelect.appendChild(opt);
-    }
-    chatModelSelect.value = settings.ai.claude.model || 'default';
+  chatModelSelect.disabled = false;
+  const claudeGroup = document.createElement('optgroup');
+  claudeGroup.label = 'Claude';
+  for (const [value, label] of CLAUDE_MODEL_OPTIONS) {
+    const opt = document.createElement('option');
+    opt.value = `claude:${value}`;
+    opt.textContent = label;
+    claudeGroup.appendChild(opt);
   }
+  chatModelSelect.appendChild(claudeGroup);
+
+  const { servers = [] } = await fetch(apiPath('/api/local-ai/detect'))
+    .then((r) => r.json())
+    .catch(() => ({}));
+  const local = settings.ai.localAi;
+  let localSelected = false;
+  for (const server of servers) {
+    if (!server.models.length) continue;
+    const group = document.createElement('optgroup');
+    group.label = `Local · ${server.label}`;
+    for (const m of server.models) {
+      const opt = document.createElement('option');
+      opt.value = `local:${m.name}`;
+      opt.dataset.url = server.url;
+      const size = formatBytes(m.size);
+      opt.textContent = size ? `${m.name} (${size})` : m.name;
+      if (settings.ai.mode === 'local' && m.name === local.model && !localSelected) {
+        opt.selected = true;
+        localSelected = true;
+      }
+      group.appendChild(opt);
+    }
+    chatModelSelect.appendChild(group);
+  }
+  if (settings.ai.mode === 'local' && !localSelected) {
+    // The configured local model is not available right now: shown anyway so the state is honest.
+    const opt = document.createElement('option');
+    opt.value = `local:${local.model}`;
+    opt.dataset.url = local.url;
+    opt.textContent = `${local.model || 'modelo local'} (no disponible)`;
+    opt.selected = true;
+    chatModelSelect.appendChild(opt);
+  }
+  if (settings.ai.mode !== 'local') chatModelSelect.value = `claude:${settings.ai.claude.model || 'default'}`;
 }
 
 // Quick change from the composer: stored where the value lives now (in the repo if it overrides it;
@@ -94,10 +115,25 @@ async function setAiField(field, value) {
 }
 
 chatModelSelect.addEventListener('change', async () => {
+  const option = chatModelSelect.selectedOptions[0];
+  const [engine, ...rest] = chatModelSelect.value.split(':');
+  const model = rest.join(':');
   const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
-  const field = settings.ai.mode === 'local' ? 'localAi.model' : 'claude.model';
-  const where = await setAiField(field, chatModelSelect.value);
-  appendMessage('system', `Modelo "${chatModelSelect.value}" ${where}, desde la próxima sesión.`);
+  // Stored where the engine lives now: in this repo if it overrides it, otherwise for all repos.
+  const own = (settings.layers?.overrides || []).includes('ai.mode');
+  const ai =
+    engine === 'local'
+      ? { mode: 'local', localAi: { model, url: option?.dataset.url || settings.ai.localAi.url } }
+      : { mode: 'claude', claude: { model } };
+  await fetch(apiPath('/api/settings'), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope: own ? 'project' : 'global', ai })
+  });
+  modeLabel.textContent = engine === 'local' ? 'IA local' : 'Claude Code';
+  const where = own ? 'solo en este repo' : 'en todos los repos';
+  const label = engine === 'local' ? `local "${model}"` : `"${model}"`;
+  appendMessage('system', `Modelo ${label} ${where}, desde la próxima sesión.`);
 });
 const connectionStatus = document.getElementById('connection-status');
 const modeLabel = document.getElementById('mode-label');

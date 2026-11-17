@@ -32,7 +32,7 @@ const { resolveInside, readPreview, openWithSystem } = require('../bridge/taskFi
 const { loadMemory, saveMemory } = require('../store/memoryStore');
 const { listSkills, createSkill } = require('../bridge/skills');
 const { getClaudeAuthStatus, openAuthLoginInTerminal } = require('../bridge/claudeAuth');
-const { listLocalModels } = require('../bridge/localAi');
+const { listModelsAt, detectLocalServers } = require('../bridge/localAi');
 const { getAiAssistSuggestion } = require('../bridge/aiAssist');
 const { sendJson, readJsonBody } = require('../http/util');
 const { handleAgentRoutes } = require('../http/agentRoutes');
@@ -120,8 +120,23 @@ function createApp(
       return sendJson(res, 200, await openAuthLoginInTerminal());
     }
 
+    // Models of the configured local server (Settings > Local AI) or, without a URL, of the first
+    // server found on this machine.
     if (url.pathname === '/api/local-models' && req.method === 'GET') {
-      return sendJson(res, 200, listLocalModels());
+      const configured = loadSettingsLayers(projectRoot).effective.ai.localAi.url;
+      try {
+        if (configured) return sendJson(res, 200, await listModelsAt(configured));
+        const [first] = await detectLocalServers();
+        return sendJson(res, 200, first ? first.models : []);
+      } catch {
+        return sendJson(res, 200, []);
+      }
+    }
+
+    // Ollama / LM Studio running on this machine, to fill in Settings > Local AI with one click.
+    if (url.pathname === '/api/local-ai/detect' && req.method === 'GET') {
+      const configuredUrl = loadSettingsLayers(projectRoot).effective.ai.localAi.url;
+      return sendJson(res, 200, { servers: await detectLocalServers({ configuredUrl }) });
     }
 
     if (url.pathname === '/api/ai-assist' && req.method === 'POST') {

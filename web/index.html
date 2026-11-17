@@ -326,13 +326,26 @@
             </section>
 
             <section class="settings-pane" data-pane="local-ai" hidden>
+              <p class="muted settings-help">
+                Ollama o LM Studio en este equipo. El chat y cada agente pueden usar un modelo local; tu cuenta de
+                Claude no se envía al servidor local.
+              </p>
+              <div class="settings-field">
+                <button type="button" id="local-ai-detect">Detectar servidores locales</button>
+                <div id="local-ai-servers" class="local-ai-servers" aria-live="polite"></div>
+              </div>
               <div class="settings-field">
                 <label for="setting-local-url">URL</label>
-                <input type="text" id="setting-local-url" placeholder="http://localhost:11434" />
+                <input
+                  type="text"
+                  id="setting-local-url"
+                  placeholder="http://127.0.0.1:1234 (LM Studio) o :11434 (Ollama)"
+                />
               </div>
               <div class="settings-field">
                 <label for="setting-local-model">Modelo</label>
-                <input type="text" id="setting-local-model" placeholder="llama3.1" />
+                <input type="text" id="setting-local-model" list="local-ai-models" placeholder="google/gemma-4-12b" />
+                <datalist id="local-ai-models"></datalist>
               </div>
               <div class="settings-field">
                 <label for="setting-local-auth">Cabecera de autenticación</label>

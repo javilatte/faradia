@@ -3,6 +3,7 @@
 const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
 const crypto = require('crypto');
+const { localSessionEnv } = require('./localAi');
 
 /**
  * Wraps one long-lived `claude -p --input-format stream-json --output-format
@@ -86,10 +87,10 @@ class ClaudeSession extends EventEmitter {
       env.GIT_CONFIG_KEY_0 = 'core.hooksPath';
       env.GIT_CONFIG_VALUE_0 = gitHooksPath;
     }
-    if (baseUrl) env.ANTHROPIC_BASE_URL = baseUrl;
-    if (authHeader) env.ANTHROPIC_CUSTOM_HEADERS = authHeader;
+    // Local model: the account's credentials stay out of the request (see localAi.js).
+    const finalEnv = baseUrl ? localSessionEnv(env, { baseUrl, authHeader, model }) : env;
 
-    this.proc = spawn('claude', args, { cwd: projectRoot, env });
+    this.proc = spawn('claude', args, { cwd: projectRoot, env: finalEnv });
 
     this.proc.stdout.on('data', (chunk) => this._onStdout(chunk));
     this.proc.stderr.on('data', (chunk) => this.emit('stderr', chunk.toString('utf8')));
