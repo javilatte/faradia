@@ -19,6 +19,15 @@
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-0A84FF" alt="Platforms: macOS and Linux">
 </p>
 
+<p align="center">
+  <a href="https://optimia.jagoan.es/media/optimia-promo-v2.2.mp4"><img src="docs/assets/demo-agents.gif" alt="Real agents at work in optimia: their reasoning, a risky command blocked for safety, and three agents running at once in two repos" width="100%"></a>
+</p>
+
+<p align="center">
+  <a href="https://optimia.jagoan.es/media/optimia-promo-v2.2.mp4"><b>▶ Watch optimia in one minute</b></a>
+  &nbsp;·&nbsp; real agents on a real two-repo project, sped up
+</p>
+
 ![optimia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
 
 ## Why optimia
@@ -26,12 +35,16 @@
 - **Agents that finish the job.** Every task runs a pipeline of agents (plan → implement →
   verify) in its own git worktree, with a model per agent. Agents only stop to ask when
   they lack context; anything blocked for safety can be allowed from the card.
+- **Watch them think.** Each card streams what its agent is doing: what it says, the files
+  it reads, its edits (+/−), the commands it runs and their results, the tests, how much it
+  is thinking. Agents write in the language you wrote the task in.
 - **Delivered the way your team works.** Commit, then open the pull request with a
   description drafted from the task, or write the comment for the Jira ticket, which
   may tell more (or less) than the PR. Or keep several tasks on one branch.
-- **Knowledge that accumulates.** A wiki per project and a personal one, updated by an
-  agent after every task (with your local model when there is one), plus each repo's
-  memory. Search it, browse it as a map, export it and take it to another machine.
+- **Knowledge that accumulates.** A wiki per project and a personal one, written from the
+  repo in one click and updated by an agent after every task (with your local model when
+  there is one), plus each repo's memory. Search it, browse it as a map, export it and
+  take it to another machine.
 - **Every repo, one window.** Workbenches group your repos; switching is instant, and
   the chat, agents and settings follow. Global settings with per-repo overrides.
 - **Batteries included.** The agents, skills and commands of
