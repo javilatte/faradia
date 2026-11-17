@@ -440,6 +440,7 @@ async function renderGeneralPane() {
     ),
     renderSecurityField(sandbox),
     renderWikiField(wikiPrefs),
+    renderToolsField(),
     h(
       'div',
       { class: 'settings-field' },
@@ -510,6 +511,125 @@ async function renderGeneralPane() {
       )
     )
   );
+}
+
+// Tools: ECC (Everything Claude Code), a Claude Code plugin with agents, skills and commands.
+function renderToolsField() {
+  const host = h('div', { class: 'settings-field', id: 'tools-field' }, h('label', {}, 'Herramientas'));
+  const body = h('div', {}, h('div', { class: 'muted' }, 'Comprobando…'));
+  host.append(body);
+  const paint = (st) => {
+    const intro = h(
+      'div',
+      { class: 'muted' },
+      h('a', { href: st.url, target: '_blank', rel: 'noopener' }, st.title),
+      ` (licencia ${st.license}): agentes, skills y comandos para Claude Code. `,
+      'Sus skills suman contexto a cada sesión; puedes activarlo solo en optimia.'
+    );
+    if (!st.installed) {
+      let everywhere = false;
+      let hooks = false;
+      const btn = h(
+        'button',
+        {
+          type: 'button',
+          class: 'primary',
+          onclick: async () => {
+            btn.disabled = true;
+            btn.textContent = 'Instalando… (puede tardar unos minutos)';
+            try {
+              paint(await api.post('/api/tools/ecc', { action: 'install', everywhere, hooks }));
+              toast('ECC instalado');
+            } catch (err) {
+              toast(err.message, { kind: 'error' });
+              paint(st);
+            }
+          }
+        },
+        'Instalar ECC'
+      );
+      body.replaceChildren(
+        intro,
+        h(
+          'label',
+          { class: 'check-row' },
+          h('input', { type: 'checkbox', onchange: (e) => (everywhere = e.target.checked) }),
+          'Activarlo también en tu Claude Code normal (si no, solo en las sesiones de optimia)'
+        ),
+        h(
+          'label',
+          { class: 'check-row' },
+          h('input', { type: 'checkbox', onchange: (e) => (hooks = e.target.checked) }),
+          'Activar sus hooks (se ejecutan en cada etapa de los agentes)'
+        ),
+        h('div', { class: 'general-actions' }, btn)
+      );
+      return;
+    }
+    const toggle = (key, label) =>
+      h(
+        'label',
+        { class: 'check-row' },
+        h('input', {
+          type: 'checkbox',
+          checked: key === 'inOptimia' ? st.inOptimia : st.enabledEverywhere,
+          onchange: async (e) => {
+            try {
+              paint(
+                await api.post('/api/tools/ecc', {
+                  [key === 'inOptimia' ? 'inOptimia' : 'everywhere']: e.target.checked
+                })
+              );
+            } catch (err) {
+              toast(err.message, { kind: 'error' });
+            }
+          }
+        }),
+        label
+      );
+    body.replaceChildren(
+      intro,
+      h('div', { class: 'muted' }, `Instalado${st.version ? ` (versión ${st.version})` : ''}.`),
+      toggle('inOptimia', 'Activo en el chat y los agentes de optimia'),
+      toggle('everywhere', 'Activo también en tu Claude Code normal'),
+      h(
+        'div',
+        { class: 'general-actions' },
+        h(
+          'button',
+          {
+            type: 'button',
+            onclick: async () => {
+              const { details } = await api.get('/api/tools/ecc?details=1');
+              openSheet({
+                title: st.title,
+                body: [h('pre', { class: 'inherited-text' }, details || 'Sin detalles.')],
+                actions: [{ label: 'Cerrar', primary: true }]
+              });
+            }
+          },
+          'Qué incluye y cuánto contexto usa…'
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'danger',
+            onclick: async () => {
+              if (!window.confirm('¿Desinstalar ECC de Claude Code?')) return;
+              paint(await api.post('/api/tools/ecc', { action: 'uninstall' }));
+            }
+          },
+          'Desinstalar'
+        )
+      )
+    );
+  };
+  api
+    .get('/api/tools/ecc')
+    .then(paint)
+    .catch((err) => body.replaceChildren(h('div', { class: 'error-text' }, err.message)));
+  return host;
 }
 
 // Wikis: kept up to date by an agent after each task.

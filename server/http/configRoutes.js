@@ -2,9 +2,10 @@
 
 const portable = require('../config/portable');
 const { checkForUpdate } = require('../config/updateCheck');
-const { loadGlobalSettings } = require('../store/settingsStore');
+const { loadGlobalSettings, saveGlobalSettings } = require('../store/settingsStore');
 const { sandboxStatus } = require('../bridge/sandbox');
 const knowledge = require('../knowledge/bundle');
+const plugins = require('../bridge/plugins');
 const { sendJson, readJsonBody } = require('./util');
 const pkg = require('../../package.json');
 
@@ -81,6 +82,37 @@ async function handleConfigRoutes(req, res, url) {
         return sendJson(res, 400, { error: err.message });
       }
       throw err;
+    }
+  }
+  // ECC (Everything Claude Code): status, install, where it is enabled.
+  if (p === '/api/tools/ecc' && req.method === 'GET') {
+    const status = await plugins.eccStatus();
+    return sendJson(res, 200, {
+      ...status,
+      inOptimia: loadGlobalSettings().tools.ecc,
+      details: status.installed && url.searchParams.get('details') === '1' ? await plugins.eccDetails() : null
+    });
+  }
+  if (p === '/api/tools/ecc' && req.method === 'POST') {
+    const body = await readJsonBody(req).catch(() => ({}));
+    try {
+      let status;
+      if (body.action === 'install') {
+        status = await plugins.installEcc({ everywhere: body.everywhere === true, hooks: body.hooks === true });
+        saveGlobalSettings({ tools: { ecc: true } });
+      } else if (body.action === 'uninstall') {
+        status = await plugins.uninstallEcc();
+        saveGlobalSettings({ tools: { ecc: false } });
+      } else {
+        if (typeof body.inOptimia === 'boolean') saveGlobalSettings({ tools: { ecc: body.inOptimia } });
+        status =
+          typeof body.everywhere === 'boolean'
+            ? await plugins.setEccEverywhere(body.everywhere)
+            : await plugins.eccStatus();
+      }
+      return sendJson(res, 200, { ...status, inOptimia: loadGlobalSettings().tools.ecc });
+    } catch (err) {
+      return sendJson(res, 502, { error: `claude plugin: ${err.message}` });
     }
   }
   if (p === '/api/update' && req.method === 'GET') {
