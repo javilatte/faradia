@@ -5,6 +5,14 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    Carpeta: 'Folder',
+    Ver: 'View',
+    'Árbol de trabajo': 'Working tree',
+    'En stage': 'Staged',
+    Contexto: 'Context',
+    'EN VIVO': 'LIVE',
+    'No hay cambios.': 'No changes.',
+    'Elige un fichero para ver su diff.': 'Pick a file to see its diff.',
     'Planificando…': 'Planning…',
     'Trabajando…': 'Working…',
     'Pensando…': 'Thinking…',
@@ -531,6 +539,20 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    [
+      '^"(.+)" necesita tu respuesta\\. Contéstala en su tarjeta del panel de agentes\\.$',
+      '"$1" needs your answer. Reply on its card in the agents panel.'
+    ],
+    ['^"(.+)" se detuvo: (.+)$', '"$1" stopped: $2'],
+    ['^PR lista: (.+)$', 'PR ready: $1'],
+    ['^Rama subida\\. Abre la PR: (.+)$', 'Branch pushed. Open the PR: $1'],
+    ['^→ lanzando agente: (.+)$', '→ launching agent: $1'],
+    ['^→ usando herramienta: (.+)$', '→ using tool: $1'],
+    ['^No se pudo ([^:]+): (.+)$', 'Could not $1: $2'],
+    [
+      '^"(.+)" está lista para revisar y ship en el panel de agentes\\.$',
+      '"$1" is ready to review and ship in the agents panel.'
+    ],
     ['^(.+) · usando (.+)$', '$1 · using $2'],
     ['^(.+) · iniciando\\.\\.\\.$', '$1 · starting…'],
     ['^(.+) · escribiendo respuesta\\.\\.\\.$', '$1 · writing the answer…'],

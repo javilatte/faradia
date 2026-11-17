@@ -141,6 +141,8 @@ function appendMessage(role, text, images = [], files = []) {
     const textEl = document.createElement(role === 'assistant' ? 'div' : 'span');
     textEl.className = 'msg-text';
     if (role === 'assistant') paintMarkdown(textEl, text);
+    // optimia's own notices are interface text: they follow the interface's language.
+    else if (role === 'system' || role === 'error') textEl.textContent = window.t ? window.t(text) : text;
     else textEl.textContent = text;
     el.appendChild(textEl);
   }
