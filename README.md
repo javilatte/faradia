@@ -1,36 +1,76 @@
-# optimIA
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="Optimia" width="320">
+</p>
 
-[![npm](https://img.shields.io/npm/v/@javilatte/optimia?logo=npm&style=flat-square)](https://www.npmjs.com/package/@javilatte/optimia)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square&logo=node.js)](https://nodejs.org/)
-[![macOS](https://img.shields.io/badge/macOS-tested-brightgreen?style=flat-square&logo=apple)](https://www.apple.com/macos)
-[![Linux](https://img.shields.io/badge/Linux-tested-brightgreen?style=flat-square&logo=linux)](https://github.com/)
-[![Windows](https://img.shields.io/badge/Windows-untested%20%2F%20WIP-yellow?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
+<p align="center">
+  <b>Direct and supervise AI coding agents across all your repos, from one local web app.</b><br>
+  Claude Code or local models, your agents and workflows, a wiki that grows with every task.
+</p>
 
-Run `optimia` in any project directory. It starts a local web server and opens a
-dashboard in your browser where you can **direct** coding agents and **watch**
-what they do, across every repo you work on:
+<p align="center">
+  <a href="https://www.npmjs.com/package/@javilatte/optimia"><img src="https://img.shields.io/badge/Install-npm%20i%20--g%20%40javilatte%2Foptimia-0A84FF?style=for-the-badge&logo=npm&logoColor=white" alt="Install with npm"></a>
+</p>
 
-- **Chat** against a real **Claude Code** session (or a local model via **LM Studio** or **Ollama**).
-- **Agents with their own model**: ten default agents (planner, implementer,
-  verifier, reviewer, debugger, test writer, auditor…) wired into task pipelines,
-  each with its own engine, model, effort and role prompt — plus your own agents.
-- **Workbenches**: group repos, auto-detect them under a folder, and run chats and
-  agents in any of them.
-- **Live supervision, read-only**: git state per repo, a live diff viewer (watch an
-  agent write in its worktree), a timeline, passive signals (large deletes,
-  sensitive files, possible secrets, test changes), metrics, desktop notifications
-  and a compact glance window.
-- **File explorer** with previews and undoable operations.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@javilatte/optimia"><img src="https://img.shields.io/npm/v/@javilatte/optimia?color=0A84FF&label=npm" alt="npm version"></a>
+  <a href="https://github.com/javilatte/optimia/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/javilatte/optimia/ci.yml?label=CI" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0A84FF" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/node-%E2%89%A5%2022-0A84FF" alt="Node 22 or later">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-0A84FF" alt="Platforms: macOS and Linux">
+</p>
+
+![optimia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
+
+## Why optimia
+
+- **Agents that finish the job.** Every task runs a pipeline of agents (plan → implement →
+  verify) in its own git worktree, with a model per agent. Agents only stop to ask when
+  they lack context; anything blocked for safety can be allowed from the card.
+- **Delivered the way your team works.** Commit, then open the pull request with a
+  description drafted from the task, or write the comment for the Jira ticket, which
+  may tell more (or less) than the PR. Or keep several tasks on one branch.
+- **Knowledge that accumulates.** A wiki per project and a personal one, updated by an
+  agent after every task (with your local model when there is one), plus each repo's
+  memory. Search it, browse it as a map, export it and take it to another machine.
+- **Every repo, one window.** Workbenches group your repos; switching is instant, and
+  the chat, agents and settings follow. Global settings with per-repo overrides.
+- **Batteries included.** The agents, skills and commands of
+  [ECC (Everything Claude Code)](https://github.com/affaan-m/ECC) are bundled: optimia's
+  own agents follow their best ECC counterpart, and any ECC agent is one `@` away.
+- **Local or Claude.** Claude Code, or LM Studio / Ollama models for the chat or for
+  any agent; your Claude account never reaches the local server.
+- **Safe by default.** Agents run in Claude Code's OS sandbox, can never commit, push
+  or merge, and a policy hook blocks destructive commands, with exceptions you approve.
+- **Live supervision.** Dashboard, live diffs, timeline, signals (large deletes,
+  secrets, sensitive files), notifications and a compact glance window.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshot-pr.png" alt="A task card with the pipeline, the verification and the drafted pull request"><br><sub><b>Delivery</b> — the PR title and description, drafted from the task</sub></td>
+    <td width="50%"><img src="docs/assets/screenshot-wiki.png" alt="A wiki page with its backlinks"><br><sub><b>Wiki</b> — pages written by the agents, with backlinks</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshot-wiki-map.png" alt="The map of a project wiki"><br><sub><b>Wiki map</b> — how the pages link to each other</sub></td>
+    <td width="50%"><img src="docs/assets/screenshot-local-ai.png" alt="Settings: local AI detection"><br><sub><b>Local AI</b> — LM Studio and Ollama, detected in one click</sub></td>
+  </tr>
+</table>
+
+## Quick start
 
 ```
-$ optimia
+npm install -g @javilatte/optimia
+cd your-project
+optimia
+```
 
+```
 optimia running at http://127.0.0.1:54213/?token=… (project: /path/to/your-project)
 ```
 
-No terminal wizard: everything (models, agents, local AI, instructions, memory,
-permission rules, skills, signals, watchlists) is configured in the web UI.
+No terminal wizard: models, agents, local AI, instructions, memory, permission rules,
+skills, signals and watchlists are all configured in the web UI.
 
 ---
 
@@ -65,6 +105,7 @@ npx @javilatte/optimia
 | [`claude`](https://claude.ai/code) (Claude Code CLI) | yes | chats and agents are real `claude` subprocesses — optimia never calls the Anthropic API directly |
 | [LM Studio](https://lmstudio.ai) ≥ 0.4 or [Ollama](https://ollama.com) ≥ 0.14 | optional | local models for the chat or for any agent (both serve the Anthropic Messages API that `claude` needs) |
 | [`gh`](https://cli.github.com) | optional | opens the pull request of a task from its card (without it, optimia pushes the branch and opens the page to create it) |
+| `bubblewrap` and `socat` (Linux) | recommended | Claude Code's OS sandbox for the agents (`sudo apt install bubblewrap socat`); built in on macOS. Without it agents do not start unless you turn the sandbox off in Settings › General |
 | [`gitleaks`](https://github.com/gitleaks/gitleaks) | optional | extra secret detection rules on top of the built-in ones |
 
 ---
@@ -73,9 +114,10 @@ npx @javilatte/optimia
 
 | View | What it does |
 |---|---|
-| **Proyecto** | Chat with Claude and the kanban of agent tasks for the selected repo. |
+| **Chat y agentes** | Chat with Claude (with attachments, `@agent` and `/skill`) and the board of agent tasks for the selected repo. |
 | **Dashboard** | One card per repo of the active workbench: branch, ahead/behind, changes, lines ±, last commit, live activity (including agents in their worktrees), 24 h activity and recent signals. |
 | **Cambios** | Live diff of any repo or task worktree: inline or side by side, with context or the whole file, syntax highlighting and a change map. It refreshes by itself while files change. Commits open here too. |
+| **Wiki** | The project's wiki and your personal one: tree, search, link map, reading and editing. |
 | **Timeline** | Chronological feed of changed files, commits, branch switches, watchlist events, agent task updates, signals and orphaned changes, with filters and the commit history of each repo. |
 | **Archivos** | File tree with previews (markdown, code, images, audio, video, PDF), copy path, a file clipboard, rename/copy/move/delete with **Undo**, and a trash you can restore from. |
 
@@ -123,9 +165,11 @@ local sessions get a placeholder token, `ANTHROPIC_API_KEY` is dropped and backg
 requests use the same local model. Tested end to end with LM Studio and Gemma 4 12B
 (plan → implement → verify, repo study, PR and Jira descriptions).
 
-Agents can never commit, push, merge, rebase or run destructive commands: a deny
-list and a git hook block them. When an agent tries one, it gets the denial and
-carries on another way, as in Claude Code. Read-only stages cannot edit files. Task
+Agents work with as little intervention as possible: they stop only to ask for missing
+details, and a failed stage is retried once by itself. They can never commit, push,
+merge or rebase, and destructive commands are blocked by a policy hook (see
+[Security](#security)): the agent is told why and carries on; the card lists what was
+blocked and lets you allow it. Read-only stages cannot edit files. Task
 agents only see optimia's MCP server and your repo's `.mcp.json`, not the
 connectors of your claude.ai account.
 
@@ -192,6 +236,53 @@ optimia asks the npm registry at most once a day whether a newer version exists 
 shows a notice in the toolbar with the install command and the release notes. Turn
 it off in Ajustes → General, or with `OPTIMIA_NO_UPDATE_CHECK=1`.
 
+## Delivering tasks
+
+After the agents finish, you review and commit from the card. In a repo with a remote:
+
+- **Pull request**: "Redactar con IA" drafts the title and description from the request,
+  the plan, the verification and the branch diff, following the repo's PR template and
+  leaving the task's internal process out. Optional notes steer it. "Crear PR" pushes the
+  branch and opens the PR with `gh` (draft if you want); later commits update it. Without
+  `gh`, or on GitLab and Bitbucket, the branch is pushed and the page to open it shows up.
+- **Jira**: a separate comment for the ticket (what was done, how to test it, what is
+  pending), copied to the clipboard.
+- **Solo commit**: the task ends with its commit on its branch. Type an existing branch in
+  the task's "Rama" field and the next task continues it: several tasks, one branch.
+
+A repo without a remote merges locally instead.
+
+## Wiki and knowledge
+
+The **Wiki** view has two wikis: the project's and your personal one. Pages are markdown
+linked with `[[Page]]`; browse them as a tree, search them, see them as a map, read and
+edit them. After each committed task (and each report), the *Bibliotecario* agent updates
+the project wiki, and your personal wiki when it learns something general. It uses your
+local model when one is configured and answering; otherwise, or if it fails, Claude Haiku.
+
+Wikis live outside the repos (`~/.local/share/optimia/knowledge`), keyed by the project's
+git remote, so a project has the same wiki on every machine. **Settings › General ›
+Export knowledge** writes one file with your configuration, every wiki and each repo's
+memory; importing it merges by date (the newer side wins, replaced items are backed up).
+
+## ECC
+
+[ECC (Everything Claude Code)](https://github.com/affaan-m/ECC), MIT, is bundled in
+`vendor/ecc` (not installed as a Claude Code plugin):
+
+- optimia's agents follow the method of their ECC counterpart (Reviewer ← code-reviewer,
+  Planner ← planner + architect, Verifier ← build-error-resolver, Test writer ←
+  tdd-guide, Auditor ← security-reviewer + performance-optimizer…);
+- its 72 agents are in Settings › Agents; type `@` in the chat to call any of them;
+- its skills (a general-purpose set by default, any of the 327 selectable in Settings ›
+  General) and, optionally, its commands reach every session.
+
+## Attachments
+
+Drop, paste or attach any file in the chat. Images go as images; PDFs are referenced by
+path and page count so Claude reads only the pages it needs; Word, Excel, PowerPoint and
+ODT text is extracted to markdown; small text files go inline; anything else by path.
+
 ## Supervision
 
 Supervision is **read-only**: optimia never writes to a repo to monitor it.
@@ -224,6 +315,18 @@ pass three checks:
 2. the `Origin`, when present, must be optimia itself (blocks CSRF),
 3. a per-run token, sent as `X-Optimia-Token` or as a `SameSite=Strict` cookie set
    by the link optimia prints on start.
+
+Agents are contained in layers:
+
+- **OS sandbox** (Claude Code's: bubblewrap on Linux, Seatbelt on macOS): Bash can only
+  write inside the task's worktree. Required by default (`failIfUnavailable`).
+- **Policy hook**: destructive commands (`rm`, `sudo`, `git reset --hard`, discarding
+  changes…) are blocked anywhere in a command line, the agent is told why and carries on.
+  The card lists them and "Permitir" approves that exact command for the repo. Approvals
+  are fixed when a stage starts, so an agent cannot grant itself one; if the hook cannot
+  run, plain deny rules take its place.
+- **Never approvable**: commit, push, merge and rebase (deny rules plus a git hook).
+- Local-model sessions never receive your Claude credentials.
 
 File operations stay inside the repo (no absolute paths, `..`, or symlinks pointing
 out), never touch `.git` or `.optimia`, never overwrite, and raw files are served
