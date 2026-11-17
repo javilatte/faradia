@@ -68,7 +68,7 @@ test('detectLocalServers: finds the configured server and skips the ones that ar
 
 test('localSessionEnv: the account credentials never reach the local server', () => {
   const env = localSessionEnv(
-    { PATH: '/bin', ANTHROPIC_API_KEY: 'sk-ant-real' },
+    { PATH: '/bin', ANTHROPIC_API_KEY: 'account-key-placeholder' },
     { baseUrl: 'http://127.0.0.1:1234', model: 'google/gemma-4-12b' }
   );
   assert.equal(env.ANTHROPIC_API_KEY, undefined);
