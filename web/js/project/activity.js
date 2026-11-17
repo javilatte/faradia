@@ -27,7 +27,9 @@ function relativePath(file, root) {
   if (!file) return '';
   const text = String(file);
   if (root && text.startsWith(root)) return text.slice(root.length).replace(/^\/+/, '') || '.';
-  return text;
+  // Outside the task's folder (another repo, the wikis): the last parts are what tells it apart.
+  const parts = text.split('/').filter(Boolean);
+  return text.startsWith('/') && parts.length > 4 ? `…/${parts.slice(-3).join('/')}` : text;
 }
 
 function countLines(text) {
@@ -97,8 +99,19 @@ function toolActivity(block, root) {
           status: t.status || 'pending'
         }))
       };
-    default:
-      return { ...item, verb: block.name, detail: input.description || input.file_path || '' };
+    case 'mcp__optimia-tasks__update_task_progress':
+      return {
+        kind: 'progress',
+        id: block.id,
+        phase: input.phase || '',
+        status: input.status || ''
+      };
+    default: {
+      // MCP tools: "mcp__server__tool" reads as "tool (server)".
+      const mcp = /^mcp__(.+?)__(.+)$/.exec(block.name);
+      const verb = mcp ? mcp[2].replace(/_/g, ' ') : block.name;
+      return { ...item, verb, detail: input.description || input.file_path || input.query || (mcp ? mcp[1] : '') };
+    }
   }
 }
 
@@ -208,7 +221,7 @@ function el(tag, className, text) {
   return node;
 }
 
-function renderActivityItem(item) {
+function renderActivityItem(item, live) {
   if (item.kind === 'stage') {
     const row = el('div', 'act-stage');
     row.appendChild(el('span', 'act-stage-name', item.stage));
@@ -230,7 +243,7 @@ function renderActivityItem(item) {
   if (item.kind === 'say') {
     const row = el('div', 'act-row act-say');
     row.appendChild(el('span', 'act-glyph'));
-    const body = el('div', 'act-body act-say-text');
+    const body = el('div', 'act-body act-say-text' + (live ? ' clamp' : ''));
     paintMarkdown(body, item.text.length > 700 ? `${item.text.slice(0, 700)}…` : item.text);
     row.appendChild(body);
     return row;
@@ -246,6 +259,18 @@ function renderActivityItem(item) {
       list.appendChild(li);
     }
     row.appendChild(list);
+    return row;
+  }
+  if (item.kind === 'progress') {
+    const row = el('div', 'act-row act-progress');
+    row.appendChild(el('span', 'act-glyph'));
+    const body = el('div', 'act-body');
+    const names = { plan: 'Plan', implement: 'Implementación', test: 'Pruebas' };
+    const states = { active: 'en marcha', done: 'hecha', blocked: 'bloqueada' };
+    body.appendChild(el('span', 'act-verb', 'Fase'));
+    body.appendChild(el('span', 'act-phase', names[item.phase] || item.phase));
+    body.appendChild(el('span', 'act-phase-state', states[item.status] || item.status));
+    row.appendChild(body);
     return row;
   }
   if (item.kind === 'blocked') {
@@ -285,7 +310,7 @@ function renderActivity(taskId, { live = false } = {}) {
     return feed;
   }
   const shown = live ? items.slice(-ACTIVITY_LIVE_ROWS) : items;
-  for (const item of shown) feed.appendChild(renderActivityItem(item));
+  for (const item of shown) feed.appendChild(renderActivityItem(item, live));
   if (!live) requestAnimationFrame(() => (feed.scrollTop = feed.scrollHeight));
   return feed;
 }

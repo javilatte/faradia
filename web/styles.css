@@ -1621,6 +1621,25 @@ select,
 .act-say-text {
   color: var(--label);
 }
+.act-say-text.clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.act-progress .act-glyph {
+  border-radius: 2px;
+  background: var(--green);
+}
+.act-progress .act-body {
+  display: flex;
+  gap: 6px;
+  color: var(--secondary-label);
+}
+.act-phase {
+  color: var(--label);
+}
 .act-say-text p {
   margin: 0 0 4px;
 }

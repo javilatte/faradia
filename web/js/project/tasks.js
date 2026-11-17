@@ -1068,10 +1068,14 @@ function buildTaskCard(taskId, task, lastStep) {
   const verification = renderVerification(task);
   if (verification) card.appendChild(verification);
 
-  const step = document.createElement('div');
-  step.className = 'task-step marquee-text';
-  step.textContent = taskStepText(task, lastStep);
-  card.appendChild(step);
+  // While the activity feed is on the card, it says what the agent is doing better than one line.
+  const feedShown = task.status === 'in_progress' && activityCount(taskId) > 0;
+  if (!feedShown) {
+    const step = document.createElement('div');
+    step.className = 'task-step marquee-text';
+    step.textContent = taskStepText(task, lastStep);
+    card.appendChild(step);
+  }
   if (task.status === 'in_progress') {
     const planning = ['plan', 'research', 'diagnose', 'audit'].includes(task.stage);
     card.appendChild(renderOrb(!lastStep ? 'thinking' : planning ? 'planning' : 'working'));
