@@ -749,3 +749,10 @@ async function startOnboarding() {
   }
 }
 onboardButton.addEventListener('click', startOnboarding);
+
+// Interface language (see web/js/i18n.js): the browser's by default; changing it reloads the page.
+const languageSelect = document.getElementById('setting-ui-language');
+if (languageSelect && window.optimiaLang) {
+  languageSelect.value = window.optimiaLang.choice;
+  languageSelect.addEventListener('change', () => window.optimiaLang.set(languageSelect.value));
+}

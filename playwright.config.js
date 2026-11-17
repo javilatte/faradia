@@ -13,9 +13,11 @@ module.exports = defineConfig({
   reporter: process.env.CI ? 'line' : 'list',
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
+    // The specs read the interface in Spanish; i18n.spec.js checks English on its own.
+    locale: 'es-ES',
     trace: 'retain-on-failure'
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], locale: 'es-ES' } }],
   webServer: {
     command: 'node test/e2e/serve.js',
     // Without a token the API answers 401; the static page is enough to know it started.

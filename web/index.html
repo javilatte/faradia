@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="macos.css" />
+    <script src="js/i18n-en.js"></script>
+    <script src="js/i18n.js"></script>
   </head>
   <body>
     <div class="app-window" id="app-window">
@@ -385,6 +387,14 @@
             </section>
 
             <section class="settings-pane" data-pane="appearance" hidden>
+              <div class="settings-field">
+                <label for="setting-ui-language">Idioma</label>
+                <select id="setting-ui-language">
+                  <option value="auto">Automático (navegador)</option>
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
               <div class="settings-field">
                 <label for="setting-ui-theme">Tema</label>
                 <select id="setting-ui-theme">

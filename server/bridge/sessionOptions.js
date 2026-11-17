@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
 const { prepareActiveDir } = require('../ecc/library');
+const wiki = require('../knowledge/wikiStore');
 const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
 
 const CHAT_TASKS_PROMPT = `## Crear tareas para agentes
@@ -91,6 +92,17 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   }
   const memory = loadMemory(projectRoot);
   if (memory.trim()) parts.push(`## Memoria del proyecto\n${memory}`);
+  // The wikis: only where they are (read on demand with Read/Grep), not their content.
+  try {
+    const projectWiki = wiki.ensureWiki(wiki.wikiFor('project', projectRoot), projectRoot);
+    const personalWiki = wiki.ensureWiki(wiki.wikiFor('personal'));
+    opts.addDirs = [...(opts.addDirs || []), wiki.wikisDir()];
+    parts.push(
+      `## Wikis\nLa wiki de este proyecto está en ${projectWiki.dir} y la wiki personal del usuario en ${personalWiki.dir} (index.md es la portada de cada una; las páginas se enlazan con [[Página]]). Consúltalas con Read o Grep cuando necesites contexto (decisiones, guías, cómo funciona algo) antes de redescubrirlo; no las cargues enteras.`
+    );
+  } catch {
+    /* without wikis */
+  }
   if (opts.mcpConfigPath) parts.push(taskId ? taskProgressPrompt(taskId) : CHAT_TASKS_PROMPT);
   if (parts.length) opts.systemPrompt = parts.join('\n\n');
 

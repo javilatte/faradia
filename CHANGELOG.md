@@ -4,6 +4,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.1.1] - 2026-11-17
 
+### Added
+- **English interface**: Settings › Appearance › Language (Automatic, Español, English). Automatic follows the browser's language.
+- The chat and every agent know where the project and personal wikis are and read them on demand (Read/Grep), instead of rediscovering what is already written there.
+
 ### Changed
 - The default workbench is called "Mi espacio" (renamed from "Por defecto" on its own), and the workbench selector no longer shows the number of repos.
 - Tighter, kerned Optimia logo.

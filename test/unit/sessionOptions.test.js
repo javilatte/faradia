@@ -7,7 +7,7 @@ const { defaultSettings } = require('../../server/store/settingsStore');
 const { saveMemory } = require('../../server/store/memoryStore');
 const { buildSessionOptions } = require('../../server/bridge/sessionOptions');
 
-test('buildSessionOptions: claude mode, no instructions/memory -> no systemPrompt, model "default" dropped', (t) => {
+test('buildSessionOptions: claude mode, no instructions/memory -> only where the wikis are, model "default" dropped', (t) => {
   const dir = mkTmpDir('sessopts');
   t.after(() => rmTmpDir(dir));
 
@@ -15,7 +15,9 @@ test('buildSessionOptions: claude mode, no instructions/memory -> no systemPromp
   const opts = buildSessionOptions(settings, dir);
 
   assert.equal(opts.projectRoot, dir);
-  assert.equal(opts.systemPrompt, undefined);
+  // Only where the wikis are (read on demand), and their folder reachable with --add-dir.
+  assert.match(opts.systemPrompt, /^## Wikis\nLa wiki de este proyecto está en .*Consúltalas con Read o Grep/s);
+  assert.ok(opts.addDirs.some((d) => d.endsWith('wikis')));
   assert.equal(opts.model, undefined); // 'default' is not a real model name, dropped
   assert.equal(opts.effort, 'high');
 });
