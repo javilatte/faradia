@@ -40,6 +40,11 @@ process.env.PATH = `${path.join(__dirname, 'fixtures', 'bin')}${path.delimiter}$
 process.env.XDG_CONFIG_HOME = path.join(home, '.config');
 process.env.XDG_DATA_HOME = path.join(home, '.local', 'share');
 process.env.OPTIMIA_E2E_TMP = tmp;
+// Commits optimia makes itself (the first commit of a repo it creates) need an identity on CI.
+for (const who of ['AUTHOR', 'COMMITTER']) {
+  process.env[`GIT_${who}_NAME`] = 'e2e';
+  process.env[`GIT_${who}_EMAIL`] = 'e2e@example.com';
+}
 // No network in tests: never ask the npm registry for updates.
 process.env.OPTIMIA_NO_UPDATE_CHECK = '1';
 // Skip the first-run welcome sheet (test/e2e/config.spec.js brings it back on purpose).

@@ -2,9 +2,11 @@
 // link is opened, so a plain fetch is enough.
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, data = {}) {
     super(message);
     this.status = status;
+    this.code = data.code;
+    this.data = data;
   }
 }
 
@@ -16,7 +18,7 @@ async function request(method, url, body) {
   }
   const res = await fetch(url, init);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, data.error || `HTTP ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status, data.error || `HTTP ${res.status}`, data);
   return data;
 }
 

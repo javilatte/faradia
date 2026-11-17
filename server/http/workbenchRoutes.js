@@ -76,7 +76,12 @@ async function handleWorkbenchRoutes(req, res, url, { registry, onChange }) {
       const body = await readJsonBody(req);
       const paths = Array.isArray(body.paths) ? body.paths : typeof body.path === 'string' ? [body.path] : [];
       if (!paths.length) return sendJson(res, 400, { error: 'indica al menos una ruta' });
-      wbStore.addRepos(m[1], paths);
+      try {
+        wbStore.addRepos(m[1], paths, { initGit: body.initGit === true });
+      } catch (err) {
+        if (err.code === 'not_git') return sendJson(res, 409, { error: err.message, code: err.code, path: err.path });
+        throw err;
+      }
       return done(200);
     }
 

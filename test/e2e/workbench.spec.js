@@ -128,12 +128,33 @@ test('switching repos is instant: no reload, each repo keeps its chat and draft,
   expect(errors).toEqual([]);
 });
 
-test('a folder that is not a git repo is refused with a hint', async ({ page }) => {
+test('a folder that is not a git repo: declined it is not added, accepted optimia creates the repo', async ({
+  page
+}) => {
   const plain = path.join(reposDir(), 'no-git');
   fs.mkdirSync(plain, { recursive: true });
+  fs.writeFileSync(path.join(plain, 'notas.txt'), 'hola\n');
   await page.goto('/?token=e2e-token');
   await page.locator('#wb-manage').click();
+
+  page.once('dialog', (d) => d.dismiss());
   await page.getByLabel('Ruta del repo').fill(plain);
   await page.getByRole('button', { name: 'Añadir', exact: true }).click();
-  await expect(page.locator('.toast')).toContainText('no es un repositorio git');
+  await expect(page.locator('.toast')).toContainText('la carpeta no es un repo git');
+  expect(fs.existsSync(path.join(plain, '.git'))).toBe(false);
+
+  let asked = '';
+  page.once('dialog', (d) => {
+    asked = d.message();
+    d.accept();
+  });
+  await page.getByRole('button', { name: 'Añadir', exact: true }).click();
+  await expect(page.locator('.wb-repos')).toContainText('no-git');
+  expect(asked).toContain('¿Crear el repo ahí?');
+  expect(fs.existsSync(path.join(plain, '.git'))).toBe(true);
+  // An empty first commit, so tasks can branch off it; the user's files are left untouched.
+  expect(execFileSync('git', ['log', '--format=%s'], { cwd: plain, encoding: 'utf8' }).trim()).toBe(
+    'chore: initial commit'
+  );
+  expect(execFileSync('git', ['status', '--porcelain'], { cwd: plain, encoding: 'utf8' })).toContain('notas.txt');
 });

@@ -127,20 +127,48 @@ function gitRoot(dir) {
   }
 }
 
-function addRepos(id, paths) {
+class NotGitError extends Error {
+  constructor(dir) {
+    super(
+      `${dir} no es un repositorio git. Si contiene varios repos, usa «Buscar repos en una carpeta»; si es un proyecto, optimia puede crear el repo.`
+    );
+    this.code = 'not_git';
+    this.path = dir;
+  }
+}
+
+// Turns a folder into a git repo with an empty first commit: task worktrees branch off a commit.
+function initRepo(dir) {
+  const run = (args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+  run(['init', '-q']);
+  try {
+    run(['commit', '-q', '--allow-empty', '-m', 'chore: initial commit']);
+  } catch (err) {
+    const msg = String(err.stderr || err.message);
+    if (/user\.(name|email)|identity/i.test(msg)) {
+      throw new Error(
+        'repo creado, pero git no sabe tu nombre: configura git config --global user.name y user.email y vuelve a añadirlo'
+      );
+    }
+    throw err;
+  }
+}
+
+function addRepos(id, paths, { initGit = false } = {}) {
   const store = load();
   const wb = findWorkbench(store, id);
   const added = [];
   for (const p of paths) {
     const dir = normalizeRepo(String(p).replace(/^~(?=$|\/)/, process.env.HOME || ''));
     if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error(`no existe la carpeta ${dir}`);
-    // Tasks need git (worktrees, branches, commits): a folder outside a repo is not accepted.
-    const repo = gitRoot(dir);
-    if (!repo) {
-      throw new Error(
-        `${dir} no es un repositorio git. Si contiene varios repos, usa «Buscar repos en una carpeta»; si es un proyecto nuevo, ejecuta git init en él.`
-      );
+    // Tasks need git (worktrees, branches, commits): a folder outside a repo is only accepted if the
+    // user agrees to create the repo.
+    let repo = gitRoot(dir);
+    if (!repo && initGit) {
+      initRepo(dir);
+      repo = gitRoot(dir);
     }
+    if (!repo) throw new NotGitError(dir);
     if (!wb.repos.includes(repo)) {
       wb.repos.push(repo);
       added.push(repo);
@@ -221,6 +249,7 @@ module.exports = {
   deleteWorkbench,
   setActiveWorkbench,
   addRepos,
+  NotGitError,
   removeRepo,
   ensureLaunchRepo,
   scanForRepos

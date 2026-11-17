@@ -108,12 +108,27 @@ async function activateWorkbench(id) {
   if (next) openProject(next);
 }
 
+// Adds folders to a workbench. A folder that is not a git repo can become one, if the user agrees
+// (tasks need git: worktrees, branches and commits).
+async function addPaths(workbenchId, paths, initGit = false) {
+  try {
+    return await api.post(`/api/workbenches/${workbenchId}/repos`, { paths, initGit });
+  } catch (err) {
+    if (err.code !== 'not_git' || initGit) throw err;
+    const ok = window.confirm(
+      `${err.data.path} no es un repositorio git.\n\n¿Crear el repo ahí? optimia ejecuta git init y hace un commit inicial vacío, que necesitan las tareas de los agentes.`
+    );
+    if (!ok) throw new Error('No se añadió: la carpeta no es un repo git.');
+    return addPaths(workbenchId, paths, true);
+  }
+}
+
 // Adds a folder to the active workbench (the native dialog or a typed path) and opens it.
 async function addRepoToActive(path) {
   const wb = activeWorkbench();
   if (!wb || !path) return;
   const before = new Set(wb.repos.map((r) => r.path));
-  const data = await api.post(`/api/workbenches/${wb.id}/repos`, { paths: [path] });
+  const data = await addPaths(wb.id, [path]);
   apply(data);
   const repos = (data.workbenches.find((w) => w.id === wb.id)?.repos || []).filter((r) => r.projectId);
   // The new one or, if it was already there, the repo of that folder (git reports the repo root, so
@@ -456,7 +471,7 @@ function renderWorkbenchPane(wb) {
         onsubmit: (e) => {
           e.preventDefault();
           const path = e.target.elements.path.value.trim();
-          if (path) run(() => api.post(`/api/workbenches/${wb.id}/repos`, { paths: [path] }));
+          if (path) run(() => addPaths(wb.id, [path]));
         }
       },
       h('input', { name: 'path', placeholder: '/ruta/al/repo', 'aria-label': 'Ruta del repo', spellcheck: 'false' }),
@@ -468,7 +483,7 @@ function renderWorkbenchPane(wb) {
           onclick: async () => {
             try {
               const { path } = await api.post('/api/pick-folder', {});
-              if (path) run(() => api.post(`/api/workbenches/${wb.id}/repos`, { paths: [path] }));
+              if (path) run(() => addPaths(wb.id, [path]));
             } catch (err) {
               toast(err.message, { kind: 'error' });
             }
