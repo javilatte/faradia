@@ -165,6 +165,8 @@ let currentAssistantBubble = null;
 // --input-format stream-json` accepts Messages-API-style image blocks
 // directly, so no file-on-disk fallback is needed.
 let pendingImages = [];
+// Other attached files, uploaded as soon as they are added: {key, name, status, id?, kind?, error?}
+let pendingFiles = [];
 const chatInputArea = document.querySelector('.chat-input-area');
 const attachmentsEl = document.getElementById('chat-attachments');
 const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);

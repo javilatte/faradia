@@ -27,6 +27,7 @@ const {
   worktreeOfBranch
 } = require('../bridge/worktree');
 const { pickFile } = require('../bridge/filePicker');
+const { saveAttachment } = require('../bridge/attachments');
 const logger = require('../bridge/logger');
 
 const { resolveInside, readPreview, openWithSystem } = require('../bridge/taskFiles');
@@ -585,6 +586,25 @@ function createApp(
         return sendJson(res, 400, { error: 'el fichero tiene que estar dentro del proyecto' });
       }
       return sendJson(res, 200, { path: rel.split(path.sep).join('/') });
+    }
+
+    // POST /api/attachments {chatId, name, mediaType, data (base64)}: a file for the next message.
+    if (url.pathname === '/api/attachments' && req.method === 'POST') {
+      let body;
+      try {
+        body = await readJsonBody(req, { maxBytes: 45 * 1024 * 1024 });
+      } catch (err) {
+        return sendJson(res, 413, { error: err.message });
+      }
+      if (!body?.chatId || !loadChat(projectRoot, body.chatId)) return sendJson(res, 404, { error: 'chat not found' });
+      try {
+        const a = saveAttachment(projectRoot, body.chatId, body);
+        log.info('chat.attachment', { chatId: body.chatId, kind: a.kind, size: a.size });
+        const { inline, ...meta } = a;
+        return sendJson(res, 201, { ...meta, inline: inline !== undefined });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
     }
 
     if (url.pathname === '/api/chats' && req.method === 'GET') {

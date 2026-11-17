@@ -58,6 +58,13 @@ rl.on('line', (line) => {
     .filter((b) => b.type === 'text')
     .map((b) => b.text)
     .join('\n');
+  // Messages received, for the tests that check what reaches the model.
+  if (process.env.FAKE_CLAUDE_LOG) {
+    fs.appendFileSync(
+      process.env.FAKE_CLAUDE_LOG.replace(/\.jsonl$/, '-messages.jsonl'),
+      JSON.stringify({ text }) + '\n'
+    );
+  }
   const editing = /IMPLEMENTACION|REDACCION|TESTS|VERIFICACION/.test(text);
   if (editing) {
     const file = path.join(process.cwd(), 'e2e-agent-output.txt');

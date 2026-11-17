@@ -131,7 +131,7 @@ function syncTaskControls() {
   document.getElementById('chat-effort-field').hidden = isTask || chatModelSelect.value.startsWith('local:');
   input.placeholder = isTask
     ? 'Describe la tarea: qué quieres, criterios de aceptación, ficheros relevantes…'
-    : 'Envía un mensaje o arrastra una imagen';
+    : 'Envía un mensaje o arrastra ficheros';
   renderTaskPlan();
   if (isTask) loadTaskBranches().catch(() => {});
 }
@@ -209,14 +209,22 @@ function notifyTaskInChat(task, prevStatus) {
 function sendCurrentInput() {
   const text = input.value.trim();
   if (chatKindSelect.value !== 'chat') return createTaskFromChat(chatKindSelect.value, text);
-  if ((!text && pendingImages.length === 0) || !currentChatId || !wsOpen || waitingForResult) return;
+  const ready = pendingFiles.filter((f) => f.status === 'ready');
+  if ((!text && pendingImages.length === 0 && !ready.length) || !currentChatId || !wsOpen || waitingForResult) return;
+  if (pendingFiles.some((f) => f.status === 'uploading')) {
+    appendMessage('system', 'Espera a que terminen de subirse los adjuntos.');
+    return;
+  }
   const images = pendingImages.map(({ mediaType, base64Data }) => ({ mediaType, base64Data }));
   const previewUrls = pendingImages.map((img) => img.dataUrl);
-  appendMessage('user', text, previewUrls);
-  ws.send(wsPayload({ type: 'user_message', chatId: currentChatId, text, images }));
+  appendMessage('user', text, previewUrls, ready);
+  ws.send(
+    wsPayload({ type: 'user_message', chatId: currentChatId, text, images, attachments: ready.map((f) => f.id) })
+  );
   input.value = '';
   input.style.height = 'auto';
   pendingImages = [];
+  pendingFiles = [];
   renderAttachments();
   setWaiting(true);
 }
@@ -273,7 +281,7 @@ function replayChat(chat) {
   for (const m of chat.messages) {
     if (m.role === 'user') {
       const previews = (m.images || []).map((img) => `data:${img.mediaType};base64,${img.base64Data}`);
-      appendMessage('user', m.text, previews);
+      appendMessage('user', m.text, previews, m.attachments || []);
     } else if (m.role === 'claude_event') {
       handleClaudeEvent(m.event);
     }

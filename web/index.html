@@ -146,7 +146,31 @@
               <div class="chat-attachments" id="chat-attachments" hidden></div>
               <div class="skill-suggest" id="skill-suggest" role="listbox" hidden></div>
               <div class="chat-input-row">
-                <textarea id="chat-input" rows="1" placeholder="Envía un mensaje o arrastra una imagen"></textarea>
+                <button
+                  type="button"
+                  class="icon-button attach-button"
+                  id="attach-button"
+                  title="Adjuntar ficheros (PDF, Word, Excel, imágenes, texto…)"
+                  aria-label="Adjuntar ficheros"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 0 1 4.7 4.7L10 17.7a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9"
+                    />
+                  </svg>
+                </button>
+                <input type="file" id="attach-input" multiple hidden />
+                <textarea id="chat-input" rows="1" placeholder="Envía un mensaje o arrastra ficheros"></textarea>
                 <button class="send-button" id="send-button" disabled>Enviar</button>
               </div>
               <div class="chat-meta-row">
@@ -189,7 +213,9 @@
                 </label>
               </div>
               <div class="task-plan-row task-only" id="task-plan-row" hidden></div>
-              <div class="chat-hint muted">Enter envía · Shift+Enter nueva línea · @ llama a un agente · / usa una skill</div>
+              <div class="chat-hint muted">
+                Enter envía · Shift+Enter nueva línea · @ llama a un agente · / usa una skill
+              </div>
             </div>
           </section>
 

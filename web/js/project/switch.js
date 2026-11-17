@@ -26,6 +26,7 @@ async function switchProject(projectId, { push = true } = {}) {
   chatLog.innerHTML = '';
   input.value = composerDrafts.get(projectId) || '';
   pendingImages = [];
+  pendingFiles = [];
   setWaiting(false);
 
   // Agents board.

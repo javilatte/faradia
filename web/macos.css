@@ -1335,3 +1335,50 @@ body {
   width: 100%;
   margin-top: 8px;
 }
+
+/* Chat attachments */
+:root .attach-button {
+  align-self: center;
+  color: var(--secondary-label);
+}
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.attachment-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 260px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--separator);
+  border-radius: 6px;
+  background: var(--group-bg);
+  font-size: var(--text-callout);
+}
+.attachment-file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-file.uploading {
+  opacity: 0.7;
+}
+.attachment-file.error {
+  border-color: #ff3b30;
+}
+:root .attachment-file button {
+  min-height: 0;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--secondary-label);
+}
+.msg-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}

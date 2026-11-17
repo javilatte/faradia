@@ -2,26 +2,25 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [2.1.0] - 2026-11-17
 
 ### Added
-- **Entrega por pull request**: tras el commit, en un repo con remoto la tarjeta ya no ofrece fusionar en la rama base. Tiene una pestaña «Pull request» (título, descripción y borrador) y otra «Jira» (comentario para el ticket, que se copia al portapapeles). «Redactar con IA» genera cada texto a partir del encargo, el plan, la verificación y el diff de la rama, con indicaciones opcionales. «Crear PR» sube la rama y abre la PR con `gh`, o la actualiza en commits posteriores; sin `gh`, o en GitLab y Bitbucket, sube la rama y abre la página para crearla. Los repos sin remoto siguen fusionando en local.
-- Agente nuevo **Redactor de PR y Jira** (etapa «Descripción»).
-- **LM Studio** como IA local, además de Ollama: Ajustes › IA local › «Detectar servidores locales» encuentra los dos y sus modelos, y el selector de modelo del chat los lista junto a los de Claude.
-- «+» junto a «Repositorios» para añadir un repo con el diálogo de carpetas del sistema.
+- **Pull request delivery**: after the commit, the task card offers a Pull request tab (title, description, draft) and a Jira tab (a comment for the ticket). An agent drafts both from the request, plan, verification and diff; "Create PR" pushes the branch and opens it with `gh`. "Commit only" ends a task on its branch, and several tasks can share one branch.
+- **Wiki**: a project wiki and a personal one (tree, search, link map, editing), updated by an agent after every committed task, with the local model when available, otherwise Claude Haiku.
+- **Export and import all your knowledge** (configuration, wikis, memories) in one file, merged by date.
+- **ECC (Everything Claude Code, MIT) bundled**: optimia's agents follow the method of their best ECC counterpart, its 72 agents are available (call any with `@` in the chat) and its skills reach every session.
+- **Chat attachments**: PDF, Word, Excel, PowerPoint, text and any other file, sent to the context efficiently (PDFs read by page, Office text extracted to markdown, small files inline).
+- **LM Studio** support next to Ollama, with detection and local models in the chat's model selector.
+- Inter bundled (no font CDN) and the Optimia logo.
 
 ### Changed
-- **Cambiar de repo ya no recarga la página**: el chat, los agentes, los ajustes y la terminal pasan al otro repo, la vista abierta se mantiene, cada repo conserva su mensaje sin enviar y los botones atrás/adelante del navegador cambian de repo.
-- Al cambiar de workbench se abre el último repo usado en él (o el primero), en vez de seguir en un repo de otro workbench.
-- La rama base recordada para las tareas nuevas es por repo.
-- Una carpeta que no es un repo git se rechaza con una pista, y una subcarpeta cuenta como su repo.
-- El chat oculta «Effort» con un modelo local.
+- Switching repos no longer reloads the page; workbenches reopen their last repo; a "+" adds repos with the folder dialog, and optimia offers to `git init` a folder that is not a repo.
+- Agents only stop to ask for missing context. Blocked actions never stop a stage and can be allowed from the card; commit, push, merge and rebase stay forbidden.
+- Agents run in Claude Code's OS sandbox (`bubblewrap` + `socat` on Linux, built in on macOS); without it they do not start unless you turn it off in Settings › General.
 
 ### Fixed
-- Las sesiones con modelo local ya no envían las credenciales de la cuenta de Claude al servidor local.
-- Un enlace con `?token=…&p=<repo>` perdía el repo al cambiar el token por la cookie.
-- Guardar la memoria de «Conocer el repo» deja de dejar un worktree y una rama `optimia/task-…` sin usar.
-- Una tarea puede volver a hacer commit si una etapa posterior deja cambios nuevos.
+- Local-model sessions no longer send your Claude credentials to the local server.
+- `?token=…&p=<repo>` links keep the repo.
 
 ## [2.0.1] - 2026-11-15
 

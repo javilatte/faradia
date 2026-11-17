@@ -33,6 +33,7 @@ const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/cla
 const { sandboxProblem } = require('../bridge/sandbox');
 const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
 const { adoptPendingMemory } = require('../knowledge/bundle');
+const { loadAttachments, attachmentsPrompt } = require('../bridge/attachments');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
 const {
   STAGE_PHASE,
@@ -760,10 +761,14 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       }
       if (!session) return ws.send(JSON.stringify({ type: 'client_error', error: 'chat not found' }));
 
+      const attachments = loadAttachments(projectRoot, msg.chatId, msg.attachments || []);
       appendMessage(projectRoot, msg.chatId, {
         role: 'user',
         text: msg.text,
         images: msg.images || [],
+        ...(attachments.length
+          ? { attachments: attachments.map((a) => ({ id: a.id, name: a.name, kind: a.kind, size: a.size })) }
+          : {}),
         ts: new Date().toISOString()
       });
       log.info('chat.user', { chatId: msg.chatId, text: cut(msg.text), images: (msg.images || []).length });
@@ -780,7 +785,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         broadcast({ type: 'chat_renamed', chatId: msg.chatId, title });
       }
       try {
-        session.send(msg.text, msg.images || []);
+        session.send(`${msg.text || ''}${attachmentsPrompt(attachments)}`, msg.images || []);
       } catch (err) {
         ws.send(JSON.stringify({ type: 'bridge_error', chatId: msg.chatId, error: err.message }));
       }
