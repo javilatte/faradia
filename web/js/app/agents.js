@@ -52,11 +52,50 @@ function render() {
   const host = document.getElementById('agents-pane');
   if (!host || !data) return;
   clear(host);
+  const mine = data.agents.filter((a) => a.source !== 'ecc');
   host.append(
     renderPipelines(),
     h('h3', { class: 'wb-h' }, 'Agentes'),
-    ...data.agents.map(renderAgent),
-    renderNewAgent()
+    ...mine.map(renderAgent),
+    renderNewAgent(),
+    renderEccLibrary(data.agents.filter((a) => a.source === 'ecc'))
+  );
+}
+
+// ECC's agents (vendor/ecc, MIT): off until needed. Turned on, they show in the chat's mode
+// selector; any of them can also be called by typing @ in the message box.
+let eccQuery = '';
+function renderEccLibrary(list) {
+  if (!list.length) return null;
+  const on = list.filter((a) => a.enabled);
+  const box = h('div', { class: 'ecc-agents' });
+  const paint = () => {
+    const q = eccQuery.toLowerCase();
+    const shown = list.filter((a) => !q || a.id.includes(q) || a.description.toLowerCase().includes(q) || a.enabled);
+    box.replaceChildren(...shown.slice(0, q ? 72 : 12).map(renderAgent));
+    if (!q && shown.length > 12) box.append(h('p', { class: 'muted' }, `y ${shown.length - 12} más: búscalos.`));
+  };
+  paint();
+  return h(
+    'details',
+    { class: 'ecc-library', open: on.length > 0 || Boolean(eccQuery) },
+    h('summary', {}, `Agentes de ECC (${list.length}${on.length ? `, ${on.length} activos` : ''})`),
+    h(
+      'p',
+      { class: 'muted agents-help' },
+      'De Everything Claude Code (licencia MIT), incluidos en optimia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.'
+    ),
+    h('input', {
+      type: 'search',
+      placeholder: 'Buscar agentes de ECC (react, security, go…)',
+      'aria-label': 'Buscar agentes de ECC',
+      value: eccQuery,
+      oninput: (e) => {
+        eccQuery = e.target.value;
+        paint();
+      }
+    }),
+    box
   );
 }
 
@@ -174,7 +213,7 @@ function renderAgent(agent) {
         })
       ),
       h('strong', {}, agent.name),
-      h('span', { class: 'wb-badge' }, agent.builtin ? 'por defecto' : 'propio'),
+      h('span', { class: 'wb-badge' }, agent.source === 'ecc' ? 'ECC' : agent.builtin ? 'por defecto' : 'propio'),
       agent.overriddenIn.length
         ? h(
             'span',

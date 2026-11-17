@@ -1304,3 +1304,34 @@ body {
   font-weight: 600;
   margin: 16px 0 6px;
 }
+
+/* Settings > Agents: the ECC library */
+.ecc-library {
+  margin-top: 18px;
+}
+.ecc-library > summary {
+  font-weight: 600;
+  padding: 6px 0;
+}
+.ecc-library input[type='search'] {
+  width: 100%;
+  margin: 6px 0 10px;
+}
+.ecc-skill-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--separator);
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: 6px 0;
+}
+:root .ecc-skill {
+  margin-top: 4px;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--text-callout);
+}
+#ecc-field input[type='search'] {
+  width: 100%;
+  margin-top: 8px;
+}

@@ -93,3 +93,26 @@ test('a forbidden action does not stop the stage: the agent goes on and the card
   expect(task.error).toBeNull();
   expect(errors).toEqual([]);
 });
+
+test('@ in the message box calls any agent, ECC ones included, as a single-stage task', async ({ page }) => {
+  const errors = trackErrors(page);
+  await openProject(page);
+  await page.locator('#chat-input').fill('@code-rev');
+  const suggestion = page.locator('#skill-suggest .skill-suggest-item', { hasText: '@ecc-code-reviewer' });
+  await expect(suggestion).toBeVisible();
+  await expect(suggestion).toContainText('ECC');
+  await suggestion.click();
+  await expect(page.locator('#chat-kind-select')).toHaveValue('custom:ecc-code-reviewer');
+  await expect(page.locator('#chat-input')).toHaveValue('');
+  await page.locator('#chat-input').fill('Revisar el módulo de pagos');
+  await page.locator('#chat-input').press('Enter');
+  const task = page.locator('.task-card', { hasText: 'Revisar el módulo de pagos' });
+  await expect(task).toHaveClass(/ready/, { timeout: 20_000 });
+  await expect(task.locator('.pipeline-step small')).toHaveText(['code-reviewer (ECC) · sonnet']);
+  // Turned on by calling it: it now has its place in the mode selector.
+  await expect(page.locator('#chat-kind-select optgroup[label="Agentes de ECC"] option')).toContainText([
+    'code-reviewer (ECC)'
+  ]);
+  await page.locator('#chat-kind-select').selectOption('chat');
+  expect(errors).toEqual([]);
+});

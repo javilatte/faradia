@@ -1,5 +1,7 @@
 'use strict';
 
+const { eccAgents } = require('../ecc/library');
+
 const fs = require('fs');
 const path = require('path');
 const { configDir } = require('../store/globalPaths');
@@ -60,7 +62,7 @@ const BUILTIN_AGENTS = [
   {
     id: 'reviewer',
     name: 'Revisor',
-    description: 'Revisa los cambios antes de hacer commit: errores, riesgos y estilo.',
+    description: 'Revisa los cambios antes de hacer commit: errores reales, seguridad y riesgos, sin ruido.',
     engine: 'claude',
     model: 'opus',
     effort: 'high',
@@ -159,6 +161,41 @@ const BUILTIN_AGENTS = [
   }
 ];
 
+// optimia's agents follow the method of their best ECC counterpart (MIT, vendor/ecc): the agent
+// keeps its id, name, stage and access, and its prompt is its own role plus that method. Without the
+// bundle, the short prompt alone.
+const ECC_METHOD = {
+  planner: ['ecc-planner', 'ecc-architect'],
+  verifier: ['ecc-build-error-resolver'],
+  reviewer: ['ecc-code-reviewer'],
+  committer: ['ecc-commit-reviewer'],
+  researcher: ['ecc-code-explorer'],
+  'doc-writer': ['ecc-doc-updater'],
+  'test-writer': ['ecc-tdd-guide'],
+  auditor: ['ecc-security-reviewer', 'ecc-performance-optimizer']
+};
+const methodCache = new Map();
+function withEccMethod(id, own) {
+  if (methodCache.has(id)) return methodCache.get(id);
+  const methods = (ECC_METHOD[id] || []).map((eid) => eccAgents().find((a) => a.id === eid)).filter(Boolean);
+  const prompt = methods.length
+    ? [
+        own,
+        'Responde en el idioma del usuario. Las instrucciones de la etapa de optimia mandan sobre este método (por ejemplo, no hagas commit ni push, y respeta el acceso de tu etapa).',
+        ...methods.map((m) => `## Método: ${m.name.replace(' (ECC)', '')} (de ECC, licencia MIT)\n\n${m.prompt}`)
+      ].join('\n\n')
+    : own;
+  methodCache.set(id, prompt);
+  return prompt;
+}
+
+// Base definition of an agent: optimia's own (with its ECC method) or one from the ECC library.
+function baseAgent(id) {
+  const own = BUILTIN_AGENTS.find((a) => a.id === id);
+  if (own) return { ...own, prompt: withEccMethod(id, own.prompt) };
+  return eccAgents().find((a) => a.id === id) || null;
+}
+
 function globalAgentsDir() {
   return path.join(configDir(), 'agents');
 }
@@ -250,14 +287,19 @@ function normalize(agent) {
 function loadAgents(projectRoot) {
   const global = readDir(globalAgentsDir());
   const project = projectRoot ? readDir(projectAgentsDir(projectRoot)) : new Map();
-  const ids = new Set([...BUILTIN_AGENTS.map((a) => a.id), ...global.keys(), ...project.keys()]);
+  const ids = new Set([
+    ...BUILTIN_AGENTS.map((a) => a.id),
+    ...eccAgents().map((a) => a.id),
+    ...global.keys(),
+    ...project.keys()
+  ]);
   const agents = [];
   for (const id of ids) {
-    const builtin = BUILTIN_AGENTS.find((a) => a.id === id);
+    const base = baseAgent(id);
     const overriddenIn = [global.has(id) && 'global', project.has(id) && 'project'].filter(Boolean);
-    const merged = { ...(builtin || {}), ...(global.get(id) || {}), ...(project.get(id) || {}), id };
-    const source = builtin ? 'builtin' : project.has(id) ? 'project' : 'global';
-    agents.push({ ...normalize(merged), builtin: Boolean(builtin), source, overriddenIn });
+    const merged = { ...(base || {}), ...(global.get(id) || {}), ...(project.get(id) || {}), id };
+    const source = base?.library === 'ecc' ? 'ecc' : base ? 'builtin' : project.has(id) ? 'project' : 'global';
+    agents.push({ ...normalize(merged), builtin: Boolean(base), source, overriddenIn });
   }
   return agents;
 }
@@ -299,7 +341,7 @@ function slugify(name) {
 /** Saves the given agent fields in a scope (merged with whatever was already there). */
 function saveAgent(projectRoot, scope, id, input) {
   if (!ID_RE.test(id)) throw new Error('id de agente no válido');
-  const exists = BUILTIN_AGENTS.some((a) => a.id === id) || loadAgents(projectRoot).some((a) => a.id === id);
+  const exists = Boolean(baseAgent(id)) || loadAgents(projectRoot).some((a) => a.id === id);
   const problem = validateAgentInput(input, { isNew: !exists });
   if (problem) throw new Error(problem);
   const dir = dirFor(scope, projectRoot);

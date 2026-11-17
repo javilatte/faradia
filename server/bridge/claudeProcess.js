@@ -34,7 +34,8 @@ class ClaudeSession extends EventEmitter {
     extraAllowedTools = [],
     disallowedTools = [],
     gitHooksPath,
-    extraEnv = {}
+    extraEnv = {},
+    addDirs = []
   } = {}) {
     super();
     this.projectRoot = projectRoot;
@@ -52,6 +53,8 @@ class ClaudeSession extends EventEmitter {
     }
     args.push('--permission-prompts', 'none');
     if (model) args.push('--model', model);
+    // Extra folders Claude Code reads skills and commands from (ECC, see ecc/library.js).
+    for (const dir of addDirs) args.push('--add-dir', dir);
     if (effort) args.push('--effort', effort);
     if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
     if (settingsPath) args.push('--settings', settingsPath);

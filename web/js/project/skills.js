@@ -10,12 +10,20 @@ let skillSuggestIndex = 0;
 let skillSuggestRange = null;
 let skillSuggestToken = 0;
 
+// "/" offers skills and commands; "@" at the start of the message offers agents: picking one turns
+// the message into a task for that agent.
 function currentSkillQuery() {
   const caret = input.selectionStart;
-  const match = input.value.slice(0, caret).match(/(^|\s)\/([a-z0-9-]*)$/i);
+  const before = input.value.slice(0, caret);
+  const agent = before.match(/^\s*@([a-z0-9-]*)$/i);
+  if (agent) {
+    const query = agent[1].toLowerCase();
+    return { query, start: caret - query.length - 1, end: caret, kind: 'agent' };
+  }
+  const match = before.match(/(^|\s)\/([a-z0-9-]*)$/i);
   if (!match) return null;
   const query = match[2].toLowerCase();
-  return { query, start: caret - query.length - 1, end: caret };
+  return { query, start: caret - query.length - 1, end: caret, kind: 'skill' };
 }
 
 function hideSkillSuggest() {
@@ -33,10 +41,12 @@ function renderSkillSuggest() {
     row.setAttribute('role', 'option');
     const name = document.createElement('span');
     name.className = 'skill-suggest-name';
-    name.textContent = '/' + skill.slug;
+    name.textContent = (skill.agent ? '@' : '/') + skill.slug;
     const source = document.createElement('span');
     source.className = 'skill-suggest-source';
-    source.textContent = skill.source === 'claude' ? 'Claude' : 'proyecto';
+    source.textContent =
+      { claude: 'Claude', ecc: 'ECC', builtin: 'optimia', global: 'tuyo', project: 'este repo' }[skill.source] ||
+      'proyecto';
     const head = document.createElement('div');
     head.className = 'skill-suggest-head';
     head.appendChild(name);
@@ -62,6 +72,7 @@ function applySkillSuggest(i) {
   const skill = skillSuggestItems[i];
   const range = skillSuggestRange;
   if (!skill || !range) return;
+  if (skill.agent) return pickAgent(skill, range);
   const insert = '/' + skill.slug + ' ';
   input.value = input.value.slice(0, range.start) + insert + input.value.slice(range.end);
   const caret = range.start + insert.length;
@@ -97,22 +108,86 @@ const CLAUDE_COMMANDS = [
   { slug: 'vim', description: 'Activa el modo vim en el editor de entrada' }
 ].map((c) => ({ ...c, source: 'claude' }));
 
+// @agent: the message becomes a task for that agent (turned on first if it was off).
+async function pickAgent(agent, range) {
+  input.value = (input.value.slice(0, range.start) + input.value.slice(range.end)).replace(/^\s+/, '');
+  hideSkillSuggest();
+  if (!agent.enabled) {
+    await fetch(apiPath(`/api/agents/${agent.slug}`), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'global', enabled: true })
+    }).catch(() => {});
+  }
+  await loadTaskKinds().catch(() => {});
+  const value = `custom:${agent.slug}`;
+  if (![...chatKindSelect.options].some((o) => o.value === value)) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = agent.name;
+    chatKindSelect.appendChild(opt);
+  }
+  chatKindSelect.value = value;
+  chatKindSelect.dispatchEvent(new Event('change'));
+  input.focus();
+}
+
+async function updateAgentSuggest(range, token) {
+  const data = await fetch(apiPath('/api/agents'))
+    .then((r) => r.json())
+    .catch(() => ({ agents: [] }));
+  if (token !== skillSuggestToken) return;
+  const q = range.query;
+  const order = { builtin: 0, global: 1, project: 1, ecc: 2 };
+  const matches = data.agents
+    .filter((a) => a.id.includes(q) || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q))
+    .sort(
+      (a, b) =>
+        Number(!a.id.replace(/^ecc-/, '').startsWith(q)) - Number(!b.id.replace(/^ecc-/, '').startsWith(q)) ||
+        order[a.source] - order[b.source] ||
+        a.name.localeCompare(b.name)
+    )
+    .slice(0, 12)
+    .map((a) => ({
+      agent: true,
+      slug: a.id,
+      name: a.name,
+      enabled: a.enabled,
+      source: a.source,
+      description: `${a.name} · ${a.description}`
+    }));
+  if (!matches.length) return hideSkillSuggest();
+  skillSuggestItems = matches;
+  skillSuggestIndex = 0;
+  skillSuggestRange = range;
+  renderSkillSuggest();
+}
+
 async function updateSkillSuggest() {
   const range = currentSkillQuery();
   if (!range) return hideSkillSuggest();
   const token = ++skillSuggestToken;
-  const skills = await fetch(apiPath('/api/skills'))
-    .then((r) => r.json())
-    .catch(() => []);
+  if (range.kind === 'agent') return updateAgentSuggest(range, token);
+  const [skills, ecc] = await Promise.all([
+    fetch(apiPath('/api/skills'))
+      .then((r) => r.json())
+      .catch(() => []),
+    fetch('/api/ecc')
+      .then((r) => r.json())
+      .catch(() => ({ skills: [] }))
+  ]);
   if (token !== skillSuggestToken) return;
   const q = range.query;
-  const all = [...skills.map((s) => ({ ...s, source: 'project' })), ...CLAUDE_COMMANDS];
+  const eccSkills = (ecc.skills || [])
+    .filter((s) => s.enabled)
+    .map((s) => ({ slug: s.name, name: s.name, description: s.description, source: 'ecc' }));
+  const all = [...skills.map((s) => ({ ...s, source: 'project' })), ...eccSkills, ...CLAUDE_COMMANDS];
   const matches = all
     .filter((s) => s.slug.includes(q) || (s.name || '').toLowerCase().includes(q))
     .sort(
       (a, b) =>
         Number(!a.slug.startsWith(q)) - Number(!b.slug.startsWith(q)) ||
-        (a.source === b.source ? 0 : a.source === 'project' ? -1 : 1) ||
+        ({ project: 0, ecc: 1, claude: 2 }[a.source] ?? 3) - ({ project: 0, ecc: 1, claude: 2 }[b.source] ?? 3) ||
         a.slug.localeCompare(b.slug)
     )
     .slice(0, 12);

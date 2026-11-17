@@ -29,7 +29,8 @@
   "files": [
     "bin/optimia",
     "server",
-    "web"
+    "web",
+    "vendor"
   ],
   "engines": {
     "node": ">=22"

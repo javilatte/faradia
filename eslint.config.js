@@ -5,7 +5,7 @@ const globals = require('globals');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'test-results/**', 'playwright-report/**', '.optimia/**', '.codegraph/**']
+    ignores: ['node_modules/**', 'vendor/**', 'test-results/**', 'playwright-report/**', '.optimia/**', '.codegraph/**']
   },
   js.configs.recommended,
   {

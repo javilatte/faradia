@@ -2,9 +2,10 @@
 
 const portable = require('../config/portable');
 const { checkForUpdate } = require('../config/updateCheck');
-const { loadGlobalSettings } = require('../store/settingsStore');
+const { loadGlobalSettings, saveGlobalSettings } = require('../store/settingsStore');
 const { sandboxStatus } = require('../bridge/sandbox');
 const knowledge = require('../knowledge/bundle');
+const ecc = require('../ecc/library');
 const { sendJson, readJsonBody } = require('./util');
 const pkg = require('../../package.json');
 
@@ -82,6 +83,25 @@ async function handleConfigRoutes(req, res, url) {
       }
       throw err;
     }
+  }
+  // ECC's skills and commands: which ones every session gets.
+  if (p === '/api/ecc' && (req.method === 'GET' || req.method === 'PATCH')) {
+    if (req.method === 'PATCH') {
+      const body = await readJsonBody(req).catch(() => ({}));
+      const patch = {};
+      if (body.skills === null || Array.isArray(body.skills)) patch.skills = body.skills;
+      if (typeof body.commands === 'boolean') patch.commands = body.commands;
+      saveGlobalSettings({ ecc: patch });
+    }
+    const sel = ecc.selection(loadGlobalSettings().ecc);
+    const enabled = new Set(sel.skills);
+    return sendJson(res, 200, {
+      available: ecc.available(),
+      defaults: ecc.DEFAULT_SKILLS,
+      skills: ecc.eccSkills().map((s) => ({ ...s, enabled: enabled.has(s.name) })),
+      commands: { count: ecc.eccCommands().length, enabled: sel.commands },
+      agents: ecc.eccAgents().length
+    });
   }
   if (p === '/api/update' && req.method === 'GET') {
     const enabled = loadGlobalSettings().updates.check;

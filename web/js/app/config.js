@@ -440,6 +440,7 @@ async function renderGeneralPane() {
     ),
     renderSecurityField(sandbox),
     renderWikiField(wikiPrefs),
+    renderEccField(),
     h(
       'div',
       { class: 'settings-field' },
@@ -510,6 +511,90 @@ async function renderGeneralPane() {
       )
     )
   );
+}
+
+// ECC (Everything Claude Code, MIT), bundled: which of its skills and commands every session gets.
+let eccFilter = '';
+function renderEccField() {
+  const host = h('div', { class: 'settings-field', id: 'ecc-field' }, h('label', {}, 'Skills de ECC'));
+  const body = h('div', {}, h('div', { class: 'muted' }, 'Cargando…'));
+  host.append(body);
+  const save = async (patch) => paint(await api.patch('/api/ecc', patch));
+  function paint(st) {
+    if (!st.available) {
+      body.replaceChildren(h('div', { class: 'muted' }, 'Esta instalación no incluye ECC.'));
+      return;
+    }
+    const on = st.skills.filter((s) => s.enabled);
+    const chars = on.reduce((n, s) => n + Math.min(s.description.length, 400), 0);
+    const list = h('div', { class: 'ecc-skill-list' });
+    const fill = () => {
+      const q = eccFilter.toLowerCase();
+      list.replaceChildren(
+        ...st.skills
+          .filter((s) => !q || s.name.includes(q) || s.description.toLowerCase().includes(q))
+          .map((s) =>
+            h(
+              'label',
+              { class: 'check-row ecc-skill', title: s.description },
+              h('input', {
+                type: 'checkbox',
+                checked: s.enabled,
+                onchange: (e) => {
+                  const names = new Set(on.map((x) => x.name));
+                  if (e.target.checked) names.add(s.name);
+                  else names.delete(s.name);
+                  save({ skills: [...names] });
+                }
+              }),
+              h('code', {}, s.name),
+              h('span', { class: 'muted' }, ` ${s.description.slice(0, 110)}${s.description.length > 110 ? '…' : ''}`)
+            )
+          )
+      );
+    };
+    fill();
+    body.replaceChildren(
+      h(
+        'div',
+        { class: 'muted' },
+        `${st.skills.length} skills, ${st.commands.count} comandos y ${st.agents} agentes de Everything Claude Code (licencia MIT), incluidos en optimia. `,
+        `Las skills activas llegan al chat y a los agentes (/nombre). ${on.length} activas: unos ${Math.round(chars / 4 / 100) * 100 || on.length * 30} tokens por sesión. Los agentes de ECC están en Ajustes › Agentes y con @ en el chat.`
+      ),
+      h('input', {
+        type: 'search',
+        placeholder: 'Buscar skills (react, docker, security…)',
+        'aria-label': 'Buscar skills de ECC',
+        value: eccFilter,
+        oninput: (e) => {
+          eccFilter = e.target.value;
+          fill();
+        }
+      }),
+      list,
+      h(
+        'label',
+        { class: 'check-row' },
+        h('input', {
+          type: 'checkbox',
+          checked: st.commands.enabled,
+          onchange: (e) => save({ commands: e.target.checked })
+        }),
+        `Incluir también sus ${st.commands.count} comandos (/code-review, /tdd, /plan…)`
+      ),
+      h(
+        'div',
+        { class: 'general-actions' },
+        h('button', { type: 'button', onclick: () => save({ skills: null }) }, 'Volver a la selección recomendada'),
+        h('button', { type: 'button', onclick: () => save({ skills: [] }) }, 'Ninguna')
+      )
+    );
+  }
+  api
+    .get('/api/ecc')
+    .then(paint)
+    .catch((err) => body.replaceChildren(h('div', { class: 'error-text' }, err.message)));
+  return host;
 }
 
 // Wikis: kept up to date by an agent after each task.

@@ -34,16 +34,24 @@ async function loadTaskKinds() {
     if (type !== 'custom' && !def.internal) add(tasksGroup, type, def.label);
   }
   chatKindSelect.appendChild(tasksGroup);
-  const custom = data.agents.filter((a) => !a.builtin && a.enabled);
-  if (custom.length) {
+  // Agents that run on their own: the user's and the ECC ones turned on (any agent can also be
+  // called with @ in the message box).
+  const groups = [
+    ['Agentes propios', data.agents.filter((a) => (a.source === 'global' || a.source === 'project') && a.enabled)],
+    ['Agentes de ECC', data.agents.filter((a) => a.source === 'ecc' && a.enabled)]
+  ];
+  for (const [label, list] of groups) {
+    if (!list.length) continue;
     const group = document.createElement('optgroup');
-    group.label = 'Agentes propios';
-    for (const a of custom) {
+    group.label = label;
+    for (const a of list) {
       add(group, `custom:${a.id}`, a.name);
       CHAT_KIND_LABEL[`custom:${a.id}`] = `de ${a.name}`;
     }
     chatKindSelect.appendChild(group);
   }
+  // A builtin agent picked with @ runs alone too.
+  for (const a of data.agents.filter((x) => x.source === 'builtin')) CHAT_KIND_LABEL[`custom:${a.id}`] = `de ${a.name}`;
   const values = [...chatKindSelect.querySelectorAll('option')].map((o) => o.value);
   chatKindSelect.value = values.includes(saved) ? saved : 'chat';
   syncTaskControls();

@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
+const { prepareActiveDir } = require('../ecc/library');
 const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
 
 const CHAT_TASKS_PROMPT = `## Crear tareas para agentes
@@ -66,6 +67,14 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
     opts.strictMcpConfig = true;
     const projectMcp = path.join(cwd, '.mcp.json');
     if (fs.existsSync(projectMcp)) opts.extraMcpConfigPaths = [projectMcp];
+  }
+
+  // ECC skills and commands the user enabled (copied to a folder Claude Code reads with --add-dir).
+  try {
+    const eccDir = prepareActiveDir(settings.ecc || {});
+    if (eccDir) opts.addDirs = [eccDir];
+  } catch {
+    /* without them */
   }
 
   const parts = [];
