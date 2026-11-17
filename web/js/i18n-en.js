@@ -5,6 +5,32 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'Planificando…': 'Planning…',
+    'Trabajando…': 'Working…',
+    'Pensando…': 'Thinking…',
+    Pensó: 'Thought',
+    'iniciando...': 'starting…',
+    'Ver toda la actividad': 'View all activity',
+    'Ver actividad del agente': "View the agent's activity",
+    'Ocultar actividad': 'Hide activity',
+    'Etapa completada': 'Stage complete',
+    'Etapa con error': 'Stage failed',
+    'Sin actividad registrada desde que abriste esta pestaña.': 'No activity recorded since you opened this tab.',
+    Lee: 'Reads',
+    Edita: 'Edits',
+    Crea: 'Creates',
+    Ejecuta: 'Runs',
+    Busca: 'Searches',
+    Lista: 'Lists',
+    Delega: 'Delegates',
+    Consulta: 'Looks up',
+    'Generar desde el repo': 'Generate from the repo',
+    'Generando…': 'Generating…',
+    'El agente bibliotecario lee el repositorio y escribe o completa la wiki':
+      'The librarian agent reads the repository and writes or completes the wiki',
+    'El bibliotecario está escribiendo la wiki a partir del repositorio':
+      'The librarian is writing the wiki from the repository',
+    herramienta: 'tool',
     'A qué repos se aplican los cambios': 'Which repos the changes apply to',
     'Abre la configuración de Claude Code': 'Opens the Claude Code settings',
     'Abrir con el sistema': 'Open with the system',
@@ -505,6 +531,14 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^(.+) · usando (.+)$', '$1 · using $2'],
+    ['^(.+) · iniciando\\.\\.\\.$', '$1 · starting…'],
+    ['^(.+) · escribiendo respuesta\\.\\.\\.$', '$1 · writing the answer…'],
+    ['^usando (.+)$', 'using $1'],
+    ['^Bloqueado por seguridad: (.+)$', 'Blocked for safety: $1'],
+    ['^No se pudo generar la wiki: (.+)$', 'Could not generate the wiki: $1'],
+    ['^Wiki generada: (\\d+) páginas escritas o actualizadas$', 'Wiki generated: $1 pages written or updated'],
+    ['^(\\d+) min (\\d+) s$', '$1 min $2 s'],
     [
       '^(.+) · lista para revisar \\(cambios en stage, sin commitear\\)$',
       '$1 · ready for review (changes staged, not committed)'

@@ -98,7 +98,7 @@ export async function importFile(file) {
     toast(`No se puede importar ${file.name}: ${err.message}`, { kind: 'error' });
     return;
   }
-  const when = preview.exportedAt ? new Date(preview.exportedAt).toLocaleString('es-ES') : 'fecha desconocida';
+  const when = preview.exportedAt ? new Date(preview.exportedAt).toLocaleString(window.optimiaLang?.locale || 'es-ES') : 'fecha desconocida';
   const nothing =
     !preview.settings.length &&
     !preview.agents.added.length &&
@@ -414,7 +414,7 @@ async function renderGeneralPane() {
         'div',
         { class: 'muted' },
         status,
-        u?.checkedAt ? ` Última comprobación: ${new Date(u.checkedAt).toLocaleString('es-ES')}.` : ''
+        u?.checkedAt ? ` Última comprobación: ${new Date(u.checkedAt).toLocaleString(window.optimiaLang?.locale || 'es-ES')}.` : ''
       ),
       h(
         'div',

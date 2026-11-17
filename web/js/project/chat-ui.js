@@ -6,13 +6,13 @@ let clockFormat = 'datetime';
 
 function tickClock() {
   const now = new Date();
-  const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const time = now.toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', { hour: '2-digit', minute: '2-digit' });
   if (clockFormat === 'time') {
     clockEl.textContent = time;
     return;
   }
-  const weekday = now.toLocaleDateString('es-ES', { weekday: 'long' });
-  const day = now.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+  const weekday = now.toLocaleDateString(window.optimiaLang?.locale || 'es-ES', { weekday: 'long' });
+  const day = now.toLocaleDateString(window.optimiaLang?.locale || 'es-ES', { day: '2-digit', month: 'short' });
   clockEl.textContent = `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${day}\u00A0\u00A0${time}`;
 }
 
