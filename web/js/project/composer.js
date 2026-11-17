@@ -102,6 +102,8 @@ function syncTaskControls() {
   const isTask = chatKindSelect.value !== 'chat';
   for (const el of document.querySelectorAll('.task-only')) el.hidden = !isTask;
   for (const el of document.querySelectorAll('.chat-only')) el.hidden = isTask;
+  // Effort is a Claude setting: local models ignore it.
+  document.getElementById('chat-effort-field').hidden = isTask || chatModelSelect.value.startsWith('local:');
   input.placeholder = isTask
     ? 'Describe la tarea: qué quieres, criterios de aceptación, ficheros relevantes…'
     : 'Envía un mensaje o arrastra una imagen';

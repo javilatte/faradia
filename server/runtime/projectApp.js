@@ -313,7 +313,21 @@ function createApp(
       if (previous.trim()) fs.writeFileSync(path.join(projectRoot, '.optimia', 'memory.prev.md'), previous);
       saveMemory(projectRoot, content);
       log.info('memory.apply', { taskId, chars: content.length });
-      return sendJson(res, 200, updateTask(projectRoot, taskId, { memoryApplied: new Date().toISOString() }));
+      // The study only read the repo: its worktree and branch are no longer needed.
+      let cleaned = {};
+      if (task.worktreePath || task.branch) {
+        try {
+          removeTaskWorktree(projectRoot, task);
+          cleaned = { worktreePath: null, branchDeleted: true };
+        } catch (err) {
+          log.warn('task.cleanup_failed', { taskId, error: err.message });
+        }
+      }
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, { memoryApplied: new Date().toISOString(), ...cleaned })
+      );
     }
 
     // Commit and merge are user actions (from the task card), never an agent's.

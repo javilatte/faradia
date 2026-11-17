@@ -107,8 +107,8 @@ test('buildSessionOptions: a local agent without URL or model fails with a clear
   t.after(() => rmTmpDir(dir));
   const settings = defaultSettings();
   assert.throws(
-    () => buildSessionOptions(settings, dir, dir, 't', { engine: 'local', model: 'x' }),
-    /URL de la IA local/
+    () => buildSessionOptions(settings, dir, dir, 't', { engine: 'local', model: 'x', name: 'Implementador' }),
+    /el agente "Implementador" usa un modelo local, pero no hay servidor configurado.*Detectar servidores locales/
   );
   settings.ai.localAi.url = 'http://localhost:11434';
   assert.throws(() => buildSessionOptions(settings, dir, dir, 't', { engine: 'local', model: '' }), /modelo local/);

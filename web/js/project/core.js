@@ -96,6 +96,7 @@ async function populateChatModelSelect(settings) {
     chatModelSelect.appendChild(opt);
   }
   if (settings.ai.mode !== 'local') chatModelSelect.value = `claude:${settings.ai.claude.model || 'default'}`;
+  if (typeof syncTaskControls === 'function') syncTaskControls();
 }
 
 // Quick change from the composer: stored where the value lives now (in the repo if it overrides it;
@@ -131,6 +132,7 @@ chatModelSelect.addEventListener('change', async () => {
     body: JSON.stringify({ scope: own ? 'project' : 'global', ai })
   });
   modeLabel.textContent = engine === 'local' ? 'IA local' : 'Claude Code';
+  syncTaskControls();
   const where = own ? 'solo en este repo' : 'en todos los repos';
   const label = engine === 'local' ? `local "${model}"` : `"${model}"`;
   appendMessage('system', `Modelo ${label} ${where}, desde la próxima sesión.`);

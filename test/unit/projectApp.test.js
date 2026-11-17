@@ -90,3 +90,32 @@ test('memoryFromOutput: strips the ```markdown wrapper and the preamble', () => 
   assert.equal(memoryFromOutput('Hecho.\n\n# Memoria\n## A'), '# Memoria\n## A\n');
   assert.equal(memoryFromOutput('sin apartados'), 'sin apartados\n');
 });
+
+test('apply-memory removes the study worktree and branch: they only read the repo', async (t) => {
+  const repo = isolated(t);
+  const { execFileSync } = require('child_process');
+  const git = (...args) => execFileSync('git', args, { cwd: repo, stdio: 'pipe' });
+  git('init', '-q', '-b', 'main');
+  git('config', 'user.email', 't@t');
+  git('config', 'user.name', 't');
+  fs.writeFileSync(path.join(repo, 'README.md'), 'x\n');
+  git('add', '.');
+  git('commit', '-q', '-m', 'init');
+  const { createTaskWorktree } = require('../../server/bridge/worktree');
+  const api = await serve(t, repo);
+  const task = addTask(repo, { title: 'Conocer el repo', type: 'onboard', instruction: 'x' });
+  const wt = createTaskWorktree(repo, task.id);
+  updateTask(repo, task.id, {
+    status: 'ready_to_test',
+    output: '## Qué es\nUn repo.',
+    worktreePath: wt.dir,
+    branch: wt.branch
+  });
+
+  const r = await api('POST', `/api/tasks/${task.id}/apply-memory`);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.worktreePath, null);
+  assert.equal(r.body.branchDeleted, true);
+  assert.equal(fs.existsSync(wt.dir), false);
+  assert.equal(execFileSync('git', ['branch', '--list', wt.branch], { cwd: repo, encoding: 'utf8' }).trim(), '');
+});

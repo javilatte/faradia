@@ -880,13 +880,15 @@ function renderOrb(state) {
 function renderTaskWorkspace(taskId, task) {
   const box = document.createElement('div');
   box.className = 'task-workspace';
-  if (task.branch) {
+  // Worktree already removed (memory saved): there is no branch or files to open.
+  const gone = Boolean(task.branchDeleted);
+  if (task.branch && !gone) {
     const meta = document.createElement('div');
     meta.className = 'task-meta';
     meta.textContent = `Rama: ${task.branch}${task.baseBranch ? ` · base: ${task.baseBranch}` : ''}`;
     box.appendChild(meta);
   }
-  const files = task.outputFiles || [];
+  const files = gone ? [] : task.outputFiles || [];
   if (files.length) {
     const title = document.createElement('div');
     title.className = 'task-meta';

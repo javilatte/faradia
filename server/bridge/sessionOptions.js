@@ -88,7 +88,11 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const engine = agent ? agent.engine : ai.mode === 'local' ? 'local' : 'claude';
   if (engine === 'local') {
     Object.assign(opts, localDefaults(ai));
-    if (!opts.baseUrl) throw new Error('configura la URL de la IA local en Ajustes > IA local');
+    if (!opts.baseUrl) {
+      throw new Error(
+        `${agent ? `el agente "${agent.name}" usa un modelo local, pero` : 'el chat usa IA local, pero'} no hay servidor configurado: abre Ajustes › IA local y pulsa «Detectar servidores locales»`
+      );
+    }
     const model = (agent ? agent.model : '') || ai.localAi.model;
     if (!model) throw new Error('elige un modelo local para este agente o en Ajustes > IA local');
     opts.model = model;
