@@ -66,7 +66,10 @@ test('a custom agent shows in the mode selector and runs its single-stage task',
   await expect(task).toHaveClass(/ready/, { timeout: 20_000 });
   await expect(task.locator('.pipeline-step small')).toHaveText(['Revisor de accesibilidad · opus']);
   await expect(task).toContainText('Informe entregado');
-  const last = claudeCalls().pop();
+  // The task's stage ran in its worktree (the report then goes to the wiki with another session).
+  const last = claudeCalls()
+    .filter((c) => c.cwd.includes('/.optimia/worktrees/'))
+    .pop();
   expect(argAfter(last.args, '--model')).toBe('opus');
   expect(argAfter(last.args, '--append-system-prompt')).toContain('Revisa la accesibilidad (WCAG).');
   expect(errors).toEqual([]);
