@@ -71,7 +71,8 @@ async function remoteInfo(dir) {
   }
   if (!names.length) return null;
   const name = names.includes('origin') ? 'origin' : names[0];
-  const url = (await run('git', ['remote', 'get-url', name], { cwd: dir })).stdout.trim();
+  // The URL as configured (get-url would apply url.*.insteadOf rewrites and hide the host).
+  const url = (await run('git', ['config', '--get', `remote.${name}.url`], { cwd: dir })).stdout.trim();
   const webUrl = webUrlOf(url);
   return { name, url, webUrl, provider: providerOf(webUrl) };
 }

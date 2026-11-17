@@ -49,6 +49,7 @@ fs.writeFileSync(path.join(home, '.config', 'optimia', 'state.json'), JSON.strin
 fs.writeFileSync(path.join(os.tmpdir(), `optimia-e2e-current-${PORT}.txt`), tmp);
 // Every call to the fake claude is recorded here (arguments and folder), for the agent tests.
 process.env.FAKE_CLAUDE_LOG = path.join(tmp, 'claude-calls.jsonl');
+process.env.FAKE_GH_LOG = path.join(tmp, 'gh-calls.jsonl');
 
 const cleanup = () => fs.rmSync(tmp, { recursive: true, force: true });
 process.on('exit', cleanup);

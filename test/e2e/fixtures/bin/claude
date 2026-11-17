@@ -78,11 +78,17 @@ rl.on('line', (line) => {
     emit({ type: 'system', subtype: 'permission_denied', tool_name: 'Bash', tool_use_id: id, session_id: sessionId });
   }
   const verifying = /VERIFICACION/.test(text);
-  const reply = verifying
-    ? 'Tests ejecutados.\nVEREDICTO: OK'
-    : editing
-      ? 'He hecho el cambio pedido.'
-      : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
+  const describing = /Etapa de DESCRIPCION/.test(text);
+  const jira = describing && /ticket de Jira/.test(text);
+  const reply = jira
+    ? 'Comentario para Jira simulado: hecho y probado.'
+    : describing
+      ? 'TÍTULO: feat: cambio simulado\n\nResumen simulado.\n\n## Cambios\n- e2e-agent-output.txt'
+      : verifying
+        ? 'Tests ejecutados.\nVEREDICTO: OK'
+        : editing
+          ? 'He hecho el cambio pedido.'
+          : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
   emit({
     type: 'assistant',
     session_id: sessionId,

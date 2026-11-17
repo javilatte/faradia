@@ -295,6 +295,8 @@ function taskStepText(task, lastStep) {
       if (task.type === 'onboard')
         return task.memoryApplied ? 'memoria guardada' : 'memoria propuesta · revísala y guárdala';
       if (task.reportOnly) return `${stage} · informe listo (no cambia ficheros)`;
+      if (task.pr) return task.pr.manual ? 'rama subida · termina de abrir la PR' : 'PR abierta';
+      if (task.lastCommit && !task.uncommitted) return 'commit hecho · lista para entregar';
       return `${stage} · lista para revisar (cambios en stage, sin commitear)`;
     default:
       return task.error || 'pendiente';
@@ -732,17 +734,25 @@ function renderDelivery(taskId, task) {
     draft.addEventListener('change', () => cardDrafts.set(draftKey, draft.checked));
     draftLabel.append(draft, ' Borrador');
     const pr = task.pr;
-    const label = pr && !pr.manual ? 'Subir cambios y actualizar PR' : viaGh ? 'Crear PR' : 'Subir rama y abrir PR';
-    row.appendChild(
+    // Commits after the last push: the PR can be brought up to date.
+    const behind = pr && pr.pushedCommit !== task.lastCommit;
+    const createLabel = viaGh ? 'Crear PR' : 'Subir rama y abrir PR';
+    const send = (label, primary) =>
       actionButton(label, {
-        primary: true,
+        primary,
         disabled: Boolean(task.uncommitted) || generating,
         onClick: () => createPullRequest(taskId, { title: title.value, body: body.value, draft: draft.checked })
-      })
-    );
-    if (viaGh && !pr) row.appendChild(draftLabel);
-    if (pr) {
-      row.appendChild(actionButton('Ver PR', { onClick: () => window.open(pr.url, '_blank', 'noopener') }));
+      });
+    if (!pr) {
+      row.appendChild(send(createLabel, true));
+      if (viaGh) row.appendChild(draftLabel);
+    } else {
+      row.appendChild(
+        actionButton('Ver PR', { primary: !behind, onClick: () => window.open(pr.url, '_blank', 'noopener') })
+      );
+      row.appendChild(
+        send(pr.manual ? 'Subir cambios' : behind ? 'Subir cambios y actualizar PR' : 'Actualizar PR', behind)
+      );
       // The branch is already on the remote: the local worktree and branch can go.
       row.appendChild(actionButton('Archivar', { onClick: () => archiveTask(taskId) }));
     }
@@ -750,9 +760,11 @@ function renderDelivery(taskId, task) {
     const hint = document.createElement('div');
     hint.className = 'task-meta';
     if (pr) {
-      hint.textContent = pr.manual
-        ? `Rama subida a ${pr.remote}. Termina de abrir la PR en el navegador.`
-        : `PR ${pr.draft ? 'en borrador ' : ''}abierta en ${task.baseBranch}.`;
+      hint.textContent = behind
+        ? 'Hay commits nuevos que la PR aún no tiene.'
+        : pr.manual
+          ? `Rama subida a ${pr.remote}. Termina de abrir la PR en el navegador.`
+          : `PR ${pr.draft ? 'en borrador ' : ''}abierta contra ${task.baseBranch}.`;
     } else if (remote.provider === 'github' && !gh) {
       hint.textContent =
         'Sin gh (o sin sesión): se sube la rama y se abre GitHub para crear la PR. Con «gh auth login» se crea desde aquí.';
@@ -1015,12 +1027,13 @@ function buildTaskCard(taskId, task, lastStep) {
 
   const answerStage = task.status === 'awaiting_input' ? QUESTION_STAGE[task.pendingQuestion?.kind] : null;
   const question = answerStage ? task.pendingQuestion.text : null;
-  const text = question || (ready || task.status === 'pending' ? task.output : null);
-  if (text) {
+  const raw = question || (ready || task.status === 'pending' ? task.output : null);
+  // The verdict is already shown above (renderVerification): not repeated in the report.
+  const text = raw && !question && task.verification ? stripVerdict(raw) : raw;
+  if (text && text.trim()) {
     const output = document.createElement('div');
     output.className = 'task-output';
-    // The verdict is already shown above (renderVerification): not repeated in the report.
-    paintMarkdown(output, task.verification ? stripVerdict(text) : text);
+    paintMarkdown(output, text);
     card.appendChild(output);
   }
   if (task.error) {
