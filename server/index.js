@@ -94,7 +94,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       }
     }
 
-    if (url.pathname.startsWith('/api/workbenches') || url.pathname === '/api/scan') {
+    if (
+      url.pathname.startsWith('/api/workbenches') ||
+      url.pathname === '/api/scan' ||
+      url.pathname === '/api/pick-folder'
+    ) {
       const handled = await handleWorkbenchRoutes(req, res, url, {
         registry,
         onChange: () => {
@@ -179,7 +183,9 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     // The link optimia prints carries ?token=: it is stored in a cookie and removed from the URL.
     const given = url.searchParams.get('token');
     if (given !== null) {
-      const headers = { Location: url.pathname };
+      // The rest of the query (?p=<project>) is kept.
+      url.searchParams.delete('token');
+      const headers = { Location: `${url.pathname}${url.search}` };
       if (security.safeEqual(given, sessionToken)) {
         headers['Set-Cookie'] = security.sessionCookie(sessionToken, actualPort);
       }

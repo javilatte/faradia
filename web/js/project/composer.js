@@ -53,7 +53,7 @@ const taskBranchInput = document.getElementById('task-branch-input');
 
 async function loadTaskBranches() {
   const { current, branches } = await fetch(apiPath('/api/git/branches')).then((r) => r.json());
-  const saved = localStorage.getItem('optimia:task-base');
+  const saved = localStorage.getItem(taskBaseKey());
   taskBaseSelect.innerHTML = '';
   for (const name of branches) {
     const opt = document.createElement('option');
@@ -109,7 +109,11 @@ function syncTaskControls() {
   if (isTask) loadTaskBranches().catch(() => {});
 }
 
-taskBaseSelect.addEventListener('change', () => localStorage.setItem('optimia:task-base', taskBaseSelect.value));
+// The base branch chosen last, per repo: "develop" in one repo says nothing about another.
+function taskBaseKey() {
+  return `optimia:task-base:${currentProjectId || defaultProjectId || 'default'}`;
+}
+taskBaseSelect.addEventListener('change', () => localStorage.setItem(taskBaseKey(), taskBaseSelect.value));
 chatKindSelect.addEventListener('change', () => {
   localStorage.setItem('optimia:chat-kind', chatKindSelect.value);
   syncTaskControls();
@@ -249,9 +253,11 @@ function replayChat(chat) {
 }
 
 async function selectChat(chatId) {
+  const pid = currentProjectId;
   currentChatId = chatId;
   renderChatTabs();
   const chat = await fetch(apiPath(`/api/chats/${chatId}`)).then((r) => r.json());
+  if (pid !== currentProjectId || chatId !== currentChatId) return;
   replayChat(chat);
   setWaiting(false);
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -270,7 +276,9 @@ async function createAndSelectChat() {
 }
 
 async function loadInitialChats() {
+  const pid = currentProjectId;
   const list = await fetch(apiPath('/api/chats')).then((r) => r.json());
+  if (pid !== currentProjectId) return;
   chatsMeta.clear();
   for (const meta of list) chatsMeta.set(meta.id, meta);
   const mostRecent = list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];

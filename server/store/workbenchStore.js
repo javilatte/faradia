@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 const { configDir } = require('./globalPaths');
 
 // A workbench is a named set of repos looked at together ("Work", "Client X"...). A repo can be in
@@ -115,13 +116,31 @@ function setActiveWorkbench(id) {
   return store;
 }
 
+// Root of the git repo that contains `dir` (a subfolder picked by mistake counts as its repo), or
+// null if it is not inside one.
+function gitRoot(dir) {
+  try {
+    const top = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+    return normalizeRepo(top.trim());
+  } catch {
+    return null;
+  }
+}
+
 function addRepos(id, paths) {
   const store = load();
   const wb = findWorkbench(store, id);
   const added = [];
   for (const p of paths) {
-    const repo = normalizeRepo(p);
-    if (!fs.existsSync(repo) || !fs.statSync(repo).isDirectory()) throw new Error(`no existe la carpeta ${repo}`);
+    const dir = normalizeRepo(String(p).replace(/^~(?=$|\/)/, process.env.HOME || ''));
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error(`no existe la carpeta ${dir}`);
+    // Tasks need git (worktrees, branches, commits): a folder outside a repo is not accepted.
+    const repo = gitRoot(dir);
+    if (!repo) {
+      throw new Error(
+        `${dir} no es un repositorio git. Si contiene varios repos, usa «Buscar repos en una carpeta»; si es un proyecto nuevo, ejecuta git init en él.`
+      );
+    }
     if (!wb.repos.includes(repo)) {
       wb.repos.push(repo);
       added.push(repo);

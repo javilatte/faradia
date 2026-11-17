@@ -49,13 +49,87 @@ export async function loadWorkbenches() {
   const [wbs, projects] = await Promise.all([api.get('/api/workbenches'), api.get('/api/projects')]);
   state.defaultProjectId = projects.defaultProjectId;
   apply(wbs);
+  rememberRepo(currentProjectId());
 }
 
-// Switching repos reloads the project view with ?p=<id> and keeps the current view.
+// Last repo opened in each workbench: switching workbench takes you back to it.
+const LAST_REPO_KEY = 'optimia:last-repo';
+function lastRepos() {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_REPO_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+function rememberRepo(projectId) {
+  const wb = activeWorkbench();
+  if (!wb || !wb.repos.some((r) => r.projectId === projectId)) return;
+  try {
+    localStorage.setItem(LAST_REPO_KEY, JSON.stringify({ ...lastRepos(), [wb.id]: projectId }));
+  } catch {
+    /* no persistence */
+  }
+}
+
+// Opens a repo in place (chat, agents, settings and the other views switch to it) and keeps the
+// current view. Falls back to a reload if the project view is not loaded.
 export function openProject(projectId) {
-  const params = new URLSearchParams(location.search);
-  params.set('p', projectId);
-  location.href = `${location.pathname}?${params}${location.hash}`;
+  if (!projectId || projectId === currentProjectId()) return;
+  if (typeof window.optimiaSwitchProject !== 'function') {
+    const params = new URLSearchParams(location.search);
+    params.set('p', projectId);
+    location.href = `${location.pathname}?${params}${location.hash}`;
+    return;
+  }
+  state.currentProjectId = projectId;
+  renderSwitcher();
+  window.optimiaSwitchProject(projectId);
+}
+
+// The project view changed repo (also with the browser's back and forward buttons).
+window.addEventListener('optimia:project-changed', (e) => {
+  state.currentProjectId = e.detail.projectId;
+  rememberRepo(e.detail.projectId);
+  renderSwitcher();
+  for (const fn of changeListeners) fn(state);
+});
+
+// Repo to open after switching to a workbench: the last one used there, or its first one.
+function repoForWorkbench(wb) {
+  const repos = (wb?.repos || []).filter((r) => r.exists && r.projectId);
+  if (!repos.length || repos.some((r) => r.projectId === currentProjectId())) return null;
+  const last = lastRepos()[wb.id];
+  return (repos.find((r) => r.projectId === last) || repos[0]).projectId;
+}
+
+async function activateWorkbench(id) {
+  apply(await api.put('/api/workbenches/active', { id }));
+  const next = repoForWorkbench(activeWorkbench());
+  if (next) openProject(next);
+}
+
+// Adds a folder to the active workbench (the native dialog or a typed path) and opens it.
+async function addRepoToActive(path) {
+  const wb = activeWorkbench();
+  if (!wb || !path) return;
+  const before = new Set(wb.repos.map((r) => r.path));
+  const data = await api.post(`/api/workbenches/${wb.id}/repos`, { paths: [path] });
+  apply(data);
+  const repos = (data.workbenches.find((w) => w.id === wb.id)?.repos || []).filter((r) => r.projectId);
+  // The new one or, if it was already there, the repo of that folder (git reports the repo root, so
+  // a subfolder counts as its repo).
+  const target =
+    repos.find((r) => !before.has(r.path)) || repos.find((r) => path === r.path || path.startsWith(`${r.path}/`));
+  if (target) openProject(target.projectId);
+}
+
+async function pickAndAddRepo() {
+  try {
+    const { path } = await api.post('/api/pick-folder', {});
+    if (path) await addRepoToActive(path);
+  } catch (err) {
+    toast(err.message, { kind: 'error' });
+  }
 }
 
 function renderSwitcher() {
@@ -71,7 +145,7 @@ function renderSwitcher() {
       title: 'Workbench activo',
       onchange: async (e) => {
         try {
-          apply(await api.put('/api/workbenches/active', { id: e.target.value }));
+          await activateWorkbench(e.target.value);
         } catch (err) {
           toast(err.message, { kind: 'error' });
         }
@@ -99,22 +173,21 @@ function renderSwitcher() {
 }
 
 // Repos of the active workbench, like Mail's mailboxes: the selected one is the open project (chat,
-// agents, settings).
+// agents, settings). The "+" next to the title adds one.
 function renderRepoList(wb) {
   const list = document.getElementById('repo-list');
   if (!list) return;
   clear(list);
+  renderReposTitle();
   const current = currentProjectId();
   const repos = wb ? wb.repos.filter((r) => r.exists && r.projectId) : [];
   const items = repos.map((r) => ({ id: r.projectId, name: r.name, path: r.path }));
-  // The open project may not be in the active workbench: it is shown anyway.
+  // The open project may not be in the active workbench: it is shown anyway, with a way to add it.
+  let outsider = null;
   if (current && !items.some((r) => r.id === current)) {
     const repo = repoByProject(current);
-    items.unshift({ id: current, name: repo ? repo.name : 'proyecto actual', path: repo?.path, other: true });
-  }
-  if (!items.length) {
-    list.append(h('div', { class: 'sidebar-empty' }, 'Sin repos. Añádelos desde Gestionar workbenches…'));
-    return;
+    outsider = { id: current, name: repo ? repo.name : 'proyecto actual', path: repo?.path, other: true };
+    items.unshift(outsider);
   }
   for (const r of items) {
     const selected = r.id === current;
@@ -122,11 +195,11 @@ function renderRepoList(wb) {
       h(
         'button',
         {
-          class: `sidebar-item repo-item${selected ? ' active' : ''}`,
+          class: `sidebar-item repo-item${selected ? ' active' : ''}${r.other ? ' other' : ''}`,
           role: 'option',
           'aria-selected': String(selected),
           dataset: { projectId: r.id },
-          title: r.other ? `${r.path || r.name} (de otro workbench)` : r.path || r.name,
+          title: r.other ? `${r.path || r.name} (no está en este workbench)` : r.path || r.name,
           onclick: () => {
             if (!selected) openProject(r.id);
           }
@@ -136,6 +209,54 @@ function renderRepoList(wb) {
       )
     );
   }
+  if (outsider?.path && wb) {
+    list.append(
+      h(
+        'button',
+        {
+          class: 'link-button sidebar-hint',
+          onclick: () => addRepoToActive(outsider.path).catch((err) => toast(err.message, { kind: 'error' }))
+        },
+        `Añadir ${outsider.name} a ${wb.name}`
+      )
+    );
+  }
+  if (!repos.length) {
+    list.append(
+      h('div', { class: 'sidebar-empty' }, `${wb ? wb.name : 'Este workbench'} no tiene repos todavía.`),
+      h('button', { class: 'link-button sidebar-hint', onclick: pickAndAddRepo }, 'Añadir un repo…'),
+      h('button', { class: 'link-button sidebar-hint', onclick: openManager }, 'Buscar repos en una carpeta…')
+    );
+  }
+}
+
+// "Repositorios" title with a "+" that opens the folder dialog (and, if that is not available, the
+// manager to type the path or search a folder).
+function renderReposTitle() {
+  const title = document.getElementById('repos-title-row');
+  if (!title || title.querySelector('.repos-add')) return;
+  title.classList.add('with-action');
+  title.append(
+    h(
+      'button',
+      {
+        class: 'icon-button repos-add',
+        title: 'Añadir un repo a este workbench…',
+        'aria-label': 'Añadir un repo a este workbench',
+        onclick: async () => {
+          try {
+            const { path } = await api.post('/api/pick-folder', {});
+            if (path) await addRepoToActive(path);
+          } catch (err) {
+            // No native dialog (no zenity/kdialog, or a remote session): type it in the manager.
+            toast(err.message, { kind: 'error' });
+            openManager();
+          }
+        }
+      },
+      svgIcon('M12 5v14M5 12h14')
+    )
+  );
 }
 
 function svgIcon(d) {
@@ -260,7 +381,14 @@ function renderWorkbenchPane(wb) {
         'button',
         {
           disabled: wb.id === state.activeWorkbenchId,
-          onclick: () => run(() => api.put('/api/workbenches/active', { id: wb.id }))
+          onclick: async () => {
+            try {
+              await activateWorkbench(wb.id);
+              renderManager();
+            } catch (err) {
+              toast(err.message, { kind: 'error' });
+            }
+          }
         },
         'Activar'
       ),
@@ -332,7 +460,22 @@ function renderWorkbenchPane(wb) {
         }
       },
       h('input', { name: 'path', placeholder: '/ruta/al/repo', 'aria-label': 'Ruta del repo', spellcheck: 'false' }),
-      h('button', { type: 'submit' }, 'Añadir')
+      h('button', { type: 'submit' }, 'Añadir'),
+      h(
+        'button',
+        {
+          type: 'button',
+          onclick: async () => {
+            try {
+              const { path } = await api.post('/api/pick-folder', {});
+              if (path) run(() => api.post(`/api/workbenches/${wb.id}/repos`, { paths: [path] }));
+            } catch (err) {
+              toast(err.message, { kind: 'error' });
+            }
+          }
+        },
+        'Elegir carpeta…'
+      )
     ),
     h('h3', { class: 'wb-h' }, 'Buscar repos en una carpeta'),
     renderScanForm(wb)

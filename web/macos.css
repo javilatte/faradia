@@ -1074,3 +1074,30 @@ body {
   gap: 4px;
   font-size: var(--text-callout);
 }
+
+/* Sidebar: "Repositorios" with its "+" and hints */
+.sidebar-group-title.with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+:root .sidebar-group-title .repos-add {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  padding: 0;
+  color: var(--secondary-label);
+}
+:root .sidebar-group-title .repos-add:hover {
+  color: var(--label);
+}
+:root .sidebar-hint {
+  align-self: flex-start;
+  padding: 2px 8px;
+  font-size: var(--text-callout);
+  text-align: left;
+}
+.repo-item.other .sidebar-item-label {
+  font-style: italic;
+}

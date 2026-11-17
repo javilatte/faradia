@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const wbStore = require('../store/workbenchStore');
 const { sendJson, readJsonBody } = require('./util');
+const { pickFolder } = require('../bridge/filePicker');
 
 // Global workbench routes:
 //   GET    /api/workbenches                       all, with their repos already registered as projects
@@ -14,6 +15,7 @@ const { sendJson, readJsonBody } = require('./util');
 //   POST   /api/workbenches/:id/repos {paths: []}
 //   DELETE /api/workbenches/:id/repos {path}
 //   POST   /api/scan {root, maxDepth}             looks for git repos under a folder
+//   POST   /api/pick-folder                       native folder dialog -> {path|null}
 
 function repoView(registry, repo) {
   const exists = fs.existsSync(repo);
@@ -83,6 +85,14 @@ async function handleWorkbenchRoutes(req, res, url, { registry, onChange }) {
       if (typeof body.path !== 'string') return sendJson(res, 400, { error: 'path is required' });
       wbStore.removeRepo(m[1], body.path);
       return done(200);
+    }
+
+    if (p === '/api/pick-folder' && req.method === 'POST') {
+      try {
+        return sendJson(res, 200, { path: await pickFolder({ prompt: 'Elige el repo que quieres añadir' }) });
+      } catch (err) {
+        return sendJson(res, 501, { error: err.message });
+      }
     }
 
     if (p === '/api/scan' && req.method === 'POST') {

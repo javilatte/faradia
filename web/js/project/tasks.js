@@ -529,8 +529,11 @@ function renderDocOptions(taskId, task) {
 // merging locally. Loaded with the project.
 let repoDelivery = null;
 async function loadRepoDelivery() {
+  const pid = currentProjectId;
   try {
-    repoDelivery = await fetch(apiPath('/api/git/remote')).then((r) => r.json());
+    const info = await fetch(apiPath('/api/git/remote')).then((r) => r.json());
+    if (pid !== currentProjectId) return;
+    repoDelivery = info;
   } catch {
     repoDelivery = null;
   }
@@ -1163,8 +1166,10 @@ function renderEmptyBoard() {
 }
 
 async function refreshMemoryKnown() {
+  const pid = currentProjectId;
   try {
     const { content } = await fetch(apiPath('/api/memory')).then((r) => r.json());
+    if (pid !== currentProjectId) return;
     memoryKnown = Boolean(content && content.trim());
   } catch {
     memoryKnown = null;
@@ -1231,7 +1236,9 @@ function renderTasks() {
 }
 
 async function loadInitialTasks() {
+  const pid = currentProjectId;
   const list = await fetch(apiPath('/api/tasks')).then((r) => r.json());
+  if (pid !== currentProjectId) return; // another repo was opened meanwhile
   for (const task of list) tasks.set(task.id, { task, lastStep: null });
   renderTasks();
   refreshMemoryKnown();

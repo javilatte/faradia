@@ -456,3 +456,13 @@ registerView('changes', {
     refresh();
   }
 });
+
+// The repo opened in the sidebar is the one shown here as well.
+window.addEventListener('optimia:project-changed', (e) => {
+  sel.projectId = e.detail.projectId;
+  sel.taskId = null;
+  sel.ref = null;
+  sel.commit = null;
+  sel.path = null;
+  if (root && !root.hidden) refresh();
+});

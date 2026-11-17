@@ -12,7 +12,9 @@ effortSelect.addEventListener('change', async () => {
 });
 
 async function loadInitialSettings() {
+  const pid = currentProjectId;
   const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
+  if (pid !== currentProjectId) return;
   applyUi(settings.ui || {});
   modeLabel.textContent = settings.ai.mode === 'local' ? 'IA local' : 'Claude Code';
   effortSelect.value = settings.ai.claude.effort || 'default';

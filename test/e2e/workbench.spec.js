@@ -1,4 +1,5 @@
 'use strict';
+/* global window */
 
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
@@ -47,9 +48,10 @@ test('create a workbench, search repos in a folder and switch project', async ({
   await expect(page.locator('#wb-select')).toHaveValue(/.+/);
   await expect(page.locator('#wb-select option:checked')).toContainText('Clientes');
 
-  // Switching repos reloads the project view with ?p=<id> of the new repo
+  // Opening a repo puts its id in the URL (?p=<id>)
   await page.locator('#repo-list .repo-item', { hasText: 'api' }).click();
   await expect(page).toHaveURL(/\?p=[a-f0-9]{12}/);
+  await expect(page.locator('#project-label')).toHaveText('api');
   await waitForChatReady(page);
   await page.locator('#chat-kind-select').selectOption('chat');
   await page.locator('#chat-input').fill('hola desde api');
@@ -59,4 +61,79 @@ test('create a workbench, search repos in a folder and switch project', async ({
   expect(fs.existsSync(path.join(root, 'api', '.optimia', 'chats.json'))).toBe(true);
   expect(fs.readFileSync(path.join(root, 'api', '.git', 'info', 'exclude'), 'utf8')).toContain('/.optimia');
   expect(errors).toEqual([]);
+});
+
+test('switching repos is instant: no reload, each repo keeps its chat and draft, back goes to the previous one', async ({
+  page
+}) => {
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const root = path.join(reposDir(), 'switch');
+  makeRepo(path.join(root, 'uno'));
+  makeRepo(path.join(root, 'dos'));
+
+  await page.goto('/?token=e2e-token');
+  await page.locator('#wb-manage').click();
+  await page.getByLabel('Nombre del nuevo workbench').fill('Cambio rápido');
+  await page.getByRole('button', { name: 'Crear' }).click();
+  await expect(page.locator('#wb-manager .settings-content-header')).toContainText('Cambio rápido');
+  await page.getByLabel('Carpeta donde buscar').fill(root);
+  await page.getByRole('button', { name: 'Buscar' }).click();
+  await page.getByRole('button', { name: /Añadir los seleccionados/ }).click();
+  await expect(page.locator('.wb-repos')).toContainText('dos');
+  // Activating a workbench the open repo is not in opens one of its repos
+  await page.getByRole('button', { name: 'Activar' }).click();
+  await page.locator('.wb-close').click();
+  await expect(page.locator('#project-label')).toHaveText(/^(uno|dos)$/);
+  await page.locator('#repo-list .repo-item', { hasText: 'uno' }).click();
+  await expect(page.locator('#project-label')).toHaveText('uno');
+  await waitForChatReady(page);
+
+  // A marker in the page survives the switch: there was no reload.
+  await page.evaluate(() => (window.__noReload = true));
+  await page.locator('#chat-input').fill('borrador de uno');
+  await page.locator('#repo-list .repo-item', { hasText: 'dos' }).click();
+  await expect(page.locator('#project-label')).toHaveText('dos');
+  await expect(page.locator('#repo-list .repo-item.active')).toContainText('dos');
+  await expect(page.locator('#chat-input')).toHaveValue('');
+  expect(await page.evaluate(() => window.__noReload)).toBe(true);
+  await waitForChatReady(page);
+  await page.locator('#chat-kind-select').selectOption('chat');
+  await page.locator('#chat-input').fill('hola desde dos');
+  await page.locator('#chat-input').press('Enter');
+  await expect(page.locator('#chat-log')).toContainText('Respuesta simulada a: hola desde dos', { timeout: 15_000 });
+
+  // Back to "uno": its draft is there and the chat of "dos" is not.
+  await page.goBack();
+  await expect(page.locator('#project-label')).toHaveText('uno');
+  await expect(page.locator('#chat-input')).toHaveValue('borrador de uno');
+  await expect(page.locator('#chat-log')).not.toContainText('hola desde dos');
+  expect(await page.evaluate(() => window.__noReload)).toBe(true);
+
+  // Another workbench and back: the workbench reopens the repo used last in it.
+  const pickWorkbench = async (name) =>
+    page
+      .locator('#wb-select')
+      .selectOption(await page.locator('#wb-select option', { hasText: name }).getAttribute('value'));
+  await pickWorkbench('Por defecto');
+  await expect(page.locator('#project-label')).toHaveText('demo');
+  await pickWorkbench('Cambio rápido');
+  await expect(page.locator('#project-label')).toHaveText('uno');
+
+  // A link with ?p= keeps the repo after the token is exchanged for the cookie.
+  const projectId = new URL(page.url()).searchParams.get('p');
+  await page.goto(`/?token=e2e-token&p=${projectId}`);
+  await expect(page).toHaveURL(new RegExp(`\\?p=${projectId}$`));
+  await expect(page.locator('#project-label')).toHaveText('uno');
+  expect(errors).toEqual([]);
+});
+
+test('a folder that is not a git repo is refused with a hint', async ({ page }) => {
+  const plain = path.join(reposDir(), 'no-git');
+  fs.mkdirSync(plain, { recursive: true });
+  await page.goto('/?token=e2e-token');
+  await page.locator('#wb-manage').click();
+  await page.getByLabel('Ruta del repo').fill(plain);
+  await page.getByRole('button', { name: 'Añadir', exact: true }).click();
+  await expect(page.locator('.toast')).toContainText('no es un repositorio git');
 });

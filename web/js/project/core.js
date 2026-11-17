@@ -1,9 +1,9 @@
 'use strict';
 
 // Active project: the one in ?p=<id> in the URL or, without it, the project optimia was launched
-// from. The whole project view (chat, agents, settings, terminal) talks to that project's API, and
-// switching projects reloads the view with another ?p=.
-const currentProjectId = new URLSearchParams(location.search).get('p') || null;
+// from. The whole project view (chat, agents, settings, terminal) talks to that project's API;
+// switching projects swaps it in place (see switch.js) and updates ?p=.
+let currentProjectId = new URLSearchParams(location.search).get('p') || null;
 let defaultProjectId = null;
 function apiPath(p) {
   return currentProjectId ? `/api/projects/${currentProjectId}${p.slice('/api'.length)}` : p;
