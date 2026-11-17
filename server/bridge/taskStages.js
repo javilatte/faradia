@@ -310,8 +310,12 @@ function parseDescription(text, target) {
 const AUTONOMY_RULE =
   'Trabaja de forma autónoma: decide tú los detalles razonables y anótalos en tu respuesta. Para solo si falta concreción o contexto que no puedas deducir del repo. Si una acción queda bloqueada por seguridad, no te detengas: sigue por otro camino y, si era imprescindible, di al final qué necesitabas y para qué (el usuario puede permitirla desde la tarjeta).';
 
+// optimia's instructions are in Spanish; the user's request may not be.
+const LANGUAGE_RULE =
+  'Idioma: escribe todo lo que produzcas (lo que cuentas mientras trabajas, el informe, las preguntas, los títulos y mensajes de commit o PR) en el idioma en que está escrito el encargo del usuario, aunque estas instrucciones estén en español.';
+
 function buildStagePrompt(task, stage, opts = {}) {
-  return `${buildStageBody(task, stage, opts)}\n\n${AUTONOMY_RULE}\n\n${SHELL_RULE}`;
+  return `${buildStageBody(task, stage, opts)}\n\n${AUTONOMY_RULE}\n\n${LANGUAGE_RULE}\n\n${SHELL_RULE}`;
 }
 
 // What the previous stage wrote and the implementation stage needs.
@@ -566,6 +570,7 @@ function decideAfterStage(
 }
 
 module.exports = {
+  LANGUAGE_RULE,
   DESCRIBE_TARGETS,
   parseDescription,
   parseCommitSuggestion,
