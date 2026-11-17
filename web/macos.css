@@ -1042,3 +1042,35 @@ body {
   justify-content: space-between;
   gap: 8px;
 }
+
+/* Task delivery: PR / Jira */
+.delivery {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--separator);
+}
+.delivery-tabs {
+  align-self: flex-start;
+}
+.delivery .delivery-notes {
+  flex: 1;
+  min-width: 0;
+}
+.delivery .delivery-body {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 110px;
+  resize: vertical;
+  font: inherit;
+  font-size: var(--text-callout);
+  line-height: 1.45;
+}
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-callout);
+}

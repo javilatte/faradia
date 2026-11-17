@@ -80,6 +80,17 @@ const BUILTIN_AGENTS = [
       'Eres el Redactor de commits. Escribe mensajes en Conventional Commits (tipo(ambito): resumen en imperativo), con un cuerpo breve que explique el porque cuando aporte.'
   },
   {
+    id: 'pr-writer',
+    name: 'Redactor de PR y Jira',
+    description: 'Redacta la descripción de la pull request o el comentario para Jira a partir de la tarea.',
+    engine: 'claude',
+    model: 'sonnet',
+    effort: 'low',
+    access: 'read',
+    prompt:
+      'Eres el Redactor de PR y Jira. Escribes para el lector concreto: quien revisa el código en la PR, quien sigue el ticket en Jira. Claro, breve y sin relleno; nunca inventes cambios que no estén en el diff.'
+  },
+  {
     id: 'researcher',
     name: 'Investigador',
     description: 'Reúne hechos verificados y huecos de información antes de redactar documentación.',

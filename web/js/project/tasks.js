@@ -525,77 +525,287 @@ function renderDocOptions(taskId, task) {
   return form;
 }
 
+// How this repo delivers tasks (GET /api/git/remote): with a remote, as pull requests; without one,
+// merging locally. Loaded with the project.
+let repoDelivery = null;
+async function loadRepoDelivery() {
+  try {
+    repoDelivery = await fetch(apiPath('/api/git/remote')).then((r) => r.json());
+  } catch {
+    repoDelivery = null;
+  }
+  renderTasks();
+}
+
+// Draft of an editable field that the agent may regenerate: a new generation replaces the draft;
+// the user's edits survive re-renders until then.
+function generatedDraft(el, key, value, stamp) {
+  if (cardDrafts.get(`${key}:from`) !== stamp) {
+    cardDrafts.delete(key);
+    cardDrafts.set(`${key}:from`, stamp);
+  }
+  return keepDraft(el, key, value);
+}
+
+function renderCommitBox(taskId, task) {
+  const box = document.createElement('div');
+  const row = document.createElement('div');
+  row.className = 'task-file';
+  // The "Preparar commit" proposal replaces the draft as long as it has not been edited.
+  const suggestion = task.suggestedCommit || `feat: ${task.title}`.slice(0, 72);
+  const msg = generatedDraft(document.createElement('input'), `${taskId}:commit`, suggestion, suggestion);
+  msg.type = 'text';
+  msg.className = 'task-commit-msg';
+  msg.setAttribute('aria-label', 'Mensaje de commit');
+  row.appendChild(msg);
+  const ignored = task.ignoredOutputs || [];
+  const picks = [];
+  row.appendChild(
+    actionButton(task.lastCommit ? 'Commit de los cambios nuevos' : 'Commit', {
+      primary: true,
+      onClick: () =>
+        commitTask(
+          taskId,
+          msg.value,
+          picks.filter((p) => p.checked).map((p) => p.value)
+        )
+    })
+  );
+  box.appendChild(row);
+  if (ignored.length) {
+    // Git ignores them: they stay out of the commit unless ticked.
+    const list = document.createElement('div');
+    list.className = 'ignored-outputs';
+    const note = document.createElement('div');
+    note.className = 'task-meta';
+    note.textContent = 'Git ignora estos ficheros generados; márcalos solo si deben ir en el commit:';
+    list.appendChild(note);
+    for (const f of ignored) {
+      const label = document.createElement('label');
+      const box2 = document.createElement('input');
+      box2.type = 'checkbox';
+      box2.value = f;
+      picks.push(box2);
+      label.append(box2, ` ${f}`);
+      list.appendChild(label);
+    }
+    box.appendChild(list);
+  }
+  return box;
+}
+
 function renderCommitAndMerge(taskId, task) {
   const box = document.createElement('div');
   box.className = 'task-workspace';
-  if (!task.lastCommit) {
-    const row = document.createElement('div');
-    row.className = 'task-file';
-    // The "Preparar commit" proposal replaces the draft as long as it has not been edited.
-    const suggestion = task.suggestedCommit || `feat: ${task.title}`.slice(0, 72);
-    const draftKey = `${taskId}:commit`;
-    if (cardDrafts.get(`${draftKey}:from`) !== suggestion) {
-      cardDrafts.delete(draftKey);
-      cardDrafts.set(`${draftKey}:from`, suggestion);
-    }
-    const msg = keepDraft(document.createElement('input'), draftKey, suggestion);
-    msg.type = 'text';
-    msg.className = 'task-commit-msg';
-    msg.setAttribute('aria-label', 'Mensaje de commit');
-    row.appendChild(msg);
-    const ignored = task.ignoredOutputs || [];
-    const picks = [];
-    row.appendChild(
-      actionButton('Commit', {
-        primary: true,
-        onClick: () =>
-          commitTask(
-            taskId,
-            msg.value,
-            picks.filter((p) => p.checked).map((p) => p.value)
-          )
-      })
-    );
-    box.appendChild(row);
-    if (ignored.length) {
-      // Git ignores them: they stay out of the commit unless ticked.
-      const list = document.createElement('div');
-      list.className = 'ignored-outputs';
-      const note = document.createElement('div');
-      note.className = 'task-meta';
-      note.textContent = 'Git ignora estos ficheros generados; márcalos solo si deben ir en el commit:';
-      list.appendChild(note);
-      for (const f of ignored) {
-        const label = document.createElement('label');
-        const box2 = document.createElement('input');
-        box2.type = 'checkbox';
-        box2.value = f;
-        picks.push(box2);
-        label.append(box2, ` ${f}`);
-        list.appendChild(label);
-      }
-      box.appendChild(list);
-    }
-    return box;
+  if (!task.lastCommit || task.uncommitted) {
+    box.appendChild(renderCommitBox(taskId, task));
+    if (!task.lastCommit) return box;
   }
   const meta = document.createElement('div');
   meta.className = 'task-meta';
   meta.textContent = `Commit ${task.lastCommit.slice(0, 7)}: ${task.lastCommitMessage || ''}`;
   box.appendChild(meta);
-  if (task.mergedInto) {
-    const done = document.createElement('div');
-    done.className = 'task-meta';
-    done.textContent = `Fusionada en ${task.mergedInto}`;
-    box.appendChild(done);
-  } else {
+  if (repoDelivery?.remote) {
+    box.appendChild(renderDelivery(taskId, task));
+  } else if (repoDelivery) {
+    // No remote: there is nowhere to open a PR, the task is merged locally.
+    const note = document.createElement('div');
+    note.className = 'task-meta';
+    note.textContent = 'Este repo no tiene remoto: la tarea se fusiona en local.';
     const row = document.createElement('div');
     row.className = 'task-actions';
     row.appendChild(
-      actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, { primary: true, onClick: () => mergeTask(taskId) })
+      actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, {
+        primary: true,
+        disabled: Boolean(task.uncommitted),
+        onClick: () => mergeTask(taskId)
+      })
     );
-    box.appendChild(row);
+    box.append(note, row);
   }
   return box;
+}
+
+const DELIVERY_TABS = [
+  ['pr', 'Pull request'],
+  ['jira', 'Jira']
+];
+const deliverySaveTimers = new Map();
+
+function saveDeliveryDraft(taskId, target, fields) {
+  clearTimeout(deliverySaveTimers.get(`${taskId}:${target}`));
+  deliverySaveTimers.set(
+    `${taskId}:${target}`,
+    setTimeout(() => {
+      fetch(apiPath(`/api/tasks/${taskId}/delivery`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target, ...fields() })
+      }).catch(() => {});
+    }, 600)
+  );
+}
+
+// Delivery of a committed task: the PR (title and description, generated from the task and editable)
+// and, separately, the comment for the Jira ticket, which can tell more (or less) than the PR.
+function renderDelivery(taskId, task) {
+  const wrap = document.createElement('div');
+  wrap.className = 'delivery';
+  const tabKey = `${taskId}:delivery-tab`;
+  const current = cardDrafts.get(tabKey) || 'pr';
+
+  const tabs = document.createElement('div');
+  tabs.className = 'segmented delivery-tabs';
+  tabs.setAttribute('role', 'tablist');
+  for (const [value, label] of DELIVERY_TABS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', String(value === current));
+    b.className = value === current ? 'active' : '';
+    b.textContent = label;
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cardDrafts.set(tabKey, value);
+      renderTasks();
+    });
+    tabs.appendChild(b);
+  }
+  wrap.appendChild(tabs);
+
+  const entry = task.delivery?.[current] || {};
+  const stamp = entry.generatedAt || 'none';
+  const generating = task.status === 'in_progress' && task.stage === 'describe';
+
+  // Optional notes for the agent: what to leave out, what to stress, ticket number...
+  const notes = keepDraft(document.createElement('input'), `${taskId}:${current}:notes`, '');
+  notes.type = 'text';
+  notes.className = 'delivery-notes';
+  notes.placeholder =
+    current === 'pr' ? 'Indicaciones (opcional): «no menciones la migración»…' : 'Indicaciones (opcional): «para QA»…';
+  notes.setAttribute('aria-label', 'Indicaciones para la descripción');
+  const genRow = document.createElement('div');
+  genRow.className = 'task-file';
+  genRow.append(
+    notes,
+    actionButton(generating ? 'Redactando…' : entry.body ? 'Regenerar' : 'Redactar con IA', {
+      disabled: generating,
+      onClick: () => runTaskStage(taskId, { stage: 'describe', describe: { target: current, notes: notes.value } })
+    })
+  );
+  wrap.appendChild(genRow);
+
+  if (current === 'pr') {
+    const title = generatedDraft(
+      document.createElement('input'),
+      `${taskId}:pr:title`,
+      entry.title || task.lastCommitMessage || task.title,
+      stamp
+    );
+    title.type = 'text';
+    title.className = 'task-commit-msg';
+    title.setAttribute('aria-label', 'Título de la PR');
+    title.placeholder = 'Título de la PR';
+    const body = generatedDraft(document.createElement('textarea'), `${taskId}:pr:body`, entry.body || '', stamp);
+    body.className = 'delivery-body';
+    body.rows = 8;
+    body.placeholder = 'Descripción de la PR (markdown). Pulsa «Redactar con IA» para generarla a partir de la tarea.';
+    body.setAttribute('aria-label', 'Descripción de la PR');
+    const persist = () => saveDeliveryDraft(taskId, 'pr', () => ({ title: title.value, body: body.value }));
+    title.addEventListener('input', persist);
+    body.addEventListener('input', persist);
+    wrap.append(title, body);
+
+    const row = document.createElement('div');
+    row.className = 'task-actions';
+    const { remote, gh } = repoDelivery;
+    const viaGh = remote.provider === 'github' && gh;
+    const draftKey = `${taskId}:pr:draft`;
+    const draftLabel = document.createElement('label');
+    draftLabel.className = 'check-inline';
+    const draft = document.createElement('input');
+    draft.type = 'checkbox';
+    draft.checked = cardDrafts.get(draftKey) === true;
+    draft.addEventListener('change', () => cardDrafts.set(draftKey, draft.checked));
+    draftLabel.append(draft, ' Borrador');
+    const pr = task.pr;
+    const label = pr && !pr.manual ? 'Subir cambios y actualizar PR' : viaGh ? 'Crear PR' : 'Subir rama y abrir PR';
+    row.appendChild(
+      actionButton(label, {
+        primary: true,
+        disabled: Boolean(task.uncommitted) || generating,
+        onClick: () => createPullRequest(taskId, { title: title.value, body: body.value, draft: draft.checked })
+      })
+    );
+    if (viaGh && !pr) row.appendChild(draftLabel);
+    if (pr) {
+      row.appendChild(actionButton('Ver PR', { onClick: () => window.open(pr.url, '_blank', 'noopener') }));
+      // The branch is already on the remote: the local worktree and branch can go.
+      row.appendChild(actionButton('Archivar', { onClick: () => archiveTask(taskId) }));
+    }
+    wrap.appendChild(row);
+    const hint = document.createElement('div');
+    hint.className = 'task-meta';
+    if (pr) {
+      hint.textContent = pr.manual
+        ? `Rama subida a ${pr.remote}. Termina de abrir la PR en el navegador.`
+        : `PR ${pr.draft ? 'en borrador ' : ''}abierta en ${task.baseBranch}.`;
+    } else if (remote.provider === 'github' && !gh) {
+      hint.textContent =
+        'Sin gh (o sin sesión): se sube la rama y se abre GitHub para crear la PR. Con «gh auth login» se crea desde aquí.';
+    } else if (!viaGh) {
+      hint.textContent = `Se sube la rama a ${remote.name} y se abre la página para crear la PR.`;
+    } else {
+      hint.textContent = `Se sube la rama ${task.branch} a ${remote.name} y se abre la PR contra ${task.baseBranch}.`;
+    }
+    wrap.appendChild(hint);
+  } else {
+    const body = generatedDraft(document.createElement('textarea'), `${taskId}:jira:body`, entry.body || '', stamp);
+    body.className = 'delivery-body';
+    body.rows = 8;
+    body.placeholder =
+      'Comentario para el ticket de Jira: qué se hizo, cómo probarlo y lo pendiente. Pulsa «Redactar con IA» para generarlo.';
+    body.setAttribute('aria-label', 'Comentario para Jira');
+    body.addEventListener('input', () => saveDeliveryDraft(taskId, 'jira', () => ({ body: body.value })));
+    wrap.appendChild(body);
+    const row = document.createElement('div');
+    row.className = 'task-actions';
+    row.appendChild(
+      actionButton('Copiar', {
+        primary: true,
+        onClick: async () => {
+          try {
+            await navigator.clipboard.writeText(body.value);
+            appendMessage('system', 'Comentario de Jira copiado: pégalo en el ticket.');
+          } catch {
+            body.select();
+            appendMessage('system', 'No se pudo copiar automáticamente: el texto queda seleccionado (Ctrl/⌘+C).');
+          }
+        }
+      })
+    );
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
+
+async function createPullRequest(taskId, { title, body, draft }) {
+  const res = await fetch(apiPath(`/api/tasks/${taskId}/pull-request`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, body, draft })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    appendMessage('system', `PR no creada: ${data.error || res.status}`);
+    return;
+  }
+  applyTaskFromServer(data);
+  renderTasks();
+  if (data.pr?.url) {
+    appendMessage('system', `${data.pr.manual ? 'Rama subida. Abre la PR' : 'PR lista'}: ${data.pr.url}`);
+    if (data.pr.manual) window.open(data.pr.url, '_blank', 'noopener');
+  }
 }
 
 async function commitTask(taskId, message, includeIgnored = []) {
@@ -631,7 +841,7 @@ function renderReadyActions(taskId, task) {
     row.appendChild(actionButton('Verificar otra vez', { onClick: () => runTaskStage(taskId, { stage: 'verify' }) }));
   }
   row.appendChild(actionButton('Revisión final', { onClick: () => runTaskStage(taskId, { stage: 'review' }) }));
-  if (!task?.lastCommit) {
+  if (!task?.lastCommit || task.uncommitted) {
     row.appendChild(
       actionButton('Proponer mensaje de commit', { onClick: () => runTaskStage(taskId, { stage: 'commit' }) })
     );
@@ -1025,4 +1235,5 @@ async function loadInitialTasks() {
   for (const task of list) tasks.set(task.id, { task, lastStep: null });
   renderTasks();
   refreshMemoryKnown();
+  loadRepoDelivery();
 }

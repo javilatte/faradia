@@ -38,7 +38,8 @@ const {
   buildStagePrompt,
   answerPrompt,
   decideAfterStage,
-  defaultCommitMessage
+  defaultCommitMessage,
+  DESCRIBE_TARGETS
 } = require('../bridge/taskStages');
 const { createApp } = require('./projectApp');
 
@@ -142,7 +143,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // Starts a stage of the task's pipeline (see bridge/taskStages.js) in its worktree. One Claude
   // session per stage; when it ends, the stage decides the next state and, if needed, starts the
   // next stage automatically. Returns { task } or { error, code } for the HTTP route to answer.
-  function runTaskStage(taskId, { stage, answer, docOptions } = {}) {
+  function runTaskStage(taskId, { stage, answer, docOptions, describe } = {}) {
     const task = loadTasks(projectRoot).find((t) => t.id === taskId);
     if (!task) return { error: 'task not found', code: 404 };
     if (taskSessions.has(taskId)) return { error: 'la tarea ya tiene un agente en marcha', code: 409 };
@@ -150,6 +151,13 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     const effectiveDocOptions = stage === 'write' ? docOptions || task.docOptions : undefined;
     const problem = canRun(task, stage, { answer, docOptions: effectiveDocOptions });
     if (problem) return { error: problem, code: 409 };
+    // describe: PR description or Jira comment, with optional notes from the user.
+    let describeOptions;
+    if (stage === 'describe') {
+      const target = DESCRIBE_TARGETS.includes(describe?.target) ? describe.target : 'pr';
+      const notes = typeof describe?.notes === 'string' ? describe.notes.trim().slice(0, 2000) : '';
+      describeOptions = { target, notes };
+    }
 
     let worktreeDir = task.worktreePath;
     let branch = task.branch;
@@ -185,7 +193,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // session) so the agent keeps its context.
     const resuming = answer !== undefined && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
-    let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent });
+    let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent, describeOptions });
     if (answer !== undefined)
       prompt = resuming
         ? answerPrompt(answer, stage)
@@ -228,7 +236,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
           startedAt: new Date().toISOString()
         }
       ],
-      docOptions: effectiveDocOptions || task.docOptions
+      docOptions: effectiveDocOptions || task.docOptions,
+      ...(describeOptions ? { describeTarget: describeOptions.target } : {})
     });
     broadcast({ type: 'task_updated', task: started });
 
@@ -358,7 +367,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       phaseStatus,
       isError: event.is_error === true,
       skip: skippedStages(projectRoot),
-      agent
+      agent,
+      describeTarget: current.describeTarget
     });
     const touched = changedFiles(worktreeDir);
     log.info('file.stage_changes', { taskId, stage, files: touched.slice(0, 200), total: touched.length });
@@ -390,6 +400,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       ...patch,
       ...commitDraft,
       stageRuns: runs,
+      // Changes not committed yet (e.g. a new verification after the first commit).
+      uncommitted: hasChanges,
       outputFiles: [...knownFiles].sort(),
       // The ones git ignores: they stay out of the commit unless the user ticks them.
       ignoredOutputs: ignoredAmong(worktreeDir, [...knownFiles])

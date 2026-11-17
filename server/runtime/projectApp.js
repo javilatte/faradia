@@ -37,7 +37,15 @@ const { getAiAssistSuggestion } = require('../bridge/aiAssist');
 const { sendJson, readJsonBody } = require('../http/util');
 const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
-const { isKnownType, TASK_TYPES } = require('../bridge/taskStages');
+const { isKnownType, TASK_TYPES, DESCRIBE_TARGETS } = require('../bridge/taskStages');
+const { remoteInfo, ghReady, deliverPullRequest } = require('../bridge/delivery');
+
+// gh's login is checked at most once a minute: it takes a while and rarely changes.
+let ghCache = { at: 0, ready: false };
+async function ghReadyCached(now = Date.now()) {
+  if (now - ghCache.at > 60_000) ghCache = { at: now, ready: await ghReady() };
+  return ghCache.ready;
+}
 
 // Strips what is not the memory: a ```markdown wrapper and any preamble before the first section.
 function memoryFromOutput(text) {
@@ -331,7 +339,94 @@ function createApp(
         return sendJson(res, 409, { error: `no se pudo hacer commit: ${err.message}` });
       }
       log.info('task.commit', { taskId, sha, files: filesChangedBy(task.worktreePath, sha) });
-      return sendJson(res, 200, updateTask(projectRoot, taskId, { lastCommit: sha, lastCommitMessage: message }));
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, { lastCommit: sha, lastCommitMessage: message, uncommitted: false })
+      );
+    }
+
+    // How tasks are delivered in this repo: with a remote, as pull requests (opened with gh when the
+    // remote is GitHub and gh is logged in); without one, merging locally.
+    if (url.pathname === '/api/git/remote' && req.method === 'GET') {
+      const remote = await remoteInfo(projectRoot);
+      const gh = remote?.provider === 'github' ? await ghReadyCached() : false;
+      return sendJson(res, 200, {
+        remote: remote && { name: remote.name, webUrl: remote.webUrl, provider: remote.provider },
+        gh
+      });
+    }
+
+    // Edits of the PR description or the Jira comment, kept with the task.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/delivery') && req.method === 'PUT') {
+      const taskId = url.pathname.split('/')[3];
+      const body = await readJsonBody(req).catch(() => null);
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task) return sendJson(res, 404, { error: 'task not found' });
+      if (!body || !DESCRIBE_TARGETS.includes(body.target) || typeof body.body !== 'string') {
+        return sendJson(res, 400, { error: 'indica target ("pr" o "jira") y body' });
+      }
+      const entry = { ...(task.delivery?.[body.target] || {}), body: body.body.slice(0, 60_000) };
+      if (body.target === 'pr' && typeof body.title === 'string') entry.title = body.title.trim().slice(0, 200);
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, { delivery: { ...task.delivery, [body.target]: entry } })
+      );
+    }
+
+    // Pushes the task branch and opens (or updates) its pull request.
+    if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/pull-request') && req.method === 'POST') {
+      const taskId = url.pathname.split('/')[3];
+      const body = await readJsonBody(req).catch(() => null);
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task) return sendJson(res, 404, { error: 'task not found' });
+      if (!task.lastCommit) return sendJson(res, 409, { error: 'haz commit de la tarea antes de abrir la PR' });
+      if (!task.worktreePath || !task.branch || !task.baseBranch)
+        return sendJson(res, 409, { error: 'la tarea no tiene rama o rama base' });
+      if (!worktreeIsClean(task.worktreePath))
+        return sendJson(res, 409, { error: 'quedan cambios sin commitear en la tarea' });
+      const title = typeof body?.title === 'string' ? body.title.trim() : '';
+      const text = typeof body?.body === 'string' ? body.body : '';
+      if (!title) return sendJson(res, 400, { error: 'la PR necesita un título' });
+      let result;
+      try {
+        result = await deliverPullRequest({
+          dir: task.worktreePath,
+          branch: task.branch,
+          base: task.baseBranch,
+          title,
+          body: text,
+          draft: body?.draft === true,
+          existingUrl: task.pr?.manual ? null : task.pr?.url
+        });
+      } catch (err) {
+        log.warn('task.pr_failed', { taskId, error: err.message });
+        return sendJson(res, 409, { error: err.message });
+      }
+      log.info('task.pr', {
+        taskId,
+        url: result.url,
+        created: Boolean(result.created),
+        manual: Boolean(result.manual)
+      });
+      const now = new Date().toISOString();
+      return sendJson(
+        res,
+        200,
+        updateTask(projectRoot, taskId, {
+          delivery: { ...task.delivery, pr: { ...(task.delivery?.pr || {}), title, body: text } },
+          pr: {
+            url: result.url,
+            manual: Boolean(result.manual),
+            draft: body?.draft === true,
+            remote: result.remote,
+            pushedCommit: task.lastCommit,
+            createdAt: task.pr?.createdAt || now,
+            updatedAt: now
+          }
+        })
+      );
     }
 
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/merge') && req.method === 'POST') {
