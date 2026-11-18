@@ -5,7 +5,32 @@ const path = require('path');
 const { execFile, execFileSync } = require('child_process');
 
 // Folders that are never a "stage result": dependencies, metadata and optimia's own state.
-const SKIP_DIRS = new Set(['.git', 'node_modules', '.optimia', '.claude', '.codegraph']);
+// Not shown as "generated files": tool folders and the output of builds, tests and installs that a
+// verification leaves behind (they are noise next to the files the task really produced).
+const SKIP_DIRS = new Set([
+  '.git',
+  'node_modules',
+  '.optimia',
+  '.claude',
+  '.codegraph',
+  'build',
+  'dist',
+  'out',
+  '.next',
+  '.nuxt',
+  '.svelte-kit',
+  'coverage',
+  'target',
+  '__pycache__',
+  '.pytest_cache',
+  '.mypy_cache',
+  '.ruff_cache',
+  '.venv',
+  'venv',
+  '.cache',
+  '.turbo',
+  '.parcel-cache'
+]);
 const MAX_FILES = 500;
 const MAX_PREVIEW_BYTES = 1_000_000;
 

@@ -220,6 +220,7 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    'Conectarse a internet fuera de los registros de paquetes': 'Connect to the internet outside package registries',
     'Dejar que instalen dependencias: acceso solo a los registros de paquetes (npm, PyPI, crates.io, Go, RubyGems, Maven)':
       'Let them install dependencies: access only to package registries (npm, PyPI, crates.io, Go, RubyGems, Maven)',
     Archivo: 'Archive',
@@ -708,6 +709,10 @@ window.OPTIMIA_I18N_EN = {
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
     [
+      '^Quería conectarse a internet fuera de los registros de paquetes \\(etapa (.+)\\)\\.$',
+      'Wanted to connect to the internet outside package registries (stage $1).'
+    ],
+    [
       '^Tarea terminada: su commit queda en la rama (.+), lista para fusionarla cuando quieras\\.$',
       'Task finished: its commit stays on branch $1, ready to merge whenever you want.'
     ],
@@ -763,10 +768,7 @@ window.OPTIMIA_I18N_EN = {
     ['^→ lanzando agente: (.+)$', '→ launching agent: $1'],
     ['^→ usando herramienta: (.+)$', '→ using tool: $1'],
     ['^No se pudo ([^:]+): (.+)$', 'Could not $1: $2'],
-    [
-      '^"(.+)" está lista para revisar y ship en el panel de agentes\\.$',
-      '"$1" is ready to review and ship in the agents panel.'
-    ],
+    ['^"(.+)" está lista para revisar en el panel de agentes\\.$', '"$1" is ready to review in the agents panel.'],
     ['^(.+) · usando (.+)$', '$1 · using $2'],
     ['^(.+) · iniciando\\.\\.\\.$', '$1 · starting…'],
     ['^(.+) · escribiendo respuesta\\.\\.\\.$', '$1 · writing the answer…'],

@@ -210,7 +210,7 @@ function notifyTaskInChat(task, prevStatus) {
       appendMessage('system', `"${task.title}" necesita tu respuesta. Contéstala en su tarjeta del panel de agentes.`);
     }
   } else if (task.status === 'ready_to_test') {
-    appendMessage('system', `"${task.title}" está lista para revisar y ship en el panel de agentes.`);
+    appendMessage('system', `"${task.title}" está lista para revisar en el panel de agentes.`);
   } else if (task.status === 'pending' && task.error) {
     appendMessage('system', `"${task.title}" se detuvo: ${task.error}`);
   }

@@ -301,13 +301,21 @@ const TASK_TYPE_LABEL = {
 // Actions the safety policy blocked: the agent went on another way. Each one says what the agent
 // wanted to do and why it was blocked and, when it can be approved, offers "Permitir" (for this exact
 // command in this repo). Shown while the task is open; the ones of earlier stages are kept too.
+// Tools whose name means nothing to a person.
+const BLOCKED_TOOL_LABEL = {
+  SandboxNetworkAccess: 'Conectarse a internet fuera de los registros de paquetes'
+};
+
 function renderBlockedCommands(taskId, task) {
   const list = (task.blockedCommands || []).filter((b) => !b.allowed || b.stage === task.stage);
   if (!list.length || task.mergedInto || task.deliveredAs) return null;
   const pending = list.filter((b) => !b.allowed);
   const box = document.createElement('details');
   box.className = 'blocked-commands';
-  box.open = pending.some((b) => b.approvable);
+  // Once the task is ready (verified), what was blocked is history: folded, no call to action.
+  const settled = task.status === 'ready_to_test';
+  box.classList.toggle('settled', settled);
+  box.open = !settled && pending.some((b) => b.approvable);
   const summary = document.createElement('summary');
   summary.textContent = pending.length
     ? `${pending.length} ${pending.length === 1 ? 'acción bloqueada' : 'acciones bloqueadas'} por seguridad · el agente siguió sin ${pending.length === 1 ? 'ella' : 'ellas'}`
@@ -318,19 +326,20 @@ function renderBlockedCommands(taskId, task) {
     row.className = 'blocked-row';
     const what = document.createElement('div');
     const code = document.createElement('code');
-    code.textContent = b.command || b.tool;
+    code.textContent = b.command || BLOCKED_TOOL_LABEL[b.tool] || b.tool;
     const why = document.createElement('div');
     why.className = 'task-meta';
     why.textContent = b.allowed
       ? 'Permitido en este repo.'
-      : `Quería ${b.reason || `usar ${b.tool}`} (etapa ${STAGE_LABELS[b.stage] || b.stage}).`;
+      : `Quería ${BLOCKED_TOOL_LABEL[b.tool] ? BLOCKED_TOOL_LABEL[b.tool].toLowerCase() : b.reason || `usar ${b.tool}`} (etapa ${STAGE_LABELS[b.stage] || b.stage}).`;
     what.append(code, why);
     row.appendChild(what);
     if (!b.allowed && b.approvable) {
       const actions = document.createElement('div');
       actions.className = 'task-actions';
       actions.appendChild(actionButton('Permitir', { onClick: () => allowBlocked(taskId, b.id, false) }));
-      if (task.status !== 'in_progress') {
+      // Repeating a stage only makes sense while the task is not done yet.
+      if (task.status !== 'in_progress' && !settled) {
         actions.appendChild(
           actionButton('Permitir y repetir etapa', { primary: true, onClick: () => allowBlocked(taskId, b.id, true) })
         );
