@@ -277,6 +277,7 @@ async function deleteChat(chatId) {
 // like" — recovering from a refresh is just feeding history through it.
 function replayChat(chat) {
   chatLog.innerHTML = '';
+  clearPermissionCards();
   currentAssistantBubble = null;
   for (const m of chat.messages) {
     if (m.role === 'user') {

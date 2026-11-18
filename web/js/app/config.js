@@ -389,10 +389,12 @@ async function renderGeneralPane() {
   let checkEnabled = true;
   let sandbox = null;
   let wikiPrefs = null;
+  let chatPrefs = null;
   try {
     const global = (await api.get('/api/settings')).layers.global;
     checkEnabled = global.updates.check;
     wikiPrefs = global.wiki;
+    chatPrefs = global.chat;
     sandbox = (await api.get('/api/config/status')).sandbox;
   } catch {
     /* keep the default */
@@ -443,6 +445,7 @@ async function renderGeneralPane() {
       )
     ),
     renderSecurityField(sandbox),
+    renderChatPermissionsField(chatPrefs),
     renderWikiField(wikiPrefs),
     h(
       'div',
@@ -691,6 +694,35 @@ function renderEccField() {
 }
 
 // Wikis: kept up to date by an agent after each task.
+// What the chat does when the agent needs permission (see projectRuntime.js).
+function renderChatPermissionsField(chat) {
+  const mode = chat?.permissions === 'ask' ? 'ask' : 'auto';
+  return h(
+    'div',
+    { class: 'settings-field' },
+    h('label', { for: 'chat-permissions' }, 'Permisos en el chat'),
+    h(
+      'select',
+      {
+        id: 'chat-permissions',
+        onchange: async (e) => {
+          await api.patch('/api/settings', { scope: 'global', chat: { permissions: e.target.value } });
+          toast('Se aplica desde el siguiente mensaje');
+        }
+      },
+      h('option', { value: 'auto', selected: mode === 'auto' }, 'Automático: pregunta solo lo arriesgado'),
+      h('option', { value: 'ask', selected: mode === 'ask' }, 'Preguntar todo salvo lo de solo lectura')
+    ),
+    h(
+      'span',
+      { class: 'muted' },
+      mode === 'auto'
+        ? 'Claude Code decide qué es seguro (leer, buscar, cambios dentro del repo) y lo hace sin preguntar; lo demás te lo pide con una tarjeta en el chat. Con Gemini o un modelo local siempre se pregunta.'
+        : 'Cada acción que necesite permiso aparece como una tarjeta en el chat, salvo los comandos que solo leen (git log, ls, grep…).'
+    )
+  );
+}
+
 function renderWikiField(prefs) {
   if (!prefs) return null;
   const toggle = (key, label) =>

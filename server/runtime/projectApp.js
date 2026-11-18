@@ -148,7 +148,8 @@ function createApp(
           security: body.security,
           wiki: body.wiki,
           providers: body.providers,
-          suggestions: body.suggestions
+          suggestions: body.suggestions,
+          chat: body.chat
         });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));

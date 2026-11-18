@@ -138,6 +138,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // "no dual-driving one session" rule from before still holds.
   function watchForPermissionHandoff(scope, id, session, sessionsMap, event) {
     if (event.type !== 'system' || event.subtype !== 'permission_denied') return;
+    // Sessions that ask in the chat only get here for rules ("Prohibido"): those stay denied.
+    if (session.approvals) return;
     broadcast({ type: 'permission_needed', scope, id, toolName: event.tool_name, message: event.message });
     // Flagged so the session's own 'exit' handler (below) knows this kill is
     // an intentional handoff, not a real/unexpected end — without this, the
@@ -596,8 +598,16 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   function realignChatEngine(chatId) {
     const existing = chatSessions.get(chatId);
     if (!existing || existing._busy) return;
-    const wanted = engineFor(loadSettings(projectRoot));
-    if (existing.engine === wanted) return;
+    const settings = loadSettings(projectRoot);
+    const wanted = engineFor(settings);
+    // A change of the chat permissions setting also starts a new process (same conversation).
+    if (existing.engine === wanted && existing.chatPermissions === (settings.chat?.permissions || 'auto')) return;
+    if (existing.engine === wanted) {
+      existing._switching = true;
+      chatSessions.delete(chatId);
+      existing.kill();
+      return;
+    }
     existing._switching = true;
     chatSessions.delete(chatId);
     existing.kill();
@@ -612,6 +622,62 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     });
   }
 
+  // Commands that only read: allowed in the chat without asking (each part of a pipeline must match).
+  const READ_ONLY_COMMANDS = [
+    'git status',
+    'git log',
+    'git diff',
+    'git show',
+    'git ls-files',
+    'git branch',
+    'git blame',
+    'ls',
+    'cat',
+    'head',
+    'tail',
+    'wc',
+    'grep',
+    'rg',
+    'pwd',
+    'tree',
+    'sort',
+    'uniq',
+    'cut'
+  ].map((c) => `Bash(${c}:*)`);
+
+  // What the page needs to show a permission request (the full input can be large).
+  function permissionView(request) {
+    const input = request.input || {};
+    return {
+      requestId: request.requestId,
+      toolName: request.toolName,
+      description: request.description,
+      command: typeof input.command === 'string' ? input.command.slice(0, 2000) : undefined,
+      path: input.file_path || input.notebook_path || input.path || undefined,
+      url: input.url || undefined,
+      canAlways: Boolean(approvalRule(request.toolName, input.command))
+    };
+  }
+
+  /** The user answered a permission card: allow once, always (stored for this repo) or deny. */
+  function answerPermission(chatId, requestId, decision) {
+    const session = chatSessions.get(chatId);
+    const request = session?.pendingPermissions.get(requestId);
+    if (!request) return false;
+    if (decision === 'always') {
+      const rule = approvalRule(request.toolName, request.input?.command);
+      if (rule) {
+        const approved = loadProjectLayer(projectRoot).preferences.approvedTools;
+        if (!approved.includes(rule))
+          saveProjectSettings(projectRoot, { preferences: { approvedTools: [...approved, rule] } });
+      }
+    }
+    log.info('chat.permission_answer', { chatId, tool: request.toolName, decision });
+    session.respondPermission(requestId, decision);
+    broadcast({ type: 'permission_resolved', chatId, requestId, decision });
+    return true;
+  }
+
   function startOrGetChatSession(chatId) {
     const existing = chatSessions.get(chatId);
     if (existing) return existing;
@@ -622,9 +688,19 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     const settings = loadSettings(projectRoot);
     const opts = buildSessionOptions(settings, projectRoot);
     opts.resumeSessionId = chat.claudeSessionId || undefined;
+    // The chat asks the user (a card in the conversation) instead of denying and jumping to the
+    // terminal; what was allowed "always" for this repo is allowed from the start.
+    opts.approvals = true;
+    const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
+    // Auto: Claude Code's classifier approves what is safe (only with Claude: it is Anthropic's).
+    // Ask: read-only commands go through without a card.
+    const auto = settings.chat?.permissions !== 'ask' && opts.engine === 'claude';
+    if (auto) opts.permissionMode = 'auto';
+    opts.extraAllowedTools = [...(opts.extraAllowedTools || []), ...approved, ...(auto ? [] : READ_ONLY_COMMANDS)];
 
     const session = new ClaudeSession(opts);
     session.engine = opts.engine;
+    session.chatPermissions = settings.chat?.permissions || 'auto';
     chatSessions.set(chatId, session);
     log.info('claude.session.spawn', {
       scope: 'chat',
@@ -657,10 +733,18 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       broadcast({ type: 'claude_event', chatId, event });
       watchForPermissionHandoff('chat', chatId, session, chatSessions, event);
     });
+    session.on('permission_request', (request) => {
+      log.info('chat.permission_request', { chatId, tool: request.toolName, command: cut(request.input?.command) });
+      broadcast({ type: 'permission_request', chatId, request: permissionView(request) });
+    });
+    session.on('permission_cancelled', (requestId) => broadcast({ type: 'permission_resolved', chatId, requestId }));
     session.on('error', (err) => broadcast({ type: 'bridge_error', chatId, error: err.message }));
     session.on('stderr', (text) => broadcast({ type: 'claude_stderr', chatId, text }));
     session.on('exit', (info) => {
       if (chatSessions.get(chatId) === session) chatSessions.delete(chatId);
+      for (const requestId of session.pendingPermissions?.keys() || []) {
+        broadcast({ type: 'permission_resolved', chatId, requestId });
+      }
       log.info('claude.session.exit', {
         scope: 'chat',
         chatId,
@@ -790,7 +874,31 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   function handleWsMessage(msg, ws) {
     // Chat sessions are server-side and chatId-tagged on every broadcast;
     // a tab doesn't need to register interest before sending a message.
-    if (msg.type === 'subscribe') return;
+    if (msg.type === 'subscribe') {
+      // A page that opens (or reloads) while the chat waits for a permission sees the card again.
+      const session = msg.chatId && chatSessions.get(msg.chatId);
+      for (const request of session?.pendingPermissions?.values() || []) {
+        ws.send(
+          JSON.stringify({
+            type: 'permission_request',
+            chatId: msg.chatId,
+            projectId,
+            request: permissionView(request)
+          })
+        );
+      }
+      return;
+    }
+
+    if (msg.type === 'permission_response') {
+      if (!['allow', 'always', 'deny'].includes(msg.decision)) return;
+      if (!answerPermission(msg.chatId, msg.requestId, msg.decision)) {
+        ws.send(
+          JSON.stringify({ type: 'permission_resolved', chatId: msg.chatId, projectId, requestId: msg.requestId })
+        );
+      }
+      return;
+    }
 
     if (msg.type === 'terminal_subscribe') {
       const session = startOrGetTerminalSession();

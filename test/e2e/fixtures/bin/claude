@@ -45,6 +45,7 @@ const emit = (event) => process.stdout.write(JSON.stringify(event) + '\n');
 
 emit({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: process.cwd(), tools: [] });
 
+let pendingPermission = null;
 const rl = readline.createInterface({ input: process.stdin });
 rl.on('line', (line) => {
   if (!line.trim()) return;
@@ -52,6 +53,26 @@ rl.on('line', (line) => {
   try {
     msg = JSON.parse(line);
   } catch {
+    return;
+  }
+  // The answer to a permission asked through --permission-prompt-tool stdio.
+  if (msg.type === 'control_response') {
+    const r = msg.response?.response || {};
+    const pending = pendingPermission;
+    pendingPermission = null;
+    if (!pending) return;
+    const ok = r.behavior === 'allow';
+    emit({
+      type: 'user',
+      session_id: sessionId,
+      message: {
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: pending, content: ok ? 'a.txt\nb.txt' : 'denied', is_error: !ok }]
+      }
+    });
+    const reply = ok ? 'Comando permitido: hay 2 ficheros.' : 'No me dejaste ejecutarlo.';
+    emit({ type: 'assistant', session_id: sessionId, message: { role: 'assistant', content: [{ type: 'text', text: reply }] } });
+    emit({ type: 'result', subtype: 'success', session_id: sessionId, is_error: false, result: reply, total_cost_usd: 0 });
     return;
   }
   const text = (msg.message?.content || [])
@@ -83,6 +104,19 @@ rl.on('line', (line) => {
       }
     });
     emit({ type: 'system', subtype: 'permission_denied', tool_name: 'Bash', tool_use_id: id, session_id: sessionId });
+  }
+  // "[e2e:permiso]" in a chat that asks the host for permissions: a command that needs approval.
+  if (/\[e2e:permiso\]/.test(text) && args.includes('--permission-prompt-tool')) {
+    const id = `toolu_${Date.now()}`;
+    const input = { command: 'ls -1 && rm -rf /tmp/e2e-tmp', description: 'Listar ficheros' };
+    emit({ type: 'assistant', session_id: sessionId, message: { role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input }] } });
+    pendingPermission = id;
+    emit({
+      type: 'control_request',
+      request_id: `req-${id}`,
+      request: { subtype: 'can_use_tool', tool_name: 'Bash', input, description: 'Listar ficheros', permission_suggestions: [] }
+    });
+    return;
   }
   const verifying = /VERIFICACION/.test(text);
   const describing = /Etapa de DESCRIPCION/.test(text);

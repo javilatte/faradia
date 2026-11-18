@@ -54,3 +54,30 @@ test('the chat takes attachments: a small text file goes inline in the message',
   expect(sent).toContain('notas.txt (texto, 5 palabras, 1 KB): su contenido va debajo.');
   expect(sent).toContain('Precio con IVA: 121 €');
 });
+
+test('a command that needs permission is asked in the chat, not in the terminal', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/?token=e2e-token');
+  await waitForChatReady(page);
+  await page.locator('#chat-kind-select').selectOption('chat');
+  await page.locator('#chat-input').fill('[e2e:permiso] lista los ficheros');
+  await page.locator('#chat-input').press('Enter');
+  const card = page.locator('.permission-card').last();
+  await expect(card).toContainText('El agente quiere ejecutar un comando', { timeout: 15_000 });
+  await expect(card.locator('pre')).toHaveText('ls -1 && rm -rf /tmp/e2e-tmp');
+  await card.getByRole('button', { name: 'Permitir', exact: true }).click();
+  await expect(card).toContainText('Permitido');
+  await expect(card.locator('.permission-actions')).toHaveCount(0);
+  await expect(page.locator('#chat-log')).toContainText('Comando permitido: hay 2 ficheros.', { timeout: 10_000 });
+  await expect(page.locator('.terminal-modal')).toBeHidden();
+
+  // Denied: the agent gets the answer and goes on.
+  await page.locator('#chat-input').fill('[e2e:permiso] otra vez');
+  await page.locator('#chat-input').press('Enter');
+  const second = page.locator('.permission-card').last();
+  await expect(second.locator('.permission-actions')).toBeVisible({ timeout: 15_000 });
+  await second.getByRole('button', { name: 'Denegar' }).click();
+  await expect(second).toContainText('Denegado');
+  await expect(page.locator('#chat-log')).toContainText('No me dejaste ejecutarlo.', { timeout: 10_000 });
+  expect(errors).toEqual([]);
+});

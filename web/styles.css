@@ -2231,3 +2231,67 @@ select,
 .chat-example:hover {
   background: var(--hover-bg, rgba(0, 0, 0, 0.04));
 }
+
+/* A permission the agent is waiting for, inside the conversation. */
+.permission-card {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--orange, #ff9f0a) 55%, var(--panel-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orange, #ff9f0a) 7%, var(--bg));
+}
+.permission-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+.permission-detail {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel, rgba(0, 0, 0, 0.04));
+  font: 12px/1.45 var(--mono, ui-monospace, monospace);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow: auto;
+}
+.permission-why {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.permission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.permission-card.resolved {
+  border-color: var(--panel-border);
+  background: transparent;
+  padding: 8px 12px;
+  gap: 4px;
+}
+.permission-card.resolved .permission-title {
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.permission-card.resolved .permission-detail {
+  max-height: 3.2em;
+}
+.permission-state {
+  font-size: 12px;
+  font-weight: 600;
+}
+.permission-state.allow,
+.permission-state.always {
+  color: var(--green-text, #1f8a3a);
+}
+.permission-state.deny {
+  color: var(--red-text, #c0392b);
+}
+.permission-state.gone {
+  color: var(--text-dim);
+}

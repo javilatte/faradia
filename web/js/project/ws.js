@@ -51,6 +51,10 @@ function connect() {
         );
         setWaiting(false);
       }
+    } else if (msg.type === 'permission_request') {
+      if (msg.chatId === currentChatId) showPermissionRequest(msg.request);
+    } else if (msg.type === 'permission_resolved') {
+      if (msg.chatId === currentChatId) resolvePermission(msg.requestId, msg.decision);
     } else if (msg.type === 'provider_switch') {
       const names = { claude: 'Claude', gemini: 'Gemini', local: 'el modelo local' };
       const until = msg.until

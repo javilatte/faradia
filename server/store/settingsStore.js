@@ -133,6 +133,9 @@ function sanitizeGlobal(raw) {
       }
     },
     suggestions: { mode: ['auto', 'off'].includes(g.suggestions?.mode) ? g.suggestions.mode : d.suggestions.mode },
+    // Chat permissions: 'auto' (Claude Code's auto mode approves what is safe and asks the rest in
+    // the chat) or 'ask' (every action that needs permission is asked; read-only commands are not).
+    chat: { permissions: ['auto', 'ask'].includes(g.chat?.permissions) ? g.chat.permissions : 'auto' },
     preferences: {
       instructions: str(g.preferences?.instructions),
       noGo: strList(g.preferences?.noGo)
@@ -180,6 +183,7 @@ function saveGlobalSettings(patch = {}) {
   next.ecc = { ...current.ecc, ...(patch.ecc || {}) };
   next.providers = { gemini: { ...current.providers.gemini, ...(patch.providers?.gemini || {}) } };
   next.suggestions = { ...current.suggestions, ...(patch.suggestions || {}) };
+  next.chat = { ...current.chat, ...(patch.chat || {}) };
   const clean = sanitizeGlobal(next);
   writeJson(globalSettingsPath(), clean);
   // It may hold API keys.
@@ -306,6 +310,7 @@ function effectiveFrom(global, project) {
     ecc: global.ecc,
     providers: global.providers,
     suggestions: global.suggestions,
+    chat: global.chat,
     preferences: {
       // The repo's instructions are added to those for all repos.
       instructions: [globalInstructions, projectInstructions].filter(Boolean).join('\n\n'),
