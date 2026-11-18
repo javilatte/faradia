@@ -587,7 +587,7 @@ window.OPTIMIA_I18N_EN = {
     'Skills de ECC': 'ECC skills',
     'Skills instaladas (.claude/skills/)': 'Installed skills (.claude/skills/)',
     Solo: 'Only',
-    'Solo commit': 'Commit only',
+    'Dejar en su rama': 'Leave on its branch',
     'Solo hora': 'Time only',
     'Solo lectura': 'Read only',
     'Subir cambios': 'Push changes',
@@ -705,6 +705,14 @@ window.OPTIMIA_I18N_EN = {
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
+    [
+      '^Tarea terminada: su commit queda en la rama (.+), lista para fusionarla cuando quieras\\.$',
+      'Task finished: its commit stays on branch $1, ready to merge whenever you want.'
+    ],
+    [
+      '^Lleva el commit a (.+) en este equipo y termina la tarea\\. Sin PR ni push\\.$',
+      'Brings the commit into $1 on this computer and finishes the task. No PR, no push.'
+    ],
     ['^(\\d+) tareas$', '$1 tasks'],
     ['^Verificación: (.+)$', 'Verification: $1'],
     ['^(\\d+) pasos$', '$1 steps'],

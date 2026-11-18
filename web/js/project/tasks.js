@@ -642,15 +642,7 @@ function renderCommitAndMerge(taskId, task) {
       : 'Este repo no tiene remoto: la tarea se fusiona en local o se queda en su rama.';
     const row = document.createElement('div');
     row.className = 'task-actions';
-    if (!task.existingBranch) {
-      row.appendChild(
-        actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, {
-          primary: true,
-          disabled: Boolean(task.uncommitted),
-          onClick: () => mergeTask(taskId)
-        })
-      );
-    }
+    if (!task.existingBranch) row.appendChild(mergeButton(taskId, task, true));
     row.appendChild(commitOnlyButton(taskId, task, Boolean(task.existingBranch)));
     box.append(note, row);
   }
@@ -772,6 +764,8 @@ function renderDelivery(taskId, task) {
     if (!pr) {
       row.appendChild(send(createLabel, true));
       if (viaGh) row.appendChild(draftLabel);
+      // A commit can be the end too: straight into the base branch, or left on its own branch.
+      if (task.baseBranch && !task.existingBranch) row.appendChild(mergeButton(taskId, task, false));
       row.appendChild(commitOnlyButton(taskId, task, false));
     } else {
       row.appendChild(
@@ -834,12 +828,23 @@ function renderDelivery(taskId, task) {
 // "Solo commit": the task ends with its commit on its branch (one of several tasks of a branch, or
 // a PR opened later). The branch stays; only the worktree goes.
 function commitOnlyButton(taskId, task, primary) {
-  const btn = actionButton('Solo commit', {
+  const btn = actionButton('Dejar en su rama', {
     primary,
     disabled: Boolean(task.uncommitted),
     onClick: () => finishTask(taskId)
   });
-  btn.title = `Termina la tarea con su commit en ${task.branch}, sin PR ni fusión. La rama se conserva.`;
+  btn.title = `Termina la tarea con su commit en ${task.branch}, sin PR ni fusión. La rama se conserva para fusionarla cuando quieras.`;
+  return btn;
+}
+
+// The commit lands in the base branch locally (fast-forward when possible): no PR, no push.
+function mergeButton(taskId, task, primary) {
+  const btn = actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, {
+    primary,
+    disabled: Boolean(task.uncommitted),
+    onClick: () => mergeTask(taskId)
+  });
+  btn.title = `Lleva el commit a ${task.baseBranch || 'la rama base'} en este equipo y termina la tarea. Sin PR ni push.`;
   return btn;
 }
 
@@ -852,7 +857,10 @@ async function finishTask(taskId) {
   }
   applyTaskFromServer(data);
   renderTasks();
-  appendMessage('system', `Tarea terminada: su commit queda en la rama ${data.branch}.`);
+  appendMessage(
+    'system',
+    `Tarea terminada: su commit queda en la rama ${data.branch}, lista para fusionarla cuando quieras.`
+  );
 }
 
 async function createPullRequest(taskId, { title, body, draft }) {
