@@ -221,6 +221,48 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    '1 paso': '1 step',
+    'Novedades…': "What's new…",
+    Anterior: 'Back',
+    Siguiente: 'Next',
+    Empezar: 'Get started',
+    Saltar: 'Skip',
+    'Así funciona optimia': 'How optimia works',
+    'Sin sesión': 'Signed out',
+    'Iniciar sesión…': 'Sign in…',
+    'Conectar…': 'Connect…',
+    'Detectar…': 'Detect…',
+    'Modelo local': 'Local model',
+    'Gratis con una clave de Google': 'Free with a Google key',
+    'Ollama o LM Studio': 'Ollama or LM Studio',
+    'Conectar Gemini…': 'Connect Gemini…',
+    'Conecta una IA y listo': 'Connect an AI and you are set',
+    'Con una basta. Si Claude se queda sin uso, optimia sigue con Gemini o con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
+      'One is enough. If Claude runs out of usage, optimia goes on with Gemini or your local model without losing the conversation, and returns to Claude when it renews.',
+    'Pide en el chat': 'Ask in the chat',
+    'Mientras escribes, optimia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.':
+      'As you type, optimia suggests the skill, agent or task type that fits. Tab to use it. @ calls an agent and / a skill.',
+    'Los agentes trabajan aparte': 'Agents work on the side',
+    'Cada tarea va en su propio worktree: un agente planifica, otro implementa y otro verifica. Tu rama no se toca hasta que tú haces el commit o la PR.':
+      'Each task runs in its own worktree: one agent plans, another implements and another verifies. Your branch is untouched until you make the commit or the PR.',
+    'Lo arriesgado lo decides tú': 'You decide what is risky',
+    'Lo seguro se hace sin preguntar. Lo demás aparece como una tarjeta en el chat: Permitir, Permitir siempre o Denegar.':
+      'Safe things happen without asking. Anything else shows up as a card in the chat: Allow, Always allow or Deny.',
+    'Una wiki que se escribe sola': 'A wiki that writes itself',
+    'En Wiki, «Generar desde el repo» documenta el proyecto, y tras cada tarea los agentes apuntan lo que aprendieron. Todo se ajusta en Ajustes cuando quieras.':
+      'In Wiki, "Generate from the repo" documents the project, and after each task the agents write down what they learned. Everything can be adjusted in Settings whenever you want.',
+    'Gemini, y sin cortes si Claude se agota': 'Gemini, and no stops when Claude runs out',
+    'Conecta Gemini con una clave gratuita en Ajustes › Gemini. Úsalo como IA principal o como respaldo: si Claude se queda sin uso, la conversación sigue con todo su contexto.':
+      'Connect Gemini with a free key in Settings › Gemini. Use it as your main AI or as a fallback: if Claude runs out of usage, the conversation goes on with all its context.',
+    'Sugerencias mientras escribes': 'Suggestions while you type',
+    'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.':
+      'optimia proposes the skill, agent or task type that fits your message. Tab to accept it, Esc to dismiss it.',
+    'Permisos en el chat, no en la terminal': 'Permissions in the chat, not in the terminal',
+    'Cuando el agente necesita permiso, lo pide con una tarjeta en la conversación. En modo automático solo pregunta lo arriesgado.':
+      'When the agent needs permission, it asks with a card in the conversation. In automatic mode it only asks what is risky.',
+    'Skills de serie': 'Skills built in',
+    'frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.':
+      'frontend-craft, unslop, security-audit and plan-optimizer come on for the chat and the agents. You will find them in Settings › Skills.',
     'Permisos en el chat': 'Permissions in the chat',
     'Automático: pregunta solo lo arriesgado': 'Automatic: asks only what is risky',
     'Preguntar todo salvo lo de solo lectura': 'Ask everything except read-only',
@@ -282,7 +324,6 @@ window.OPTIMIA_I18N_EN = {
     'Elige el modelo': 'Pick the model',
     'Aparecen al comprobar la clave.': 'They show up once the key is checked.',
     'Quitar la clave': 'Remove the key',
-    'Sugerencias mientras escribes': 'Suggestions while you type',
     'Activadas: Gemini, luego IA local, luego Claude Haiku': 'On: Gemini, then local AI, then Claude Haiku',
     Desactivadas: 'Off',
     'Tras una pausa al escribir, un modelo rápido propone una skill, un agente o un tipo de tarea. Nunca se aplica solo.':
@@ -639,6 +680,8 @@ window.OPTIMIA_I18N_EN = {
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
+    ['^(\\d+) pasos$', '$1 steps'],
+    ['^Novedades de optimia (.+)$', "What's new in optimia $1"],
     ['^Una tarea: (.+)$', 'A task: $1'],
     ['^El agente quiere usar (.+)$', 'The agent wants to use $1'],
     ['^Activas \\((\\d+)\\)$', 'On ($1)'],

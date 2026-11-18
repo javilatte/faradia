@@ -25,8 +25,14 @@ async function handleConfigRoutes(req, res, url) {
     return sendJson(res, 200, {
       firstRun: portable.isFirstRun(),
       version: pkg.version,
+      tourSeen: portable.tourSeen(),
       sandbox: { mode: loadGlobalSettings().security.sandbox, ...sandboxStatus() }
     });
+  }
+  // The "what's new" tour was shown (or skipped) for this version.
+  if (p === '/api/config/tour' && req.method === 'POST') {
+    portable.markTourSeen(pkg.version);
+    return sendJson(res, 200, { ok: true });
   }
   if (p === '/api/config/welcome' && req.method === 'POST') {
     portable.markWelcomed();

@@ -6,6 +6,7 @@
 
 import { api } from './api.js';
 import { h, toast } from './dom.js';
+import { showIntroTour, maybeShowNews, showAllNews } from './tour.js';
 
 const DISMISSED_KEY = 'optimia:update-dismissed';
 const RECHECK_MS = 6 * 60 * 60 * 1000;
@@ -297,7 +298,10 @@ function welcome() {
       {
         label: 'Empezar con la configuración por defecto',
         primary: true,
-        onClick: () => api.post('/api/config/welcome').catch(() => {})
+        onClick: () => {
+          api.post('/api/config/welcome').catch(() => {});
+          setTimeout(showIntroTour, 150);
+        }
       }
     ]
   });
@@ -428,7 +432,12 @@ async function renderGeneralPane() {
         u?.updateAvailable
           ? h('button', { type: 'button', class: 'primary', onclick: showUpdateSheet }, 'Cómo actualizar…')
           : null,
-        h('button', { type: 'button', onclick: () => checkUpdates({ force: true }) }, 'Buscar ahora')
+        h('button', { type: 'button', onclick: () => checkUpdates({ force: true }) }, 'Buscar ahora'),
+        h(
+          'button',
+          { type: 'button', onclick: () => showAllNews(configStatus?.version || updateInfo?.current || '') },
+          'Novedades…'
+        )
       ),
       h(
         'label',
@@ -807,6 +816,8 @@ function renderSkillsLibrary() {
   if (host) host.replaceChildren(renderEccField());
 }
 
+let configStatus = null;
+
 export async function initConfig() {
   bindDrop();
   renderSkillsLibrary();
@@ -815,7 +826,9 @@ export async function initConfig() {
   renderGeneralPane();
   try {
     const status = await api.get('/api/config/status');
+    configStatus = status;
     if (status.firstRun) welcome();
+    else maybeShowNews(status);
   } catch {
     /* the server is not ready yet: no welcome sheet */
   }

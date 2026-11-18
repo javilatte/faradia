@@ -308,12 +308,80 @@ function renderAssistantEvent(event) {
       // (last_tool_name), so skip the generic chat line to avoid flooding
       // the log with another agent's internal steps.
     } else if (block.type === 'tool_use') {
-      appendMessage('system', `→ usando herramienta: ${block.name}`);
+      addToolStep(block);
     } else if (block.type === 'tool_result') {
-      appendMessage('system', '✓ resultado de herramienta recibido');
+      finishToolStep(block);
     }
   }
   chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+// Consecutive tool calls of the chat's agent fold into one line: "4 pasos · Ejecuta npm ci", which
+// opens to the list (verb + file or command, ✓ or ✕ when it finishes).
+const toolSteps = new Map(); // tool_use_id -> <li>
+// Background shell commands (npm ci, a dev server…) run as Claude Code "tasks" too, but are not
+// agents: their task ids and tool calls are remembered so they never become agent cards.
+const shellTaskIds = new Set();
+const shellToolUseIds = new Set();
+const isShellTask = (e) =>
+  /bash|shell/i.test(e.task_type || '') || shellTaskIds.has(e.task_id) || shellToolUseIds.has(e.tool_use_id);
+function toolGroup() {
+  const last = chatLog.lastElementChild;
+  if (last?.classList.contains('tool-group')) return last;
+  const group = document.createElement('details');
+  group.className = 'tool-group';
+  const summary = document.createElement('summary');
+  const list = document.createElement('ul');
+  group.append(summary, list);
+  chatLog.appendChild(group);
+  return group;
+}
+// "Ejecuta" (translatable) + the command or file in <code> (left as is).
+function stepParts(verb, detail) {
+  const v = document.createElement('span');
+  v.textContent = verb;
+  const parts = [v];
+  if (detail) {
+    const c = document.createElement('code');
+    c.textContent = detail.length > 90 ? `${detail.slice(0, 89)}…` : detail;
+    parts.push(document.createTextNode(' '), c);
+  }
+  return parts;
+}
+function paintToolGroup(group) {
+  const items = group.querySelectorAll('li');
+  const last = items[items.length - 1];
+  const summary = group.querySelector('summary');
+  const count = document.createElement('span');
+  count.textContent = items.length === 1 ? '1 paso' : `${items.length} pasos`;
+  summary.replaceChildren(
+    count,
+    document.createTextNode(' · '),
+    ...stepParts(last?.dataset.verb || '', last?.dataset.detail || '')
+  );
+  summary.classList.toggle('running', Boolean(group.querySelector('li.running')));
+}
+function addToolStep(block) {
+  currentAssistantBubble = null;
+  const group = toolGroup();
+  const a = typeof toolActivity === 'function' ? toolActivity(block, '') : { verb: block.name, detail: '' };
+  const li = document.createElement('li');
+  li.className = 'running';
+  li.dataset.verb = a.verb || block.name;
+  li.dataset.detail = a.detail || '';
+  li.title = [li.dataset.verb, li.dataset.detail].filter(Boolean).join(' ');
+  li.replaceChildren(...stepParts(li.dataset.verb, li.dataset.detail));
+  group.querySelector('ul').appendChild(li);
+  if (block.id) toolSteps.set(block.id, li);
+  if (block.id && block.name === 'Bash') shellToolUseIds.add(block.id);
+  paintToolGroup(group);
+}
+function finishToolStep(block) {
+  const li = toolSteps.get(block.tool_use_id);
+  if (!li) return;
+  toolSteps.delete(block.tool_use_id);
+  li.className = block.is_error ? 'error' : 'ok';
+  paintToolGroup(li.closest('.tool-group'));
 }
 
 function handleClaudeEvent(event) {
@@ -328,7 +396,10 @@ function handleClaudeEvent(event) {
     // task_notification carries the agent's actual final text answer in
     // `summary`, and background_tasks_changed gives the full live snapshot).
     let agentsChanged = false;
-    if (event.subtype === 'task_started' && event.task_id) {
+    // Background shell commands (npm ci, a dev server…) are not agents: no card for them.
+    if (event.task_id && isShellTask(event)) {
+      shellTaskIds.add(event.task_id);
+    } else if (event.subtype === 'task_started' && event.task_id) {
       if (!isAgentDismissed(currentChatId, event.task_id)) {
         chatAgents.set(event.task_id, {
           chatId: currentChatId,
@@ -379,6 +450,7 @@ function handleClaudeEvent(event) {
         }
       }
       for (const t of event.tasks || []) {
+        if (isShellTask(t)) continue;
         if (!chatAgents.has(t.task_id) && !isAgentDismissed(currentChatId, t.task_id)) {
           chatAgents.set(t.task_id, {
             chatId: currentChatId,
@@ -390,9 +462,18 @@ function handleClaudeEvent(event) {
       }
     }
     if (agentsChanged) renderTasks();
+  } else if (event.type === 'user') {
+    // Tool results come back as "user" messages: they close their step.
+    for (const block of event.message?.content || []) if (block.type === 'tool_result') finishToolStep(block);
   } else if (event.type === 'result') {
     currentAssistantBubble = null;
     setWaiting(false);
+    // The turn is over: nothing of it is still running.
+    for (const [id, li] of toolSteps) {
+      li.className = 'ok';
+      toolSteps.delete(id);
+      paintToolGroup(li.closest('.tool-group'));
+    }
     if (event.is_error)
       appendMessage('error', typeof event.result === 'string' ? event.result : 'Error en la sesión de Claude.');
     // NOTE: deliberately no chatAgents cleanup here. A `result` only closes

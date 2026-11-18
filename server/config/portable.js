@@ -271,7 +271,20 @@ function markWelcomed() {
   writeJson(stateFile(), { ...readJson(stateFile(), {}), welcomed: new Date().toISOString() });
 }
 
+// ---------- what's new ----------
+
+/** Last version whose "what's new" tour was shown (or skipped), or null. */
+function tourSeen() {
+  return readJson(stateFile(), {}).tourSeen || null;
+}
+
+function markTourSeen(version) {
+  writeJson(stateFile(), { ...readJson(stateFile(), {}), tourSeen: String(version).slice(0, 20) });
+}
+
 module.exports = {
+  tourSeen,
+  markTourSeen,
   FORMAT,
   FORMAT_VERSION,
   ConfigError,

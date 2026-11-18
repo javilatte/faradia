@@ -1755,3 +1755,112 @@ input.switch:focus-visible {
 :root .settings-pane > .settings-field:has(> select:only-of-type) > :empty {
   display: none;
 }
+
+/* What's new: one card at a time in a sheet. */
+.tour-sheet {
+  width: min(460px, calc(100vw - 32px));
+}
+.tour-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tour-skip {
+  border: 0;
+  background: none;
+  color: var(--secondary-label);
+  font: inherit;
+  font-size: var(--text-callout);
+  padding: 2px 4px;
+}
+.tour-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 210px;
+  padding: 8px 0 4px;
+}
+.tour-card h3 {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  text-wrap: balance;
+}
+.tour-card p {
+  margin: 0;
+  color: var(--secondary-label);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.tour-icon {
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tour-action {
+  margin-top: 4px;
+}
+.tour-connect {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  align-self: stretch;
+  border-radius: var(--radius-group);
+  background: var(--group-bg);
+  border: 0.5px solid var(--separator);
+}
+.tour-connect li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  min-height: 38px;
+}
+.tour-connect li + li {
+  border-top: 0.5px solid var(--separator);
+}
+.tour-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--quaternary-label);
+  flex: none;
+}
+.tour-dot.ok {
+  background: var(--green);
+}
+.tour-connect-name {
+  font-weight: 500;
+}
+.tour-connect-state {
+  flex: 1;
+  color: var(--secondary-label);
+  font-size: var(--text-footnote);
+}
+.tour-actions {
+  align-items: center;
+}
+.tour-dots {
+  display: flex;
+  gap: 6px;
+  margin-right: auto;
+}
+.tour-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--quaternary-label);
+}
+.tour-dots span.on {
+  background: var(--accent);
+}
