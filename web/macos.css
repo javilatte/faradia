@@ -1555,3 +1555,35 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Text push buttons that reuse the icon-button class: a real push button, as in macOS. */
+:root .ai-assist-button {
+  width: auto;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  box-shadow: var(--control-shadow);
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+:root .ai-assist-button:hover {
+  background: var(--hover-bg);
+}
+
+/* Composer: the model menu sizes to its content instead of taking the whole row, so Mode, Model and
+   Effort fit on one line at usual widths. */
+:root #chat-model-select {
+  max-width: 15em;
+}
+:root #chat-input {
+  min-width: 0;
+}
+/* Narrow windows: the chat keeps a usable width; the agents board gives way first. */
+@media (max-width: 1100px) {
+  :root .layout {
+    grid-template-columns: var(--chat-w, minmax(360px, 1.2fr)) 1px minmax(280px, 1fr);
+  }
+}

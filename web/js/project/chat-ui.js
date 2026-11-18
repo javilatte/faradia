@@ -114,6 +114,7 @@ tickClock();
 setInterval(tickClock, 1000 * 30);
 
 function appendMessage(role, text, images = [], files = []) {
+  chatLog.querySelector('.chat-empty')?.remove();
   const el = document.createElement('div');
   el.className = `msg ${role}`;
   if (images.length) {

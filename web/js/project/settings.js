@@ -203,7 +203,7 @@ async function renderSkillsList() {
   if (skills.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'muted';
-    empty.textContent = 'No hay skills todavía.';
+    empty.textContent = 'Este repo no tiene skills propias. Las de optimia y las de ECC están arriba.';
     skillsList.appendChild(empty);
   }
 }
@@ -690,7 +690,9 @@ function renderScope() {
     b.classList.toggle('active', on);
     b.setAttribute('aria-pressed', String(on));
   }
-  if (GLOBAL_PANES.has(pane)) scopeNote.textContent = 'Igual en todos los repos.';
+  if (pane === 'skills')
+    scopeNote.textContent = `Las skills de optimia y de ECC valen para todos los repos; las propias, solo para ${repo}.`;
+  else if (GLOBAL_PANES.has(pane)) scopeNote.textContent = 'Igual en todos los repos.';
   else if (!SCOPED_PANES.has(pane)) scopeNote.textContent = `Solo de este repo (${repo}).`;
   else if (settingsScope === 'global')
     scopeNote.textContent = 'Los cambios se aplican a todos los repos, salvo a los que tengan su propio valor.';

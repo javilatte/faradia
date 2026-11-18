@@ -174,7 +174,13 @@ function entryBody(e) {
 function renderFeed() {
   const feed = h('ol', { class: 'tl-feed', 'aria-label': 'Timeline' });
   if (!entries.length) {
-    feed.append(h('li', { class: 'empty-state' }, 'Nada que mostrar con estos filtros todavía.'));
+    feed.append(
+      h(
+        'li',
+        { class: 'empty-state' },
+        'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que optimia vigila tus repos; el historial anterior está en Commits.'
+      )
+    );
     return feed;
   }
   let lastDay = null;
@@ -251,17 +257,22 @@ function renderFilters() {
         load();
       }
     }),
+    // Both dates in one group, so a narrow window wraps them together.
     h(
-      'label',
-      { class: 'tl-date' },
-      'Desde ',
-      h('input', { type: 'date', value: filters.since, onchange: (e) => ((filters.since = e.target.value), load()) })
-    ),
-    h(
-      'label',
-      { class: 'tl-date' },
-      'Hasta ',
-      h('input', { type: 'date', value: filters.until, onchange: (e) => ((filters.until = e.target.value), load()) })
+      'div',
+      { class: 'tl-dates' },
+      h(
+        'label',
+        { class: 'tl-date' },
+        'Desde ',
+        h('input', { type: 'date', value: filters.since, onchange: (e) => ((filters.since = e.target.value), load()) })
+      ),
+      h(
+        'label',
+        { class: 'tl-date' },
+        'Hasta ',
+        h('input', { type: 'date', value: filters.until, onchange: (e) => ((filters.until = e.target.value), load()) })
+      )
     )
   );
 }

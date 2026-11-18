@@ -444,7 +444,6 @@ async function renderGeneralPane() {
     ),
     renderSecurityField(sandbox),
     renderWikiField(wikiPrefs),
-    renderEccField(),
     h(
       'div',
       { class: 'settings-field' },
@@ -520,7 +519,7 @@ async function renderGeneralPane() {
 // ECC (Everything Claude Code, MIT), bundled: which of its skills and commands every session gets.
 let eccFilter = '';
 function renderEccField() {
-  const host = h('div', { class: 'settings-field', id: 'ecc-field' }, h('label', {}, 'Skills de ECC'));
+  const host = h('div', { class: 'settings-field', id: 'ecc-field' }, h('label', {}, 'Skills de optimia y de ECC'));
   const body = h('div', {}, h('div', { class: 'muted' }, 'Cargando…'));
   host.append(body);
   const save = async (patch) => paint(await api.patch('/api/ecc', patch));
@@ -694,8 +693,16 @@ function renderSecurityField(sandbox) {
 
 // ---------- boot ----------
 
+// Settings › Skills: optimia's built-in skills and the ECC library, above the repo's own.
+function renderSkillsLibrary() {
+  const host = document.getElementById('skills-library');
+  if (host) host.replaceChildren(renderEccField());
+}
+
 export async function initConfig() {
   bindDrop();
+  renderSkillsLibrary();
+  document.querySelector('.settings-nav-item[data-pane="skills"]')?.addEventListener('click', renderSkillsLibrary);
   document.getElementById('update-button')?.addEventListener('click', showUpdateSheet);
   renderGeneralPane();
   try {

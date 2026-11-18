@@ -286,6 +286,39 @@ function replayChat(chat) {
       handleClaudeEvent(m.event);
     }
   }
+  if (!chat.messages.length) renderChatEmpty();
+}
+
+// A new chat: what can be asked here, with examples that fill the message box.
+const CHAT_EXAMPLES = [
+  '¿Cómo está organizado este repo y por dónde empiezo?',
+  'Busca bugs probables en el código que más cambia',
+  'Revisa la seguridad de la autenticación'
+];
+function renderChatEmpty() {
+  const box = document.createElement('div');
+  box.className = 'chat-empty';
+  const title = document.createElement('h2');
+  title.textContent = '¿En qué trabajamos hoy?';
+  const hint = document.createElement('p');
+  hint.textContent =
+    'Pregunta lo que quieras o encarga una tarea a los agentes. Escribe @ para llamar a un agente y / para usar una skill.';
+  const list = document.createElement('div');
+  list.className = 'chat-examples';
+  for (const text of CHAT_EXAMPLES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chat-example';
+    b.textContent = text;
+    b.addEventListener('click', () => {
+      input.value = text;
+      input.dispatchEvent(new Event('input'));
+      input.focus();
+    });
+    list.appendChild(b);
+  }
+  box.append(title, hint, list);
+  chatLog.appendChild(box);
 }
 
 async function selectChat(chatId) {

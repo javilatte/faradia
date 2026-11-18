@@ -221,6 +221,18 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    '¿En qué trabajamos hoy?': 'What are we working on today?',
+    'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que optimia vigila tus repos; el historial anterior está en Commits.':
+      'No activity with these filters yet. Changes, commits and agents show up here from the moment optimia watches your repos; earlier history is under Commits.',
+    '¿Cómo está organizado este repo y por dónde empiezo?': 'How is this repo organized and where do I start?',
+    'Busca bugs probables en el código que más cambia': 'Look for likely bugs in the code that changes the most',
+    'Revisa la seguridad de la autenticación': 'Review the security of the authentication',
+    'Pregunta lo que quieras o encarga una tarea a los agentes. Escribe @ para llamar a un agente y / para usar una skill.':
+      'Ask anything or give the agents a task. Type @ to call an agent and / to use a skill.',
+    'Skills de optimia y de ECC': 'optimia and ECC skills',
+    'Skills propias de este repo (.claude/skills/)': "This repo's own skills (.claude/skills/)",
+    'Este repo no tiene skills propias. Las de optimia y las de ECC están arriba.':
+      "This repo has no skills of its own. optimia's and ECC's are above.",
     'Problemas detectados': 'Problems found',
     'Ningún problema registrado. Si algo falla, aparecerá aquí agrupado por tipo.':
       'No problems recorded. If something fails, it shows up here grouped by kind.',
@@ -594,6 +606,10 @@ window.OPTIMIA_I18N_EN = {
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
+    [
+      '^Las skills de optimia y de ECC valen para todos los repos; las propias, solo para (.+)\\.$',
+      "optimia's and ECC's skills apply to every repo; the repo's own, only to $1."
+    ],
     [
       '^(\\d+) incidencias de (\\d+) tipos, en todos los repos\\. Se guardan solo en este equipo, sin claves ni el texto de tus mensajes\\.$',
       '$1 issues of $2 kinds, across all repos. Kept only on this computer, without keys or the text of your messages.'

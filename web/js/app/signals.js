@@ -80,14 +80,15 @@ function permissionLabel() {
   }[Notification.permission];
 }
 
-async function save(patch, message = 'Guardado') {
+async function save(patch, message = 'Guardado', { rerender = true } = {}) {
   try {
     prefs = await api.put('/api/preferences', patch);
     toast(message);
   } catch (err) {
     toast(err.message, { kind: 'error' });
   }
-  render();
+  // Fields saved while typing keep their focus: no re-render for them.
+  if (rerender) render();
 }
 
 async function render() {
@@ -156,13 +157,19 @@ async function render() {
       'form',
       {
         class: 'sig-thresholds',
-        onsubmit: (e) => {
-          e.preventDefault();
-          const f = e.target.elements;
-          save({
-            orphanMinutes: Number(f.orphan.value),
-            signals: { largeDeleteLines: Number(f.lines.value), largeDeleteFiles: Number(f.files.value) }
-          });
+        onsubmit: (e) => e.preventDefault(),
+        // Applied as soon as a value changes, like every other setting.
+        onchange: (e) => {
+          const f = e.currentTarget.elements;
+          if ([...f].some((el) => el.validity && !el.validity.valid)) return;
+          save(
+            {
+              orphanMinutes: Number(f.orphan.value),
+              signals: { largeDeleteLines: Number(f.lines.value), largeDeleteFiles: Number(f.files.value) }
+            },
+            'Guardado',
+            { rerender: false }
+          );
         }
       },
       h(
@@ -185,8 +192,7 @@ async function render() {
         'Cambios huérfanos tras ',
         h('input', { name: 'orphan', type: 'number', min: 1, value: prefs.orphanMinutes }),
         ' minutos sin tocar'
-      ),
-      h('button', { type: 'submit' }, 'Guardar umbrales')
+      )
     )
   );
 
