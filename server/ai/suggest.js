@@ -43,7 +43,7 @@ function buildCatalog(projectRoot, settings) {
     const what = {
       coding: 'write or change code: plan, implement and verify in its own worktree',
       bugfix: 'fix a bug or an error: diagnose, fix and verify',
-      tests: 'write or improve automated tests',
+      tests: 'write NEW automated tests or improve the test suite (not for just running the existing tests)',
       documentation: 'write or update documentation (README, guides, docs)',
       audit: 'review the code (security, performance, quality) and report, without changes'
     }[type];
@@ -72,9 +72,11 @@ function buildCatalog(projectRoot, settings) {
 const SYSTEM = [
   'You route a developer request to the tools of a coding app. You get the request and a catalog of',
   'skills, agents and task types, one per line as "kind id: description".',
-  'Pick at most 2 catalog entries that would clearly help with this request; pick none when nothing',
-  'fits well, when the request is a casual question, or when it is too vague. Prefer a task type for',
-  'work that changes code, a skill for know-how the chat can apply, an agent for a specialist job.',
+  'Pick at most 2 catalog entries that would clearly help with this request. Pick NONE when nothing',
+  'fits well, when the request is a casual question, when it is too vague, or when the chat can simply',
+  'do it right away (run a command or the existing tests, answer, explain, look something up).',
+  'A task type is for work that changes code and deserves its own branch; a skill for know-how the',
+  'chat can apply; an agent for a specialist job.',
   'Answer ONLY with JSON: {"suggestions":[{"kind":"skill|agent|task","id":"<exact id>","reason":"<max 8',
   'words, in the language of the request>"}]}'
 ].join(' ');
