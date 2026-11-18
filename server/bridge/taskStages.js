@@ -408,7 +408,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}
         `Encargo original:\n${goal}`,
         'Ejecuta los tests, el lint y la compilacion que tenga el proyecto. Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
         'No hagas git commit ni git push.',
-        'Termina tu respuesta con una línea exactamente "VEREDICTO: OK" si todo pasa, o "VEREDICTO: FALLA" seguido del motivo.'
+        'Termina tu respuesta con una línea exactamente "VEREDICTO: OK" si todo pasa, "VEREDICTO: FALLA" seguido del motivo si algo falla por estos cambios, o "VEREDICTO: SIN VERIFICAR" seguido de lo que falta si no has podido ejecutar las comprobaciones (herramientas, versión del lenguaje o servicios que no hay en este equipo).'
       ].join('\n\n');
     case 'review':
       return [
@@ -484,11 +484,13 @@ function answerPrompt(answer, stage) {
   return `Respuesta del usuario a tus preguntas:\n${answer.trim()}\n\n${tail}`;
 }
 
-// "VEREDICTO: OK" / "VEREDICTO: FALLA ..." at the end of the verification.
+// "VEREDICTO: OK" / "VEREDICTO: FALLA ..." / "VEREDICTO: SIN VERIFICAR ..." at the end of the
+// verification. Unverified (the checks could not run here) is not a failure of the change.
 function parseVerdict(text) {
-  const m = /VEREDICTO:\s*(OK|FALLA)\b[^\n]*/i.exec(text || '');
+  const m = /VEREDICTO:\s*(OK|FALLA|SIN VERIFICAR)\b[^\n]*/i.exec(text || '');
   if (!m) return null;
-  return { ok: m[1].toUpperCase() === 'OK', line: m[0].trim() };
+  const kind = m[1].toUpperCase();
+  return { ok: kind === 'OK', unverified: kind === 'SIN VERIFICAR', line: m[0].trim() };
 }
 
 // Message proposed by the "Preparar commit" stage (its last "MENSAJE: ..." line).

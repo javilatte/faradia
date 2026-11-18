@@ -2379,3 +2379,22 @@ select,
     animation: none;
   }
 }
+
+/* Verification that could not run here (missing tools or services): not a failure, not a pass. */
+.pipeline-step.unverified {
+  border-color: var(--orange-text);
+}
+.pipeline-step.unverified strong::before {
+  content: '! ';
+  color: var(--orange-text);
+}
+.pipeline-step.failed {
+  border-color: var(--danger);
+}
+.pipeline-step.failed strong::before {
+  content: '✗ ';
+  color: var(--danger);
+}
+.verification.unverified {
+  color: var(--orange-text);
+}

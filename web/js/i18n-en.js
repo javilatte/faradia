@@ -220,6 +220,10 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    '! Sin verificar: no se pudieron ejecutar las comprobaciones en este equipo':
+      '! Not verified: the checks could not run on this computer',
+    'Sin verificar': 'Not verified',
+    'Con fallos': 'With failures',
     'Puedes ir redactando la PR; se crea después del commit.':
       'You can draft the PR now; it is created after the commit.',
     'Conectarse a internet fuera de los registros de paquetes': 'Connect to the internet outside package registries',

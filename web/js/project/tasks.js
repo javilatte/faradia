@@ -92,6 +92,10 @@ function renderPipeline(task) {
     const agent = run ? { name: run.agentName, engine: run.engine, model: run.model } : plannedAgent(task, stage);
     const disabled = !run && agent && agent.enabled === false;
     if (disabled) state = 'skipped';
+    // The verification chip says how it went, not only that the stage ran.
+    if (stage === 'verify' && state === 'done' && task.verification && !task.verification.ok) {
+      state = task.verification.unverified ? 'unverified' : 'failed';
+    }
     const chip = document.createElement('span');
     chip.className = `pipeline-step ${state}`;
     const name = document.createElement('strong');
@@ -111,6 +115,8 @@ function renderPipeline(task) {
 }
 
 const PIPELINE_STATE = {
+  unverified: 'Sin verificar',
+  failed: 'Con fallos',
   todo: 'Pendiente',
   running: 'En curso',
   done: 'Hecha',
@@ -407,15 +413,18 @@ function stripVerdict(text) {
 function renderVerification(task) {
   if (!task.verification) return null;
   const el = document.createElement('div');
-  el.className = `verification ${task.verification.ok ? 'ok' : 'fail'}`;
-  if (task.verification.ok) {
+  const v = task.verification;
+  el.className = `verification ${v.ok ? 'ok' : v.unverified ? 'unverified' : 'fail'}`;
+  if (v.ok) {
     el.textContent = '✓ Verificación superada';
     return el;
   }
-  const reason = task.verification.line.replace(/^\s*VEREDICTO:\s*FALLA\s*(motivo:)?\s*/i, '').trim();
+  const reason = v.line.replace(/^\s*VEREDICTO:\s*(FALLA|SIN VERIFICAR)\s*(motivo:)?\s*/i, '').trim();
   const details = document.createElement('details');
   const summary = document.createElement('summary');
-  summary.textContent = '✗ La verificación encontró problemas';
+  summary.textContent = v.unverified
+    ? '! Sin verificar: no se pudieron ejecutar las comprobaciones en este equipo'
+    : '✗ La verificación encontró problemas';
   details.appendChild(summary);
   const body = document.createElement('div');
   body.className = 'verification-reason';
