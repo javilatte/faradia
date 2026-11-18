@@ -17,7 +17,7 @@ window.addEventListener('optimia:settings-scope', (e) => {
 const openPrompts = new Set();
 
 const url = (rest = '') => projectApi(currentProjectId(), `/agents${rest}`);
-const ENGINE_LABEL = { claude: 'Claude', local: 'IA local' };
+const ENGINE_LABEL = { claude: 'Claude', gemini: 'Gemini', local: 'IA local' };
 const ACCESS_LABEL = { read: 'Solo lectura', edit: 'Puede editar' };
 const EFFORT_LABEL = {
   default: 'Por defecto',
@@ -149,6 +149,17 @@ function renderPipelines() {
 }
 
 function modelControl(agent, draft) {
+  if (draft.engine === 'gemini') {
+    return h('input', {
+      class: 'agents-model',
+      value: draft.model || '',
+      placeholder: 'El de Ajustes › Gemini',
+      'aria-label': `Modelo de Gemini de ${agent.name}`,
+      spellcheck: 'false',
+      oninput: (e) => (draft.model = e.target.value.trim()),
+      onchange: () => draft.save({ model: draft.model })
+    });
+  }
   if (draft.engine === 'local') {
     const listId = `local-models-${agent.id}`;
     return h(
@@ -231,9 +242,11 @@ function renderAgent(agent) {
       'aria-label': `Motor de ${agent.name}`,
       onchange: (e) => {
         draft.engine = e.target.value;
-        draft.model = draft.engine === 'claude' ? 'default' : localModels[0]?.name || '';
-        // Without a local model there is nothing to save yet: one has to be chosen first.
-        if (draft.engine === 'claude' || draft.model) draft.save({ engine: draft.engine, model: draft.model });
+        draft.model =
+          draft.engine === 'claude' ? 'default' : draft.engine === 'gemini' ? '' : localModels[0]?.name || '';
+        // Without a local model there is nothing to save yet: one has to be chosen first. Gemini
+        // without a model uses the one chosen in Settings › Gemini.
+        if (draft.engine !== 'local' || draft.model) draft.save({ engine: draft.engine, model: draft.model });
         else {
           modelSlot.replaceChildren(modelControl(agent, draft));
           effortSelect.disabled = true;
