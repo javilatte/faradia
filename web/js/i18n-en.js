@@ -5,6 +5,48 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'Tu configuración en todos tus equipos': 'Your configuration on all your computers',
+    'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de salir.':
+      'Turn it on in Settings › Sync with a folder you already sync. It is encrypted on your computer with a passphrase only you know before it leaves.',
+    'Activar sincronización…': 'Turn on sync…',
+    'Igual en todos los repos y en todos tus equipos.': 'The same in every repo and on all your computers.',
+    Sincronización: 'Sync',
+    'Tu configuración igual en todos tus equipos: ajustes, claves de IA, agentes, etapas, instrucciones y avisos. Los repos y las tareas se quedan en cada equipo.':
+      'Your configuration, the same on all your computers: settings, AI keys, agents, stages, instructions and notices. Repos and tasks stay on each computer.',
+    'Dónde guardar la copia': 'Where to keep the copy',
+    'Mi Google Drive': 'My Google Drive',
+    'Una carpeta': 'A folder',
+    'En una carpeta oculta de tu Drive que solo ve optimia. No da acceso al resto de tus archivos.':
+      'In a hidden folder of your Drive that only optimia can see. It gives no access to the rest of your files.',
+    'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing…':
+      'A folder you already sync between your computers: Google Drive for desktop, Dropbox, iCloud, Syncthing…',
+    'El inicio de sesión con Google aún no está disponible en esta versión.':
+      'Signing in with Google is not available in this version yet.',
+    'Elegir…': 'Choose…',
+    'Frase de paso': 'Passphrase',
+    'Al menos 8 caracteres': 'At least 8 characters',
+    'Cifra la copia en este equipo antes de enviarla. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).':
+      'It encrypts the copy on this computer before it is sent. Use the same one on all your computers. If you forget it, the copy cannot be recovered (your local configuration is not lost).',
+    'Iniciar sesión con Google…': 'Sign in with Google…',
+    'Activando…': 'Turning on…',
+    'Cuenta de Google': 'Google account',
+    'Este equipo': 'This computer',
+    'Última comprobación': 'Last check',
+    'Último cambio': 'Last change',
+    nunca: 'never',
+    'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/optimia/backups.':
+      'It checks every few minutes and right after each change. If two computers change at once the newest wins, and the other is kept in ~/.config/optimia/backups.',
+    'Sincronizar ahora': 'Sync now',
+    'Sincronizando…': 'Syncing…',
+    Desactivar: 'Turn off',
+    'Desactivar y borrar la copia…': 'Turn off and delete the copy…',
+    '¿Borrar la copia? Pulsa otra vez': 'Delete the copy? Click again',
+    'se subieron los cambios de este equipo': "this computer's changes were uploaded",
+    'se aplicaron los cambios de otro equipo': "another computer's changes were applied",
+    'había cambios en los dos lados: se quedó la versión más reciente (la de otro equipo)':
+      "both sides had changes: the newest was kept (another computer's)",
+    'había cambios en los dos lados: se quedó la versión más reciente (la de este equipo)':
+      "both sides had changes: the newest was kept (this computer's)",
     ver: 'view',
     ahora: 'now',
     Abrir: 'Open',
@@ -847,6 +889,7 @@ window.OPTIMIA_I18N_EN = {
       '^Effort "(.+)" (en todos los repos|solo en este repo), desde la próxima sesión\\.$',
       'Effort "$1" $2, from the next session.'
     ],
+    ['^No se pudo sincronizar: (.+)$', 'Could not sync: $1'],
     ['^No se pudo (.+): (.+)$', 'Could not $1: $2'],
     ['^(.+) \\(ECC\\)$', '$1 (ECC)'],
     ['^Agentes de ECC \\((\\d+)(?:, (\\d+) activos)?\\)$', 'ECC agents ($1)'],

@@ -135,6 +135,12 @@ const NEWS = [
         text: 'Cuando el agente necesita permiso, lo pide con una tarjeta en la conversación. En modo automático solo pregunta lo arriesgado.'
       },
       {
+        icon: 'swap',
+        title: 'Tu configuración en todos tus equipos',
+        text: 'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de salir.',
+        action: { label: 'Activar sincronización…', run: () => openPane('sync') }
+      },
+      {
         icon: 'list',
         title: 'Skills de serie',
         text: 'ponytail (la solución más simple que funcione), frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.'

@@ -5,6 +5,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Sync between computers** (Settings › Sincronización): settings, AI keys, agents, stages, instructions and notices stay the same on every computer. The copy lives in a folder the user already syncs (Google Drive for desktop, Dropbox, iCloud, Syncthing…), or in the hidden app folder of their own Google Drive once a Google OAuth client is configured. It is encrypted on the computer with a passphrase (scrypt + AES-256-GCM) before it leaves; nobody else, optimia's author included, can read it. Changes sync a few seconds after they happen and every few minutes; on a conflict the newest wins and the other is kept in `~/.config/optimia/backups`. Turning it off can also delete the copy.
 - **Gemini**: connect a free Google AI Studio key in Settings › Gemini (open AI Studio, paste the key, pick a model; a Hydrogen model is proposed when the key offers one). Use it as the main AI of the chat or of any agent.
 - **No stops when Claude runs out of usage**: the chat and running tasks go on with Gemini or the local model in the same session, with the whole conversation, and go back to Claude when the limit resets.
 - **Suggestions while you type**: a fast model (Gemini, then the local model, then Claude Haiku with low effort) proposes the skill, agent or task type that fits the message. Tab accepts, Esc dismisses; nothing is applied on its own.
@@ -24,6 +25,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Larger logo in the sidebar and an "Opt" favicon that reads in browser tabs.
 
 ### Fixed
+- Importing a configuration file now also brings the chat permissions, the archive retention, the wiki settings and the chosen ECC skills.
 - Errors of tasks that could not start were only in the browser console; they are said in the chat.
 - The verification stage could not report its progress.
 - Task titles were cut in the middle of a word; build outputs were listed as generated files.

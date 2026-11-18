@@ -709,7 +709,8 @@ body {
 }
 /* Each setting is a row of a group, as in System Settings */
 :root .settings-pane > .settings-field,
-:root #general-pane > .settings-field {
+:root #general-pane > .settings-field,
+:root #sync-pane > .settings-field {
   background: var(--group-bg);
   border: 0.5px solid var(--separator);
   border-radius: var(--radius-group);
@@ -2019,4 +2020,56 @@ input.switch:focus-visible {
   box-shadow: var(--control-shadow);
   font: inherit;
   font-size: var(--text-body);
+}
+
+/* ---------- Settings › Sincronización ---------- */
+#sync-pane > .grouped-list {
+  margin-bottom: 10px;
+}
+#sync-pane .field-label {
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--label);
+}
+.sync-row-value {
+  font-size: var(--text-body);
+  color: var(--secondary-label);
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#sync-pane > .group-help {
+  margin-bottom: 12px;
+}
+/* A macOS segmented control on a radiogroup of buttons. */
+.segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 7px;
+  background: var(--quaternary-label);
+}
+.segmented > button {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 3px 14px;
+  border-radius: 5px;
+  font-size: var(--text-callout);
+  color: var(--label);
+}
+.segmented > button.on {
+  background: var(--control-bg);
+  box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.2);
+  font-weight: 500;
+}
+.segmented > button:disabled {
+  color: var(--tertiary-label);
+}
+#sync-pane .skill-row-text {
+  flex: 0 0 auto;
+}
+#sync-pane .sync-row-value {
+  flex: 1;
 }

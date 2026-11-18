@@ -243,6 +243,10 @@ function importConfig(raw) {
     ai,
     providers,
     suggestions: s.suggestions,
+    chat: s.chat,
+    tasks: s.tasks,
+    wiki: s.wiki,
+    ecc: s.ecc,
     preferences: s.preferences ? { instructions: s.preferences.instructions, noGo: s.preferences.noGo } : undefined,
     updates: s.updates
   });

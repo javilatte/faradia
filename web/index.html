@@ -279,6 +279,7 @@
         <nav class="settings-nav">
           <div class="settings-nav-group">optimia</div>
           <button class="settings-nav-item" data-pane="general">General</button>
+          <button class="settings-nav-item" data-pane="sync">Sincronización</button>
           <div class="settings-nav-group">IA</div>
           <button class="settings-nav-item active" data-pane="claude">Claude</button>
           <button class="settings-nav-item" data-pane="gemini">Gemini</button>
@@ -322,6 +323,10 @@
           <div class="settings-pane-body">
             <section class="settings-pane" data-pane="general" hidden>
               <div id="general-pane"></div>
+            </section>
+
+            <section class="settings-pane" data-pane="sync" hidden>
+              <div id="sync-pane"></div>
             </section>
 
             <section class="settings-pane" data-pane="claude">
@@ -584,6 +589,7 @@
     <script src="js/project/skills.js"></script>
     <script src="js/project/intent.js"></script>
     <script src="js/project/gemini.js"></script>
+    <script src="js/project/sync.js"></script>
     <script src="js/project/issues.js"></script>
     <script src="js/project/archive.js"></script>
     <script src="js/project/settings.js"></script>

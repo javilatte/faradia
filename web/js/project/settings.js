@@ -665,7 +665,7 @@ localDetectButton.addEventListener('click', detectLocalAi);
 
 // Which panes support both scopes and which only one.
 const SCOPED_PANES = new Set(['claude', 'local-ai', 'instructions', 'nogo', 'agents']);
-const GLOBAL_PANES = new Set(['gemini', 'general', 'appearance', 'monitor']);
+const GLOBAL_PANES = new Set(['gemini', 'general', 'sync', 'appearance', 'monitor']);
 let settingsScope = 'global';
 try {
   settingsScope = localStorage.getItem('optimia:settings-scope') === 'project' ? 'project' : 'global';
@@ -692,6 +692,7 @@ function renderScope() {
   }
   if (pane === 'skills')
     scopeNote.textContent = `Las skills de optimia y de ECC valen para todos los repos; las propias, solo para ${repo}.`;
+  else if (pane === 'sync') scopeNote.textContent = 'Igual en todos los repos y en todos tus equipos.';
   else if (GLOBAL_PANES.has(pane)) scopeNote.textContent = 'Igual en todos los repos.';
   else if (!SCOPED_PANES.has(pane)) scopeNote.textContent = `Solo de este repo (${repo}).`;
   else if (settingsScope === 'global')

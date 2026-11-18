@@ -18,6 +18,8 @@ const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRout
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
 const { handleFsRoutes } = require('./http/fsRoutes');
 const { handleConfigRoutes } = require('./http/configRoutes');
+const { handleSyncRoutes, handleGoogleCallback, isConfigWrite, GOOGLE_CALLBACK } = require('./http/syncRoutes');
+const { createSync } = require('./sync/engine');
 const { MonitorService } = require('./monitor/monitorService');
 const { Timeline } = require('./monitor/timeline');
 const { SignalEngine } = require('./monitor/signals');
@@ -40,6 +42,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   const geminiProxy = createProxy({ getConfig: () => loadGlobalSettings().providers.gemini });
   geminiProxy.listen().then(() => setSharedProxy(geminiProxy));
   const wss = new WebSocketServer({ noServer: true });
+  // Sync of the global configuration between the user's computers (off until they turn it on).
+  const sync = createSync({
+    log: (event, data) => registry?.runtime(defaultProjectId)?.log.info(event, data),
+    onChange: (status) => sendToClients({ type: 'sync_status', status })
+  });
   let registry = null;
   let monitor = null;
   let timeline = null;
@@ -197,6 +204,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       if (handled !== null) return handled;
     }
 
+    if (url.pathname === '/api/sync' || url.pathname.startsWith('/api/sync/')) {
+      const handled = await handleSyncRoutes(req, res, url, { sync, port: actualPort });
+      if (handled !== null) return handled;
+    }
+
     if (url.pathname.startsWith('/api/fs/')) {
       const handled = await handleFsRoutes(req, res, url, { registry });
       if (handled !== null) return handled;
@@ -219,6 +231,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     if (url.pathname.startsWith('/api/')) {
       const problem = security.checkApiRequest(req, { token: sessionToken, port: actualPort });
       if (problem) return sendJson(res, problem.status, { error: problem.error });
+      if (isConfigWrite(req, url.pathname)) res.once('finish', () => res.statusCode < 400 && sync.changed());
       return handleApi(req, res, url).catch((err) => {
         registry.runtime(defaultProjectId)?.log.error('http.unhandled', { path: url.pathname, error: err.message });
         if (!res.headersSent) sendJson(res, 500, { error: err.message });
@@ -228,6 +241,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     if (!security.hostAllowed(req, actualPort)) {
       res.writeHead(421, { 'Content-Type': 'text/plain' });
       return res.end('host no permitido');
+    }
+    if (url.pathname === GOOGLE_CALLBACK && req.method === 'GET') {
+      return handleGoogleCallback(req, res, url, { sync }).catch((err) => {
+        if (!res.headersSent) sendJson(res, 500, { error: err.message });
+      });
     }
     // The link optimia prints carries ?token=: it is stored in a cookie and removed from the URL.
     const given = url.searchParams.get('token');
@@ -358,7 +376,9 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       rt.log.info('server.start', { url, port: actualPort, projectRoot });
       if (open) openInBrowser(openUrl);
       startMonitor();
+      sync.start();
       server.on('close', () => {
+        sync.stop();
         clearInterval(orphanTimer);
         timeline?.stop();
         monitor?.stop();
