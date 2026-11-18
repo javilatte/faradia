@@ -123,3 +123,40 @@ test('@ in the message box calls any agent, ECC ones included, as a single-stage
   await page.locator('#chat-kind-select').selectOption('chat');
   expect(errors).toEqual([]);
 });
+
+test('a task removed from the board goes to the archive, which keeps it for the chosen time', async ({
+  page,
+  request
+}) => {
+  const headers = { 'X-Optimia-Token': 'e2e-token' };
+  const created = await (
+    await request.post('/api/tasks', {
+      headers,
+      data: { title: 'Tarea para el archivo', type: 'audit', instruction: 'Revisa algo' }
+    })
+  ).json();
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get('/api/tasks', { headers })).json()).find((t) => t.id === created.id)?.status,
+      {
+        timeout: 20_000
+      }
+    )
+    .toBe('ready_to_test');
+  expect((await request.delete(`/api/tasks/${created.id}`, { headers })).ok()).toBeTruthy();
+
+  await page.goto('/?token=e2e-token');
+  await page.getByRole('button', { name: 'Archivo', exact: true }).click();
+  const sheet = page.locator('.archive-sheet');
+  await expect(sheet).toContainText('Tarea para el archivo');
+  await expect(sheet.locator('.archive-outcome').first()).toHaveText('Informe');
+  await sheet.locator('summary', { hasText: 'Tarea para el archivo' }).click();
+  await expect(sheet).toContainText('Revisa algo');
+  await sheet.locator('#archive-retention').selectOption('7');
+  await expect
+    .poll(async () => (await (await request.get('/api/tasks-archive', { headers })).json()).retentionDays)
+    .toBe(7);
+  await sheet.getByRole('button', { name: 'Listo' }).click();
+  await expect(sheet).toHaveCount(0);
+});

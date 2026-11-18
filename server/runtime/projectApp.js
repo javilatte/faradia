@@ -12,6 +12,7 @@ const {
   promoteToGlobal
 } = require('../store/settingsStore');
 const { loadTasks, addTask, updateTask, updateTaskPhase, deleteTask } = require('../store/taskStore');
+const { archiveTask, listArchive, removeArchived, clearArchive } = require('../store/taskArchive');
 const { listChats, loadChat, createChat, updateChatMeta, deleteChat } = require('../store/chatStore');
 const { checkClaudeCapabilities } = require('../bridge/claudeVersion');
 const { syncClaudeSettings } = require('../bridge/claudeSettingsSync');
@@ -149,7 +150,8 @@ function createApp(
           wiki: body.wiki,
           providers: body.providers,
           suggestions: body.suggestions,
-          chat: body.chat
+          chat: body.chat,
+          tasks: body.tasks
         });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
@@ -340,6 +342,23 @@ function createApp(
       return sendJson(res, 200, updated);
     }
 
+    // Archive of finished tasks (store/taskArchive.js).
+    //   GET    /api/tasks-archive       {retentionDays, tasks}
+    //   DELETE /api/tasks-archive/:id   one
+    //   DELETE /api/tasks-archive       all
+    if (url.pathname === '/api/tasks-archive' && req.method === 'GET') {
+      const days = loadSettingsLayers(projectRoot).effective.tasks.archiveDays;
+      return sendJson(res, 200, { retentionDays: days, tasks: listArchive(projectRoot, days) });
+    }
+    if (url.pathname === '/api/tasks-archive' && req.method === 'DELETE') {
+      clearArchive(projectRoot);
+      return sendJson(res, 200, { ok: true });
+    }
+    if (url.pathname.startsWith('/api/tasks-archive/') && req.method === 'DELETE') {
+      const ok = removeArchived(projectRoot, url.pathname.split('/')[3]);
+      return sendJson(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'no está en el archivo' });
+    }
+
     if (url.pathname.startsWith('/api/tasks/') && req.method === 'DELETE') {
       const taskId = url.pathname.split('/')[3];
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
@@ -350,6 +369,13 @@ function createApp(
       } catch (err) {
         log.error('task.delete_failed', { taskId, error: err.message });
         return sendJson(res, 500, { error: `no se pudo limpiar el worktree: ${err.message}` });
+      }
+      // Kept in the archive (with its outcome) before it leaves the board.
+      try {
+        archiveTask(projectRoot, task);
+        listArchive(projectRoot, loadSettingsLayers(projectRoot).effective.tasks.archiveDays);
+      } catch (err) {
+        log.warn('task.archive_failed', { taskId, error: err.message });
       }
       deleteTask(projectRoot, taskId);
       log.info('task.delete', { taskId, branch: task.branch });

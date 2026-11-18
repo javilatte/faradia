@@ -1864,3 +1864,149 @@ input.switch:focus-visible {
 .tour-dots span.on {
   background: var(--accent);
 }
+
+/* Agents board: the archive of finished tasks. */
+.archive-button {
+  margin-left: 8px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 0.5px solid var(--control-border);
+  background: var(--control-bg);
+  box-shadow: var(--control-shadow);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--text-callout);
+}
+.archive-sheet {
+  width: min(680px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+.archive-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.archive-head .sheet-title {
+  margin: 0;
+}
+.archive-count {
+  color: var(--secondary-label);
+  font-size: var(--text-callout);
+  font-variant-numeric: tabular-nums;
+}
+.archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
+  border-radius: var(--radius-group);
+  border: 0.5px solid var(--separator);
+  background: var(--group-bg);
+}
+.archive-list > li + li {
+  border-top: 0.5px solid var(--separator);
+}
+.archive-empty {
+  padding: 24px 16px;
+  color: var(--secondary-label);
+  text-align: center;
+  text-wrap: pretty;
+}
+.archive-item summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  cursor: default;
+  list-style: none;
+}
+.archive-item summary::-webkit-details-marker {
+  display: none;
+}
+.archive-outcome {
+  flex: none;
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green-text);
+}
+.archive-outcome.muted {
+  background: var(--track-bg);
+  color: var(--secondary-label);
+}
+.archive-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.archive-date {
+  flex: none;
+  color: var(--secondary-label);
+  font-size: var(--text-footnote);
+  font-variant-numeric: tabular-nums;
+}
+.archive-body {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--text-callout);
+}
+.archive-instruction {
+  margin: 0;
+  color: var(--secondary-label);
+  white-space: pre-wrap;
+}
+.archive-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 3px 12px;
+  margin: 0;
+}
+.archive-facts dt {
+  color: var(--secondary-label);
+}
+.archive-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.archive-report {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--content-bg);
+  border: 0.5px solid var(--separator);
+}
+.archive-verdict {
+  margin: 0;
+}
+.archive-row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.archive-actions {
+  align-items: center;
+  margin-top: 4px;
+}
+.archive-retention {
+  margin-right: auto;
+  color: var(--secondary-label);
+  font-size: var(--text-callout);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.danger-text {
+  color: var(--red-text) !important;
+}
