@@ -281,6 +281,7 @@
           <button class="settings-nav-item" data-pane="general">General</button>
           <div class="settings-nav-group">IA</div>
           <button class="settings-nav-item active" data-pane="claude">Claude</button>
+          <button class="settings-nav-item" data-pane="gemini">Gemini</button>
           <button class="settings-nav-item" data-pane="local-ai">IA local</button>
           <button class="settings-nav-item" data-pane="agents">Agentes</button>
           <div class="settings-nav-group">Supervisión</div>
@@ -356,6 +357,10 @@
                   <option value="max">Máximo</option>
                 </select>
               </div>
+            </section>
+
+            <section class="settings-pane" data-pane="gemini" hidden>
+              <div id="gemini-pane"></div>
             </section>
 
             <section class="settings-pane" data-pane="local-ai" hidden>
@@ -574,6 +579,8 @@
     <script src="js/project/ws.js"></script>
     <script src="js/project/composer.js"></script>
     <script src="js/project/skills.js"></script>
+    <script src="js/project/intent.js"></script>
+    <script src="js/project/gemini.js"></script>
     <script src="js/project/settings.js"></script>
     <script src="js/project/switch.js"></script>
     <script src="js/project/main.js"></script>

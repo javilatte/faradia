@@ -36,6 +36,7 @@ const { listSkills, createSkill } = require('../bridge/skills');
 const { getClaudeAuthStatus, openAuthLoginInTerminal } = require('../bridge/claudeAuth');
 const { listModelsAt, detectLocalServers } = require('../bridge/localAi');
 const { getAiAssistSuggestion } = require('../bridge/aiAssist');
+const { suggest } = require('../ai/suggest');
 const { sendJson, readJsonBody } = require('../http/util');
 const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
@@ -94,7 +95,19 @@ function createApp(
       const { global, project, effective, overrides } = loadSettingsLayers(projectRoot);
       // The effective "Prohibido" list is the one optimia's sessions receive.
       syncClaudeSettings(projectRoot, effective.preferences.noGo);
-      return { ...effective, layers: { global, project, overrides } };
+      // API keys never go back to the page: only whether there is one and its last characters.
+      const mask = (g) => ({
+        ...g,
+        providers: {
+          gemini: {
+            model: g.providers.gemini.model,
+            apiKey: '',
+            hasKey: Boolean(g.providers.gemini.apiKey),
+            keyHint: g.providers.gemini.apiKey ? `…${g.providers.gemini.apiKey.slice(-4)}` : ''
+          }
+        }
+      });
+      return { ...mask(effective), layers: { global: mask(global), project, overrides } };
     };
 
     if (url.pathname === '/api/settings' && req.method === 'GET') {
@@ -126,7 +139,9 @@ function createApp(
           preferences: body.preferences,
           updates: body.updates,
           security: body.security,
-          wiki: body.wiki
+          wiki: body.wiki,
+          providers: body.providers,
+          suggestions: body.suggestions
         });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
@@ -190,6 +205,18 @@ function createApp(
         return sendJson(res, 400, { error: 'content (string) is required' });
       saveMemory(projectRoot, body.content);
       return sendJson(res, 200, { content: body.content });
+    }
+
+    // What could help with the message being typed: {suggestions: [{kind, id, reason}], engine}.
+    if (url.pathname === '/api/suggest' && req.method === 'POST') {
+      const body = await readJsonBody(req).catch(() => ({}));
+      const result = await suggest({
+        text: body.text,
+        projectRoot,
+        settings: loadSettingsLayers(projectRoot).effective
+      });
+      if (result.errors?.length) log.warn('suggest.failed', { errors: result.errors });
+      return sendJson(res, 200, { suggestions: result.suggestions, engine: result.engine, off: Boolean(result.off) });
     }
 
     if (url.pathname === '/api/skills' && req.method === 'GET') {

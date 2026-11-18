@@ -67,7 +67,10 @@ function globalStageMapFile() {
 
 function exportConfig({ includeSecrets = false } = {}) {
   const settings = loadGlobalSettings();
-  if (!includeSecrets) settings.ai.localAi.authHeader = '';
+  if (!includeSecrets) {
+    settings.ai.localAi.authHeader = '';
+    settings.providers.gemini.apiKey = '';
+  }
   return {
     format: FORMAT,
     formatVersion: FORMAT_VERSION,
@@ -226,9 +229,20 @@ function importConfig(raw) {
   if (ai && !cfg.secretsIncluded) {
     ai.localAi = { ...(ai.localAi || {}), authHeader: current.ai.localAi.authHeader };
   }
+  const providers =
+    s.providers?.gemini && typeof s.providers.gemini === 'object'
+      ? {
+          gemini: {
+            model: s.providers.gemini.model,
+            apiKey: cfg.secretsIncluded ? s.providers.gemini.apiKey : current.providers.gemini.apiKey
+          }
+        }
+      : undefined;
   saveGlobalSettings({
     ui: s.ui,
     ai,
+    providers,
+    suggestions: s.suggestions,
     preferences: s.preferences ? { instructions: s.preferences.instructions, noGo: s.preferences.noGo } : undefined,
     updates: s.updates
   });

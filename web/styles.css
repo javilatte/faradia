@@ -555,6 +555,85 @@ body {
   z-index: 10;
 }
 
+.intent-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.intent-bar[hidden] {
+  display: none;
+}
+
+.intent-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--panel-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  animation: intent-in 0.18s ease-out;
+}
+
+.intent-chip:hover {
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg));
+}
+
+.intent-chip .intent-label {
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.intent-chip .intent-reason {
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.intent-chip kbd {
+  font:
+    500 10px/1 ui-monospace,
+    monospace;
+  padding: 2px 4px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  color: var(--text-dim);
+}
+
+.intent-close {
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+@keyframes intent-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intent-chip {
+    animation: none;
+  }
+}
+
 .skill-suggest[hidden] {
   display: none;
 }

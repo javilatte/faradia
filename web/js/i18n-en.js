@@ -221,6 +221,28 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    'Abre Google AI Studio': 'Open Google AI Studio',
+    'Entra con tu cuenta de Google.': 'Sign in with your Google account.',
+    'Abrir aistudio.google.com ↗': 'Open aistudio.google.com ↗',
+    'Pulsa «Get API key» y pega la clave': 'Click "Get API key" and paste the key',
+    'Se comprueba con Google antes de guardarla. Solo se guarda en este equipo.':
+      'It is checked with Google before it is saved. It stays on this computer.',
+    Comprobar: 'Check',
+    'Elige el modelo': 'Pick the model',
+    'Aparecen al comprobar la clave.': 'They show up once the key is checked.',
+    'Quitar la clave': 'Remove the key',
+    'Sugerencias mientras escribes': 'Suggestions while you type',
+    'Activadas: Gemini, luego IA local, luego Claude Haiku': 'On: Gemini, then local AI, then Claude Haiku',
+    Desactivadas: 'Off',
+    'Tras una pausa al escribir, un modelo rápido propone una skill, un agente o un tipo de tarea. Nunca se aplica solo.':
+      'When you pause typing, a fast model proposes a skill, an agent or a task type. It is never applied on its own.',
+    'Gemini de Google con una clave gratuita de AI Studio. optimia lo usa para las sugerencias del chat, como IA principal si lo eliges en el chat y como respaldo cuando Claude se queda sin uso.':
+      "Google's Gemini with a free AI Studio key. optimia uses it for chat suggestions, as the main AI if you pick it in the chat, and as a fallback when Claude runs out of usage.",
+    'Google no acepta esa clave. Cópiala otra vez desde AI Studio.':
+      'Google does not accept that key. Copy it again from AI Studio.',
+    'Sugerencias para este mensaje': 'Suggestions for this message',
+    'Descartar sugerencias': 'Dismiss suggestions',
+    'Descartar (Esc)': 'Dismiss (Esc)',
     'Estado de la cuenta y la configuración': 'Account and configuration status',
     'Este navegador no admite notificaciones.': 'This browser does not support notifications.',
     'Este repo aún no tiene memoria': 'This repo has no memory yet',
@@ -563,6 +585,13 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^Usar /(.+)$', 'Use /$1'],
+    ['^Encargar a @(.+)$', 'Hand to @$1'],
+    ['^Tarea: (.+)$', 'Task: $1'],
+    ['^Solo de este repo \\((.+)\\)\\.$', 'Only this repo ($1).'],
+    ['^(.+) · recomendado$', '$1 · recommended'],
+    ['^(\\d+) modelos disponibles con tu clave\\.$', '$1 models available with your key.'],
+    ['^Clave guardada \\((.+)\\)\\. Pega otra para cambiarla$', 'Saved key ($1). Paste another to change it'],
     ['^(\\d+) ficheros?$', '$1 files'],
     ['^(\\d+) ficheros? · (.+)$', '$1 files · $2'],
     ['^Un agente ha cambiado (\\d+) ficheros? de test$', 'An agent changed $1 test files'],

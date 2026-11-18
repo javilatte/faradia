@@ -68,7 +68,7 @@
 
   // Containers whose content is the user's or an agent's, not the interface's.
   const SKIP =
-    '.msg-text, .task-output, .wiki-body, .wiki-editor, pre, code, textarea, .md, .act-say, .act-think-text, .act-detail, .act-result, .act-note, .todo-text, .task-title, [contenteditable]';
+    '.msg-text, .task-output, .wiki-body, .wiki-editor, pre, code, textarea, .md, .act-say, .act-think-text, .act-detail, .act-result, .act-note, .todo-text, .task-title, .intent-reason, [contenteditable]';
   const ATTRS = ['placeholder', 'title', 'aria-label', 'label'];
 
   function translateNode(node) {

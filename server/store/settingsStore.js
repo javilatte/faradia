@@ -33,6 +33,12 @@ function defaultSettings() {
       claude: { model: 'default', effort: 'high' },
       localAi: { url: '', model: '', authHeader: '' }
     },
+    // Other AI providers. Only in the global layer (never in a repo, where a key could end up
+    // committed). Gemini: a Google AI Studio key and the model picked from the ones it offers.
+    providers: { gemini: { apiKey: '', model: '' } },
+    // Skill/agent suggestions while typing in the chat: 'auto' (Gemini, then the local model, then
+    // Claude Haiku with low effort) or 'off'.
+    suggestions: { mode: 'auto' },
     preferences: {
       instructions: '',
       // Claude Code "deny" patterns, e.g. "Read(**/.env*)" or "Bash(rm -rf *)". Passed to optimia's
@@ -120,6 +126,13 @@ function sanitizeGlobal(raw) {
       clock: CLOCKS.includes(g.ui?.clock) ? g.ui.clock : d.ui.clock
     },
     ai,
+    providers: {
+      gemini: {
+        apiKey: str(g.providers?.gemini?.apiKey).trim(),
+        model: str(g.providers?.gemini?.model).trim()
+      }
+    },
+    suggestions: { mode: ['auto', 'off'].includes(g.suggestions?.mode) ? g.suggestions.mode : d.suggestions.mode },
     preferences: {
       instructions: str(g.preferences?.instructions),
       noGo: strList(g.preferences?.noGo)
@@ -165,8 +178,16 @@ function saveGlobalSettings(patch = {}) {
   next.security = { ...current.security, ...(patch.security || {}) };
   next.wiki = { ...current.wiki, ...(patch.wiki || {}) };
   next.ecc = { ...current.ecc, ...(patch.ecc || {}) };
+  next.providers = { gemini: { ...current.providers.gemini, ...(patch.providers?.gemini || {}) } };
+  next.suggestions = { ...current.suggestions, ...(patch.suggestions || {}) };
   const clean = sanitizeGlobal(next);
   writeJson(globalSettingsPath(), clean);
+  // It may hold API keys.
+  try {
+    fs.chmodSync(globalSettingsPath(), 0o600);
+  } catch {
+    /* not supported here */
+  }
   return clean;
 }
 
@@ -283,6 +304,8 @@ function effectiveFrom(global, project) {
     security: global.security,
     wiki: global.wiki,
     ecc: global.ecc,
+    providers: global.providers,
+    suggestions: global.suggestions,
     preferences: {
       // The repo's instructions are added to those for all repos.
       instructions: [globalInstructions, projectInstructions].filter(Boolean).join('\n\n'),
