@@ -40,6 +40,7 @@ async function applyIntent(i) {
   if (!s) return;
   hideIntent();
   intentDismissed = intentKey(input.value);
+  reportIssue('suggest.accepted', { kind: s.kind, id: s.id, position: i }, 'signal');
   if (s.kind === 'skill') {
     if (!new RegExp(`(^|\\s)/${s.id}(\\s|$)`).test(input.value)) input.value = `/${s.id} ${input.value.trimStart()}`;
     input.dispatchEvent(new Event('input'));
@@ -88,6 +89,7 @@ function renderIntent() {
       close.textContent = '×';
       close.addEventListener('mousedown', (e) => e.preventDefault());
       close.addEventListener('click', () => {
+        reportIssue('suggest.dismissed', { shown: intentItems.map((x) => `${x.kind}:${x.id}`) }, 'signal');
         intentDismissed = intentKey(input.value);
         hideIntent();
       });
@@ -136,6 +138,7 @@ input.addEventListener(
       e.stopImmediatePropagation();
       applyIntent(0);
     } else if (e.key === 'Escape') {
+      reportIssue('suggest.dismissed', { shown: intentItems.map((x) => `${x.kind}:${x.id}`) }, 'signal');
       intentDismissed = intentKey(input.value);
       hideIntent();
     } else if (e.key === 'Enter' && !e.shiftKey) {

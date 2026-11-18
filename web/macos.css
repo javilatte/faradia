@@ -1494,3 +1494,64 @@ body {
 #gemini-pane > .general-actions {
   margin-bottom: 20px;
 }
+
+/* Settings > Registro: problems found, one row per kind. */
+.issue-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-group);
+  background: var(--group-bg);
+  overflow: hidden;
+}
+.issue-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+.issue-row + .issue-row {
+  border-top: 1px solid var(--separator);
+}
+.issue-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.issue-row.error .issue-head code::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--red);
+}
+.issue-row.warn .issue-head code::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--orange);
+}
+.issue-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.issue-when {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.issue-detail {
+  font-size: var(--text-footnote);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

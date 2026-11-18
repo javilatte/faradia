@@ -8,6 +8,7 @@ const knowledge = require('../knowledge/bundle');
 const ecc = require('../ecc/library');
 const { builtinSkills } = require('../skills/library');
 const gemini = require('../ai/gemini');
+const issues = require('../feedback/issues');
 const { sendJson, readJsonBody } = require('./util');
 const pkg = require('../../package.json');
 
@@ -122,6 +123,34 @@ async function handleConfigRoutes(req, res, url) {
           : `No se pudo hablar con Gemini: ${err.message}`
       });
     }
+  }
+  // Problem report (feedback/issues.js).
+  //   GET    /api/issues          {total, groups, signals}
+  //   GET    /api/issues/export   downloads optimia-issues-<date>.json
+  //   POST   /api/issues          {level: 'error'|'signal', event, data} from the page
+  //   DELETE /api/issues          empties it
+  if (p === '/api/issues' && req.method === 'GET') return sendJson(res, 200, issues.summary());
+  if (p === '/api/issues/export' && req.method === 'GET') {
+    const date = new Date().toISOString().slice(0, 10);
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="optimia-issues-${date}.json"`,
+      'Cache-Control': 'no-store'
+    });
+    return res.end(JSON.stringify(issues.exportReport(), null, 2) + '\n');
+  }
+  if (p === '/api/issues' && req.method === 'POST') {
+    const body = await readJsonBody(req).catch(() => ({}));
+    const level = body.level === 'signal' ? 'signal' : 'error';
+    if (typeof body.event !== 'string' || !/^[a-z][a-z0-9_.-]{1,60}$/i.test(body.event)) {
+      return sendJson(res, 400, { error: 'event no válido' });
+    }
+    issues.recordIssue({ level, event: body.event, data: body.data || {}, source: 'web' });
+    return sendJson(res, 200, { ok: true });
+  }
+  if (p === '/api/issues' && req.method === 'DELETE') {
+    issues.clearIssues();
+    return sendJson(res, 200, issues.summary());
   }
   if (p === '/api/update' && req.method === 'GET') {
     const enabled = loadGlobalSettings().updates.check;

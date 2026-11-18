@@ -189,6 +189,8 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       url.pathname.startsWith('/api/knowledge/') ||
       url.pathname === '/api/ecc' ||
       url.pathname.startsWith('/api/providers/') ||
+      url.pathname === '/api/issues' ||
+      url.pathname === '/api/issues/export' ||
       url.pathname === '/api/update'
     ) {
       const handled = await handleConfigRoutes(req, res, url);

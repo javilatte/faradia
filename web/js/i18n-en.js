@@ -221,6 +221,11 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    'Problemas detectados': 'Problems found',
+    'Ningún problema registrado. Si algo falla, aparecerá aquí agrupado por tipo.':
+      'No problems recorded. If something fails, it shows up here grouped by kind.',
+    'Exportar informe…': 'Export report…',
+    Vaciar: 'Clear',
     'El de Ajustes › Gemini': 'The one in Settings › Gemini',
     'Abre Google AI Studio': 'Open Google AI Studio',
     'Entra con tu cuenta de Google.': 'Sign in with your Google account.',
@@ -589,6 +594,14 @@ window.OPTIMIA_I18N_EN = {
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
+    [
+      '^(\\d+) incidencias de (\\d+) tipos, en todos los repos\\. Se guardan solo en este equipo, sin claves ni el texto de tus mensajes\\.$',
+      '$1 issues of $2 kinds, across all repos. Kept only on this computer, without keys or the text of your messages.'
+    ],
+    [
+      '^Sugerencias del chat: (\\d+) aceptadas y (\\d+) descartadas\\.$',
+      'Chat suggestions: $1 accepted and $2 dismissed.'
+    ],
     ['^Gemini · modelo de Ajustes$', 'Gemini · model from Settings'],
     ['^Solo de este repo \\((.+)\\)\\.$', 'Only this repo ($1).'],
     ['^(.+) · recomendado$', '$1 · recommended'],
