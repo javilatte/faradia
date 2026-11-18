@@ -63,9 +63,10 @@ body {
 /* The Optimia logo (Doto, dot-matrix) above the workbench selector. */
 .app-logo {
   display: block;
-  height: 22px;
+  height: 36px;
   width: auto;
-  margin: 2px 4px 10px;
+  max-width: 100%;
+  margin: 4px 4px 14px;
   user-select: none;
   -webkit-user-drag: none;
 }
