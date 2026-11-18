@@ -83,7 +83,23 @@ function textOf(data) {
     .join('');
 }
 
-/** One question, a JSON answer (as text). Thinking off where the model allows it, for speed. */
+/**
+ * The model for quick one-shot calls (suggestions): the newest stable Flash-Lite, which answers in
+ * well under a second, whatever model the user chose for chatting. Big models (Hydrogen, Pro) can
+ * take longer than a suggestion is worth.
+ */
+function fastModel(models) {
+  const ids = models.map((m) => m.id).filter((id) => !/image|tts|audio|preview|exp/i.test(id));
+  const pick = (re) => ids.filter((id) => re.test(id)).sort((a, b) => b.localeCompare(a, 'en', { numeric: true }))[0];
+  return pick(/flash-lite-latest$/) || pick(/flash-lite$/) || pick(/flash-latest$/) || pick(/flash$/) || '';
+}
+
+// Ways to ask for little or no thinking, newest API first: each model accepts only some of them
+// (an unsupported one answers 400 or 403), and a plain request always works.
+const THINKING = [{ thinkingLevel: 'minimal' }, { thinkingBudget: 0 }, null];
+const thinkingWorks = new Map(); // model -> index in THINKING that worked
+
+/** One question, a JSON answer (as text), with as little thinking as the model allows. */
 async function askJson({ apiKey, model, system, user, timeoutMs = 8000, fetcher }) {
   const body = (thinking) => ({
     systemInstruction: { parts: [{ text: system }] },
@@ -92,19 +108,27 @@ async function askJson({ apiKey, model, system, user, timeoutMs = 8000, fetcher 
       temperature: 0,
       maxOutputTokens: 400,
       responseMimeType: 'application/json',
-      ...(thinking ? {} : { thinkingConfig: { thinkingBudget: 0 } })
+      ...(thinking ? { thinkingConfig: thinking } : {})
     }
   });
   const path = `/models/${encodeURIComponent(model)}:generateContent`;
-  try {
-    return textOf(await request(path, { apiKey, method: 'POST', body: body(false), timeoutMs, fetcher }));
-  } catch (err) {
-    // Models that always think reject a zero budget: ask again without it.
-    if (err.status === 400 && /thinking/i.test(err.message)) {
-      return textOf(await request(path, { apiKey, method: 'POST', body: body(true), timeoutMs, fetcher }));
+  const deadline = Date.now() + timeoutMs;
+  let lastError = null;
+  for (let i = thinkingWorks.get(model) ?? 0; i < THINKING.length; i++) {
+    const left = deadline - Date.now();
+    if (left <= 0) break;
+    try {
+      const text = textOf(
+        await request(path, { apiKey, method: 'POST', body: body(THINKING[i]), timeoutMs: left, fetcher })
+      );
+      thinkingWorks.set(model, i);
+      return text;
+    } catch (err) {
+      lastError = err;
+      if (err.status !== 400 && err.status !== 403) throw err;
     }
-    throw err;
   }
+  throw lastError || new GeminiError('Gemini no respondió a tiempo', 504);
 }
 
-module.exports = { BASE, GeminiError, listModels, recommendedModel, askJson, request };
+module.exports = { BASE, GeminiError, listModels, recommendedModel, fastModel, askJson, request };

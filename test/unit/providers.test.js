@@ -259,3 +259,36 @@ test('the recommended Gemini model is Hydrogen when offered, else the newest Fla
     'gemini-3-flash'
   );
 });
+
+test('gemini: suggestions use the newest stable Flash-Lite, not the chat model', () => {
+  const ids = [
+    'gemini-4-hydrogen',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite-image',
+    'gemini-3.6-flash-lite-preview',
+    'gemini-flash-lite-latest'
+  ].map((id) => ({ id }));
+  assert.equal(gemini.fastModel(ids), 'gemini-flash-lite-latest');
+  assert.equal(gemini.fastModel(ids.filter((m) => m.id !== 'gemini-flash-lite-latest')), 'gemini-3.5-flash-lite');
+  assert.equal(gemini.fastModel([{ id: 'gemini-4-hydrogen' }]), '');
+});
+
+test('gemini: askJson tries the thinking options the model accepts and remembers the one that works', async () => {
+  const sent = [];
+  const fetcher = async (url, init) => {
+    const thinking = JSON.parse(init.body).generationConfig.thinkingConfig || null;
+    sent.push(thinking);
+    const ok = thinking === null;
+    const body = ok
+      ? { candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }
+      : { error: { message: 'Request contains an invalid argument.' } };
+    return { ok, status: ok ? 200 : 400, text: async () => JSON.stringify(body) };
+  };
+  const ask = () => gemini.askJson({ apiKey: 'k', model: 'm-only-plain', system: 's', user: 'u', fetcher });
+  assert.equal(await ask(), '{"ok":true}');
+  assert.deepEqual(sent, [{ thinkingLevel: 'minimal' }, { thinkingBudget: 0 }, null]);
+  sent.length = 0;
+  await ask();
+  assert.deepEqual(sent, [null], 'the second call goes straight to what worked');
+});

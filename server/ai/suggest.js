@@ -187,10 +187,23 @@ function parseSuggestions(raw, catalog) {
   return out;
 }
 
+// The fast model of each key, looked up once (listing the models takes a request).
+const fastModels = new Map();
+
+async function suggestionModel(g, fetcher) {
+  const key = crypto.createHash('sha256').update(g.apiKey).digest('hex');
+  if (!fastModels.has(key)) {
+    const models = await gemini.listModels(g.apiKey, { fetcher, timeoutMs: 4000 }).catch(() => []);
+    fastModels.set(key, gemini.fastModel(models) || '');
+  }
+  return fastModels.get(key) || g.model;
+}
+
 async function viaGemini(settings, system, user, { fetcher } = {}) {
   const g = settings.providers?.gemini || {};
   if (!g.apiKey || !g.model) return null;
-  return gemini.askJson({ apiKey: g.apiKey, model: g.model, system, user, timeoutMs: 8000, fetcher });
+  const model = await suggestionModel(g, fetcher);
+  return gemini.askJson({ apiKey: g.apiKey, model, system, user, timeoutMs: 4000, fetcher });
 }
 
 async function viaLocal(settings, system, user, { fetcher = fetch } = {}) {

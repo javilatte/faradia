@@ -109,7 +109,8 @@ async function fetchIntent(text, token) {
     const data = await res.json();
     if (token !== intentToken || intentKey(input.value) !== intentKey(text)) return;
     intentOff = Boolean(data.off);
-    intentItems = data.suggestions || [];
+    // A task type already chosen in "Modo" is not worth proposing.
+    intentItems = (data.suggestions || []).filter((s) => !(s.kind === 'task' && s.id === chatKindSelect.value));
     renderIntent();
   } catch {
     /* no suggestions this time */
@@ -122,7 +123,7 @@ function scheduleIntent() {
   const key = intentKey(text);
   // Changing the message hides the previous chips (they were for another text).
   if (intentItems.length) hideIntent();
-  if (intentOff || chatKindSelect.value !== 'chat') return;
+  if (intentOff) return;
   if (!key || key === intentDismissed || /^[@/]/.test(key) || key.split(' ').length < 4) return;
   const token = ++intentToken;
   intentTimer = setTimeout(() => fetchIntent(text, token), INTENT_DELAY);
@@ -148,9 +149,6 @@ input.addEventListener(
   true
 );
 document.getElementById('send-button').addEventListener('click', hideIntent);
-chatKindSelect.addEventListener('change', () => {
-  if (chatKindSelect.value !== 'chat') hideIntent();
-});
 // Settings may turn suggestions back on.
 window.addEventListener('focus', () => {
   intentOff = false;
