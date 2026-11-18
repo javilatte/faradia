@@ -50,15 +50,56 @@ function segments(command) {
 
 /**
  * The rule a Bash command breaks, or null. `approved` holds exact commands the user allowed.
+ * `canDelete(segment)`: an `rm` the agent may run anyway (see ownFilesOnly).
  */
-function checkCommand(command, approved = []) {
+function checkCommand(command, approved = [], { canDelete } = {}) {
   const exact = String(command || '').trim();
   if (approved.includes(exact)) return null;
   for (const seg of segments(command)) {
     const rule = RULES.find((r) => r.re.test(seg));
+    if (rule?.id === 'delete' && canDelete?.(seg)) continue;
     if (rule) return rule;
   }
   return null;
+}
+
+/**
+ * Whether `rm …` only removes what the agent itself created in its worktree: every target is inside
+ * `cwd`, is not a symbolic link nor reached through one (dependencies linked from the main repo),
+ * and git does not track anything in it. A fresh worktree only has the repo's tracked files, so an
+ * untracked path there was made during the task (an install's package-lock.json, a build folder).
+ * Anything that cannot be checked (globs, variables, quotes, ~) stays blocked.
+ */
+function ownFilesOnly(segment, cwd, { tracked } = {}) {
+  const fs = require('fs');
+  const path = require('path');
+  if (!cwd || /[*?[\]{}$`~"'\\]/.test(segment)) return false;
+  const words = segment.trim().split(/\s+/).slice(1);
+  const targets = words.filter((w) => !w.startsWith('-'));
+  if (!targets.length || words.some((w) => w === '--')) return false;
+  const root = fs.realpathSync(cwd);
+  const isTracked =
+    tracked ||
+    ((rel) => {
+      const { spawnSync } = require('child_process');
+      const res = spawnSync('git', ['ls-files', '--', rel], { cwd: root, encoding: 'utf8' });
+      return res.status !== 0 || res.stdout.trim() !== '';
+    });
+  return targets.every((t) => {
+    if (t.endsWith('/')) return false;
+    const abs = path.resolve(root, t);
+    if (abs === root || !abs.startsWith(root + path.sep)) return false;
+    let st;
+    try {
+      st = fs.lstatSync(abs);
+    } catch {
+      return true; // already gone: nothing to protect
+    }
+    if (st.isSymbolicLink()) return false;
+    // Reached through a symlinked folder: the real path leaves the worktree.
+    if (fs.realpathSync(abs) !== abs) return false;
+    return !isTracked(path.relative(root, abs));
+  });
 }
 
 const DENY_PREFIX = 'optimia-policy';
@@ -131,6 +172,7 @@ const HARD_DENY = [
 ];
 
 module.exports = {
+  ownFilesOnly,
   RULES,
   DENY_PREFIX,
   segments,
