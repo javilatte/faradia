@@ -70,7 +70,8 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
     if (fs.existsSync(projectMcp)) opts.extraMcpConfigPaths = [projectMcp];
   }
 
-  // ECC skills and commands the user enabled (copied to a folder Claude Code reads with --add-dir).
+  // optimia's built-in skills plus the ECC skills and commands the user enabled (copied to a folder
+  // Claude Code reads with --add-dir).
   try {
     const eccDir = prepareActiveDir(settings.ecc || {});
     if (eccDir) opts.addDirs = [eccDir];

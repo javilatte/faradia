@@ -525,8 +525,21 @@ function renderEccField() {
   host.append(body);
   const save = async (patch) => paint(await api.patch('/api/ecc', patch));
   function paint(st) {
+    const builtin = (st.builtin || []).length
+      ? h(
+          'div',
+          { class: 'muted builtin-skills' },
+          'Siempre activas: ',
+          ...st.builtin.flatMap((s, i) => [
+            i ? ', ' : '',
+            h('code', { title: s.description }, `/${s.name}`),
+            ` (${s.credit})`
+          ]),
+          '.'
+        )
+      : '';
     if (!st.available) {
-      body.replaceChildren(h('div', { class: 'muted' }, 'Esta instalación no incluye ECC.'));
+      body.replaceChildren(builtin, h('div', { class: 'muted' }, 'Esta instalación no incluye ECC.'));
       return;
     }
     const on = st.skills.filter((s) => s.enabled);
@@ -559,6 +572,7 @@ function renderEccField() {
     };
     fill();
     body.replaceChildren(
+      builtin,
       h(
         'div',
         { class: 'muted' },

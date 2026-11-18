@@ -181,13 +181,20 @@ async function updateSkillSuggest() {
   const eccSkills = (ecc.skills || [])
     .filter((s) => s.enabled)
     .map((s) => ({ slug: s.name, name: s.name, description: s.description, source: 'ecc' }));
-  const all = [...skills.map((s) => ({ ...s, source: 'project' })), ...eccSkills, ...CLAUDE_COMMANDS];
+  const builtinSkills = (ecc.builtin || []).map((s) => ({
+    slug: s.name,
+    name: s.name,
+    description: s.description,
+    source: 'builtin'
+  }));
+  const all = [...skills.map((s) => ({ ...s, source: 'project' })), ...builtinSkills, ...eccSkills, ...CLAUDE_COMMANDS];
   const matches = all
     .filter((s) => s.slug.includes(q) || (s.name || '').toLowerCase().includes(q))
     .sort(
       (a, b) =>
         Number(!a.slug.startsWith(q)) - Number(!b.slug.startsWith(q)) ||
-        ({ project: 0, ecc: 1, claude: 2 }[a.source] ?? 3) - ({ project: 0, ecc: 1, claude: 2 }[b.source] ?? 3) ||
+        ({ project: 0, builtin: 1, ecc: 2, claude: 3 }[a.source] ?? 4) -
+          ({ project: 0, builtin: 1, ecc: 2, claude: 3 }[b.source] ?? 4) ||
         a.slug.localeCompare(b.slug)
     )
     .slice(0, 12);

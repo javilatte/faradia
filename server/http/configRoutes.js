@@ -6,6 +6,7 @@ const { loadGlobalSettings, saveGlobalSettings } = require('../store/settingsSto
 const { sandboxStatus } = require('../bridge/sandbox');
 const knowledge = require('../knowledge/bundle');
 const ecc = require('../ecc/library');
+const { builtinSkills } = require('../skills/library');
 const { sendJson, readJsonBody } = require('./util');
 const pkg = require('../../package.json');
 
@@ -100,7 +101,8 @@ async function handleConfigRoutes(req, res, url) {
       defaults: ecc.DEFAULT_SKILLS,
       skills: ecc.eccSkills().map((s) => ({ ...s, enabled: enabled.has(s.name) })),
       commands: { count: ecc.eccCommands().length, enabled: sel.commands },
-      agents: ecc.eccAgents().length
+      agents: ecc.eccAgents().length,
+      builtin: builtinSkills().map((s) => ({ name: s.name, description: s.description, credit: s.credit }))
     });
   }
   if (p === '/api/update' && req.method === 'GET') {

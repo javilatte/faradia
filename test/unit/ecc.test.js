@@ -57,7 +57,13 @@ test('enabled ECC skills reach every session through --add-dir; none, no folder'
   assert.ok(fs.existsSync(path.join(dir, '.claude', 'skills', 'tdd-workflow', 'SKILL.md')));
   assert.ok(!fs.existsSync(path.join(dir, '.claude', 'skills', 'no-existe')));
   assert.ok(fs.readdirSync(path.join(dir, '.claude', 'commands')).length > 50);
-  assert.equal(ecc.prepareActiveDir({ skills: [], commands: false }), null);
+  const only = ecc.prepareActiveDir({ skills: [], commands: false });
+  assert.deepEqual(fs.readdirSync(path.join(only, '.claude', 'skills')).sort(), [
+    'frontend-craft',
+    'plan-optimizer',
+    'security-audit',
+    'unslop'
+  ]);
 
   const settings = defaultSettings();
   settings.ecc = { skills: ['tdd-workflow'], commands: false };
@@ -65,4 +71,28 @@ test('enabled ECC skills reach every session through --add-dir; none, no folder'
   t.after(() => rmTmpDir(repo));
   assert.equal(buildSessionOptions(settings, repo).addDirs[0], dir);
   assert.ok(!fs.existsSync(path.join(dir, '.claude', 'commands')), 'rebuilt when the selection changes');
+});
+
+test("optimia's built-in skills always reach the sessions, unslop with its license", (t) => {
+  const data = mkTmpDir('builtin-data');
+  const prev = process.env.XDG_DATA_HOME;
+  process.env.XDG_DATA_HOME = data;
+  t.after(() => {
+    process.env.XDG_DATA_HOME = prev;
+    rmTmpDir(data);
+  });
+  const { builtinSkills } = require('../../server/skills/library');
+  assert.deepEqual(
+    builtinSkills().map((s) => s.name),
+    ['frontend-craft', 'plan-optimizer', 'security-audit', 'unslop']
+  );
+  assert.match(builtinSkills()[1].description, /^Iteratively optimize a plan/);
+  assert.match(builtinSkills()[0].description, /Skeleton|skeletons/);
+  const dir = ecc.prepareActiveDir({ skills: [] });
+  const unslop = path.join(dir, '.claude', 'skills', 'unslop');
+  assert.ok(fs.existsSync(path.join(unslop, 'SKILL.md')));
+  assert.match(fs.readFileSync(path.join(unslop, 'LICENSE'), 'utf8'), /Attribution 4\.0/);
+  assert.match(fs.readFileSync(path.join(unslop, 'SOURCE.md'), 'utf8'), /Damir Sokolovsky/);
+  assert.ok(fs.existsSync(path.join(dir, '.claude', 'skills', 'frontend-craft', 'SKILL.md')));
+  assert.match(fs.readFileSync(path.join(dir, '.claude', 'skills', 'security-audit', 'LICENSE'), 'utf8'), /Cloudflare/);
 });

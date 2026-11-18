@@ -220,6 +220,7 @@ window.OPTIMIA_I18N_EN = {
     'Espera a que terminen de subirse los adjuntos.': 'Wait for the attachments to finish uploading.',
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
+    'Siempre activas:': 'Always on:',
     'Estado de la cuenta y la configuración': 'Account and configuration status',
     'Este navegador no admite notificaciones.': 'This browser does not support notifications.',
     'Este repo aún no tiene memoria': 'This repo has no memory yet',
