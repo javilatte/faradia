@@ -137,7 +137,7 @@ const NEWS = [
       {
         icon: 'list',
         title: 'Skills de serie',
-        text: 'frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.'
+        text: 'ponytail (la solución más simple que funcione), frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.'
       }
     ]
   }

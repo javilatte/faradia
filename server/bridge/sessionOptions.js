@@ -15,6 +15,13 @@ usuario (por ejemplo tras usar la skill plan-optimizer), nunca para un pedido va
 una exploracion. Cada tarea creada arranca un agente independiente en su propio worktree; dale una
 instruccion autocontenida (el agente no vera el resto de esta conversacion).`;
 
+// For every session: fewer round trips, so tasks take less time.
+const WORK_PACE_PROMPT = `## Ritmo de trabajo
+Lee en paralelo (en un mismo turno) todos los ficheros y búsquedas que necesites. Cuando ya sepas qué
+cambiar, haz todos los cambios seguidos: lanza en el mismo turno todas las ediciones independientes
+(varias llamadas a herramientas a la vez), sin releer ni comentar entre una y otra. Comprueba el
+resultado una sola vez al final (tests, build o lint), no tras cada edición.`;
+
 function taskProgressPrompt(taskId) {
   return `## Reportar progreso de esta tarea
 Esta sesion corresponde a la tarea con id "${taskId}". Dispones de la tool MCP "update_task_progress"
@@ -94,6 +101,7 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const parts = [];
   if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);
+  parts.push(WORK_PACE_PROMPT);
   // Workflow instructions shared by all repos and then this repo's (which win if they contradict
   // the shared ones).
   const prefs = settings.preferences || {};

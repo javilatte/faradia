@@ -18,7 +18,10 @@ test('buildSessionOptions: claude mode, no instructions/memory -> only where the
 
   assert.equal(opts.projectRoot, dir);
   // Only where the wikis are (read on demand), and their folder reachable with --add-dir.
-  assert.match(opts.systemPrompt, /^## Wikis\nLa wiki de este proyecto está en .*Consúltalas con Read o Grep/s);
+  assert.match(
+    opts.systemPrompt,
+    /^## Ritmo de trabajo\n.*todos los cambios seguidos.*\n\n## Wikis\nLa wiki de este proyecto está en .*Consúltalas con Read o Grep/s
+  );
   assert.ok(opts.addDirs.some((d) => d.endsWith('wikis')));
   assert.equal(opts.model, undefined); // 'default' is not a real model name, dropped
   assert.equal(opts.effort, 'high');

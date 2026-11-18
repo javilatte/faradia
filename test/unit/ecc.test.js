@@ -61,6 +61,10 @@ test('enabled ECC skills reach every session through --add-dir; none, no folder'
   assert.deepEqual(fs.readdirSync(path.join(only, '.claude', 'skills')).sort(), [
     'frontend-craft',
     'plan-optimizer',
+    'ponytail',
+    'ponytail-audit',
+    'ponytail-debt',
+    'ponytail-review',
     'security-audit',
     'unslop'
   ]);
@@ -84,7 +88,16 @@ test("optimia's built-in skills always reach the sessions, unslop with its licen
   const { builtinSkills } = require('../../server/skills/library');
   assert.deepEqual(
     builtinSkills().map((s) => s.name),
-    ['frontend-craft', 'plan-optimizer', 'security-audit', 'unslop']
+    [
+      'frontend-craft',
+      'plan-optimizer',
+      'ponytail',
+      'ponytail-audit',
+      'ponytail-debt',
+      'ponytail-review',
+      'security-audit',
+      'unslop'
+    ]
   );
   assert.match(builtinSkills()[1].description, /^Iteratively optimize a plan/);
   assert.match(builtinSkills()[0].description, /Skeleton|skeletons/);

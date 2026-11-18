@@ -6,8 +6,8 @@ const path = require('path');
 // Skills optimia always gives to the chat and to every agent, on top of the ECC ones the user picks:
 //   - optimia's own, in server/skills/<name> (frontend-craft).
 //   - third-party ones bundled unmodified in vendor/skills/<name> by scripts/vendor-skill.sh (unslop,
-//     security-audit, plan-optimizer). Each folder carries its LICENSE and a SOURCE.md with the
-//     attribution, and both travel with the copy sessions read.
+//     security-audit, plan-optimizer, ponytail and three of its companions). Each folder carries
+//     its LICENSE and a SOURCE.md with the attribution, and both travel with the copy sessions read.
 
 const OWN = __dirname;
 const VENDORED = path.join(__dirname, '..', '..', 'vendor', 'skills');
@@ -16,7 +16,11 @@ const CREDITS = {
   'frontend-craft': 'optimia',
   unslop: 'Damir Sokolovsky · CC BY 4.0',
   'security-audit': 'Cloudflare · MIT',
-  'plan-optimizer': 'Sean Geng · MIT'
+  'plan-optimizer': 'Sean Geng · MIT',
+  ponytail: 'Dietrich Gebert · MIT',
+  'ponytail-review': 'Dietrich Gebert · MIT',
+  'ponytail-audit': 'Dietrich Gebert · MIT',
+  'ponytail-debt': 'Dietrich Gebert · MIT'
 };
 
 function frontmatterDescription(file) {

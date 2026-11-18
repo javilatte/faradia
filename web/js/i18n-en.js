@@ -288,8 +288,8 @@ window.OPTIMIA_I18N_EN = {
     'Cuando el agente necesita permiso, lo pide con una tarjeta en la conversación. En modo automático solo pregunta lo arriesgado.':
       'When the agent needs permission, it asks with a card in the conversation. In automatic mode it only asks what is risky.',
     'Skills de serie': 'Skills built in',
-    'frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.':
-      'frontend-craft, unslop, security-audit and plan-optimizer come on for the chat and the agents. You will find them in Settings › Skills.',
+    'ponytail (la solución más simple que funcione), frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.':
+      'ponytail (the simplest solution that works), frontend-craft, unslop, security-audit and plan-optimizer come on for the chat and the agents. You will find them in Settings › Skills.',
     'Permisos en el chat': 'Permissions in the chat',
     'Automático: pregunta solo lo arriesgado': 'Automatic: asks only what is risky',
     'Preguntar todo salvo lo de solo lectura': 'Ask everything except read-only',
