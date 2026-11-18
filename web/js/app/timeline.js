@@ -87,7 +87,11 @@ function dayLabel(iso) {
   const yesterday = new Date(Date.now() - 86400000);
   if (d.toDateString() === today.toDateString()) return 'Hoy';
   if (d.toDateString() === yesterday.toDateString()) return 'Ayer';
-  return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  return d.toLocaleDateString(window.optimiaLang?.locale || 'es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
 }
 
 function pathLink(e, p) {
@@ -187,7 +191,10 @@ function renderFeed() {
         h(
           'time',
           { datetime: e.at },
-          new Date(e.at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+          new Date(e.at).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
         ),
         h('span', { class: 'tl-kind' }, KIND_ONE[e.kind] || e.kind),
         h('span', { class: 'tl-repo' }, e.name || ''),
@@ -325,7 +332,7 @@ function renderHistory() {
               'span',
               { class: 'muted tl-commit-meta' },
               h('code', {}, c.short),
-              ` · ${c.author} · ${new Date(c.date).toLocaleDateString('es-ES')} · `,
+              ` · ${c.author} · ${new Date(c.date).toLocaleDateString(window.optimiaLang?.locale || 'es-ES')} · `,
               h('span', { class: 'add' }, `+${c.added}`),
               ' ',
               h('span', { class: 'del' }, `−${c.removed}`)

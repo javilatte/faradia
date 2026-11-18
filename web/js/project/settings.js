@@ -491,7 +491,7 @@ function renderLogPane() {
     row.className = `log-row ${e.level || 'info'}`;
     const time = document.createElement('span');
     time.className = 'log-time';
-    time.textContent = new Date(e.ts).toLocaleTimeString('es-ES');
+    time.textContent = new Date(e.ts).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES');
     const event = document.createElement('span');
     event.className = 'log-event';
     event.textContent = e.event;

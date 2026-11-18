@@ -25,6 +25,8 @@
   const lang = resolve(choice());
   window.optimiaLang = {
     current: lang,
+    // Locale for dates and numbers, in the interface's language.
+    locale: lang === 'en' ? 'en-US' : 'es-ES',
     choice: choice(),
     set(pref) {
       try {
@@ -66,7 +68,7 @@
 
   // Containers whose content is the user's or an agent's, not the interface's.
   const SKIP =
-    '.msg-text, .task-output, .wiki-body, .wiki-editor, pre, code, textarea, .task-log, .md, [contenteditable]';
+    '.msg-text, .task-output, .wiki-body, .wiki-editor, pre, code, textarea, .md, .act-say, .act-think-text, .act-detail, .act-result, .act-note, .todo-text, .task-title, [contenteditable]';
   const ATTRS = ['placeholder', 'title', 'aria-label', 'label'];
 
   function translateNode(node) {

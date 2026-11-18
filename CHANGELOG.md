@@ -2,6 +2,21 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.2.0] - 2026-11-18
+
+### Added
+- **Live agent activity**: every task card shows, as it happens, what the agent says it is doing, the files it reads, its edits (+/−), the commands it runs with their result (test summaries included), its to-do list, how much it is thinking, blocked actions and the end of each stage. The full feed stays a click away.
+- **Generate the wiki from the repository**: a button in the Wiki view has the librarian agent explore the repo and write linked pages (architecture, modules, flows, data, API, development, glossary), shown live while it writes.
+- Task worktrees reuse the dependencies already installed in the repo (`node_modules`, `.venv`, `vendor/bundle`), so the agents can build and run the tests without reinstalling. The link never ends up in a commit.
+- A one-minute 4K video filmed from real agent runs, with its own synthesised soundtrack, and an animated demo at the top of the README.
+
+### Changed
+- Agents write in the language of your request (narration, reports, questions, commit and PR texts), and the wiki in the interface's language.
+
+### Fixed
+- The Changes view lists an agent's worktree as soon as the agent starts, without reloading.
+- English interface: dates, optimia's chat notices and the Changes view were still in Spanish.
+
 ## [2.1.1] - 2026-11-17
 
 ### Added

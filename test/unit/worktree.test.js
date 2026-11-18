@@ -243,3 +243,24 @@ test('commitTaskWorktree respects .gitignore except for ticked files, and ignore
   assert.equal(git('show', '--name-only', '--format=', sha), 'a.js');
   assert.equal(fs.existsSync(path.join(dir, '.claude')), false);
 });
+
+test('createTaskWorktree: links the installed dependencies, keeps them out of git and never deletes them', (t) => {
+  const dir = mkTmpDir('worktree-deps');
+  t.after(() => rmTmpDir(dir));
+  initGitRepo(dir);
+  fs.writeFileSync(path.join(dir, '.gitignore'), 'node_modules/\n');
+  execFileSync('git', ['add', '.gitignore'], { cwd: dir });
+  execFileSync('git', ['commit', '-q', '-m', 'ignore'], { cwd: dir });
+  fs.mkdirSync(path.join(dir, 'node_modules', 'left-pad'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'node_modules', 'left-pad', 'index.js'), 'module.exports = 1;\n');
+
+  const { dir: wt, branch } = createTaskWorktree(dir, 'task-deps');
+  const link = path.join(wt, 'node_modules');
+  assert.ok(fs.lstatSync(link).isSymbolicLink());
+  assert.ok(fs.existsSync(path.join(link, 'left-pad', 'index.js')));
+  // "node_modules/" does not match a symlink: the link must not show up as a change.
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: wt, encoding: 'utf8' }), '');
+
+  removeTaskWorktree(dir, { worktreePath: wt, branch });
+  assert.ok(fs.existsSync(path.join(dir, 'node_modules', 'left-pad', 'index.js')));
+});

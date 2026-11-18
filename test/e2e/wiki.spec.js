@@ -22,6 +22,8 @@ test('wiki: create pages linked with [[...]], follow a link, search and see the 
 
   // The index links to it; following the link opens it, and it lists its backlinks.
   await page.locator('.wiki-tree').getByRole('button', { name: 'demo' }).click();
+  // Wait for the index to load: editing before that would edit the page still on screen.
+  await expect(page.locator('.wiki-page-actions')).toContainText('index.md');
   await page.getByRole('button', { name: 'Editar' }).click();
   await page.locator('.wiki-editor').fill('# demo\n\n- [[Despliegue]]\n');
   await page.getByRole('button', { name: 'Guardar' }).click();

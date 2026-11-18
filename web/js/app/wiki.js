@@ -20,6 +20,9 @@ let data = { wiki: null, pages: [] };
 let page = null;
 let results = null;
 let searchTimer = null;
+// Project wikis being written from their repo by the wiki agent: projectId -> {running, error, pages}.
+const builds = new Map();
+let reloadTimer = null;
 
 const params = () => {
   const q = new URLSearchParams({ scope: sel.scope });
@@ -189,8 +192,64 @@ function header() {
       'span',
       { class: 'muted wiki-count' },
       `${data.wiki?.title || ''} · ${data.pages.length} ${data.pages.length === 1 ? 'página' : 'páginas'}`
-    )
+    ),
+    sel.scope === 'project'
+      ? h(
+          'button',
+          {
+            type: 'button',
+            class: 'wiki-build-btn',
+            disabled: Boolean(builds.get(currentProjectId())?.running),
+            title: 'El agente bibliotecario lee el repositorio y escribe o completa la wiki',
+            onclick: startBuild
+          },
+          builds.get(currentProjectId())?.running ? 'Generando…' : 'Generar desde el repo'
+        )
+      : null
   );
+}
+
+async function startBuild() {
+  const projectId = currentProjectId();
+  try {
+    builds.set(projectId, { running: true });
+    window.clearActivity?.(`wiki:${projectId}`);
+    render();
+    await api.post('/api/wiki/build', { projectId, lang: window.optimiaLang?.current || 'es' });
+  } catch (err) {
+    builds.delete(projectId);
+    render();
+    toast(err.message, { kind: 'error' });
+  }
+}
+
+// What the wiki agent is doing while it writes the wiki (the same feed as the task cards).
+function buildPanel() {
+  const projectId = currentProjectId();
+  const state = builds.get(projectId);
+  if (sel.scope !== 'project' || !state) return null;
+  const head = state.running
+    ? 'El bibliotecario está escribiendo la wiki a partir del repositorio'
+    : state.error
+      ? `No se pudo generar la wiki: ${state.error}`
+      : `Wiki generada: ${state.pages?.length || 0} páginas escritas o actualizadas`;
+  const panel = h(
+    'div',
+    { class: 'wiki-build' + (state.running ? ' running' : '') },
+    h('div', { class: 'wiki-build-head' }, head)
+  );
+  if (state.running && typeof window.renderActivity === 'function') {
+    panel.append(window.renderActivity(`wiki:${projectId}`, { live: true }));
+  }
+  return panel;
+}
+
+function repaintBuildPanel() {
+  const old = root?.querySelector('.wiki-build');
+  const next = buildPanel();
+  if (old && next) old.replaceWith(next);
+  else if (!old && next) root?.querySelector('.wiki-header')?.after(next);
+  else if (old) old.remove();
 }
 
 async function runSearch() {
@@ -466,7 +525,11 @@ function render() {
   if (!root) return;
   clear(root);
   const main = results ? searchResults() : sel.mode === 'map' ? mapView() : pageView();
-  root.append(header(), h('div', { class: 'wiki-layout' }, tree(), h('div', { class: 'wiki-main' }, main)));
+  root.append(
+    header(),
+    buildPanel() || '',
+    h('div', { class: 'wiki-layout' }, tree(), h('div', { class: 'wiki-main' }, main))
+  );
 }
 
 registerView('wiki', {
@@ -485,6 +548,20 @@ registerView('wiki', {
 // Live: the agent (or another window) changed the wiki shown here.
 on('wiki_changed', () => {
   if (root && !root.hidden && sel.mode !== 'edit') load().catch(() => {});
+});
+on('wiki_build', (msg) => {
+  builds.set(msg.projectId, { running: msg.state === 'running', error: msg.error, pages: msg.pages });
+  if (root && !root.hidden) render();
+});
+on('wiki_build_event', (msg) => {
+  window.recordActivity?.(`wiki:${msg.projectId}`, msg.event);
+  if (!root || root.hidden || msg.projectId !== currentProjectId()) return;
+  repaintBuildPanel();
+  // A page was just written: show it without waiting for the end.
+  if (msg.event.type === 'user' && sel.scope === 'project' && sel.mode !== 'edit') {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => load().catch(() => {}), 400);
+  }
 });
 window.addEventListener('optimia:project-changed', () => {
   if (sel.scope !== 'project') return;

@@ -374,3 +374,27 @@ test('describe stage: keeps the report on the card and stores the description by
   const empty = decideAfterStage(task, 'describe', { text: '', describeTarget: 'jira' });
   assert.match(empty.patch.error, /no devolvió/);
 });
+
+test('requestLanguage and the stage prompt: agents are told to write in the language of the request', () => {
+  const { requestLanguage, buildStagePrompt } = require('../../server/bridge/taskStages');
+  assert.equal(requestLanguage('Fix the failing auth tests and make all the suites pass'), 'en');
+  assert.equal(requestLanguage('Arregla los tests de login que fallan en la API'), 'es');
+  const en = buildStagePrompt(
+    {
+      type: 'coding',
+      title: 'Add rate limiting',
+      instruction: 'Limit the login to 5 attempts per minute and add tests for it.'
+    },
+    'plan'
+  );
+  assert.match(en, /^LANGUAGE: the user's request is in English/);
+  const es = buildStagePrompt(
+    {
+      type: 'coding',
+      title: 'Límite de intentos',
+      instruction: 'Limita el login a 5 intentos por minuto y añade los tests.'
+    },
+    'plan'
+  );
+  assert.match(es, /^Idioma: escribe todo/);
+});

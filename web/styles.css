@@ -1529,16 +1529,255 @@ select,
 .task-file-name:hover {
   text-decoration: underline;
 }
-.task-log {
-  max-height: 180px;
-  overflow-y: auto;
-  margin: 0;
-  padding: 8px;
+/* Live agent activity (activity.js) */
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 6px 0 2px;
+  padding: 8px 10px;
   border-radius: 8px;
-  background: var(--panel-border);
+  background: var(--group-bg);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.activity-feed.full {
+  max-height: 420px;
+  overflow-y: auto;
+}
+.act-empty {
+  color: var(--tertiary-label);
+}
+.act-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+}
+.act-row.fresh {
+  animation: act-in 0.28s ease-out;
+}
+@keyframes act-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.act-glyph {
+  width: 8px;
+  height: 8px;
+  margin: 5px 0 0 3px;
+  border-radius: 50%;
+  background: var(--quaternary-label);
+}
+.act-body {
+  min-width: 0;
+}
+.act-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 4px;
+  margin-top: 2px;
+  border-top: 1px solid var(--separator);
   font-size: 11px;
-  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+.act-stage:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+.act-stage-name {
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--label);
+}
+.act-stage-agent,
+.act-count {
+  color: var(--tertiary-label);
+  font-variant-numeric: tabular-nums;
+}
+.act-think .act-glyph {
+  background: var(--purple);
+}
+.act-think.live .act-glyph {
+  animation: orb-pulse 1.1s ease-in-out infinite;
+}
+.act-think-head {
+  display: flex;
+  gap: 8px;
+  color: var(--purple);
+  font-weight: 500;
+}
+.act-think-text {
+  color: var(--secondary-label);
+  font-style: italic;
   white-space: pre-wrap;
+}
+.act-say .act-glyph {
+  border-radius: 2px;
+  background: var(--accent);
+}
+.act-say-text {
+  color: var(--label);
+}
+.act-say-text.clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.act-progress .act-glyph {
+  border-radius: 2px;
+  background: var(--green);
+}
+.act-progress .act-body {
+  display: flex;
+  gap: 6px;
+  color: var(--secondary-label);
+}
+.act-phase {
+  color: var(--label);
+}
+.act-say-text p {
+  margin: 0 0 4px;
+}
+.act-say-text p:last-child {
+  margin-bottom: 0;
+}
+.act-tool-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.act-verb {
+  flex: none;
+  min-width: 52px;
+  color: var(--secondary-label);
+  font-weight: 500;
+}
+.act-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--label);
+  background: none;
+  padding: 0;
+}
+.act-add,
+.act-del {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.act-add {
+  color: var(--green-text, var(--green));
+}
+.act-del {
+  color: var(--red);
+}
+.act-result,
+.act-note {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tertiary-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.act-tool.status-running .act-glyph {
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-right-color: transparent;
+  animation: act-spin 0.8s linear infinite;
+}
+@keyframes act-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.act-tool.status-ok .act-glyph {
+  background: var(--green);
+}
+.act-tool.status-error .act-glyph,
+.act-blocked .act-glyph {
+  background: var(--red);
+}
+.act-tool.status-error .act-result,
+.act-blocked .act-body {
+  color: var(--red);
+}
+.act-tool.tool-edit .act-verb,
+.act-tool.tool-multiedit .act-verb,
+.act-tool.tool-write .act-verb {
+  color: var(--accent);
+}
+.act-todo .act-glyph {
+  border-radius: 2px;
+  background: var(--orange);
+}
+.act-todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.act-todo-list li {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  color: var(--secondary-label);
+}
+.todo-box {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--tertiary-label);
+  border-radius: 3px;
+  transform: translateY(1px);
+}
+.todo-in_progress {
+  color: var(--label);
+  font-weight: 500;
+}
+.todo-in_progress .todo-box {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.todo-completed .todo-text {
+  text-decoration: line-through;
+  color: var(--tertiary-label);
+}
+.todo-completed .todo-box {
+  border-color: var(--green);
+  background: var(--green);
+}
+.act-end {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 500;
+}
+.act-end.failed {
+  color: var(--red);
+}
+@media (prefers-reduced-motion: reduce) {
+  .act-row.fresh,
+  .act-think.live .act-glyph,
+  .act-tool.status-running .act-glyph {
+    animation: none;
+  }
 }
 .file-preview-overlay {
   position: fixed;
@@ -1625,7 +1864,7 @@ select,
 
 .task-output,
 .task-permission,
-.task-log,
+.activity-feed,
 .task-meta {
   overflow-wrap: anywhere;
   min-width: 0;

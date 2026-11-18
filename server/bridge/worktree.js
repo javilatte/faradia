@@ -12,6 +12,42 @@ function git(projectRoot, args) {
   return execFileSync('git', args, { cwd: projectRoot, encoding: 'utf8' }).trim();
 }
 
+// Installed dependencies the worktree reuses from the main checkout, so the agents can build and run
+// the tests without installing everything again (a fresh worktree only has the tracked files).
+const DEPENDENCY_DIRS = ['node_modules', '.venv', 'venv', 'vendor/bundle'];
+
+function linkDependencies(projectRoot, dir) {
+  const linked = [];
+  for (const rel of DEPENDENCY_DIRS) {
+    const source = path.join(projectRoot, rel);
+    const target = path.join(dir, rel);
+    try {
+      if (!fs.statSync(source).isDirectory() || fs.existsSync(target)) continue;
+      // Only folders git ignores: a tracked vendor folder is already in the worktree.
+      if (spawnSync('git', ['check-ignore', '-q', rel], { cwd: projectRoot }).status !== 0) continue;
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.symlinkSync(source, target, 'dir');
+      // "node_modules/" in .gitignore does not match a symlink: keep the link out of the task's commit.
+      if (spawnSync('git', ['check-ignore', '-q', rel], { cwd: dir }).status !== 0) {
+        const exclude = path.join(
+          git(dir, ['rev-parse', '--path-format=absolute', '--git-common-dir']),
+          'info',
+          'exclude'
+        );
+        const current = fs.existsSync(exclude) ? fs.readFileSync(exclude, 'utf8') : '';
+        if (!current.split('\n').includes(`/${rel}`)) {
+          fs.mkdirSync(path.dirname(exclude), { recursive: true });
+          fs.appendFileSync(exclude, `${current && !current.endsWith('\n') ? '\n' : ''}/${rel}\n`);
+        }
+      }
+      linked.push(rel);
+    } catch {
+      /* not there, or the link could not be made: the agent installs what it needs */
+    }
+  }
+  return linked;
+}
+
 /**
  * One git worktree + branch per task, so concurrent task sessions never
  * collide on uncommitted changes in the main checkout. Branches off whatever
@@ -23,10 +59,12 @@ function createTaskWorktree(projectRoot, taskId, { baseRef, branchName, existing
   if (existingBranch) {
     // A branch shared by several tasks: the task continues where the previous one left it.
     git(projectRoot, ['worktree', 'add', dir, branch]);
+    linkDependencies(projectRoot, dir);
     return { dir, branch };
   }
   const base = baseRef || git(projectRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
   git(projectRoot, ['worktree', 'add', '-b', branch, dir, base]);
+  linkDependencies(projectRoot, dir);
   // The session's permissions come with --settings (.optimia/claude-settings-agents.json): nothing
   // is copied into the worktree, where it would end up in the task's commit.
   return { dir, branch };
@@ -191,6 +229,7 @@ function changedFiles(dir) {
 }
 
 module.exports = {
+  linkDependencies,
   worktreeOfBranch,
   worktreeDir,
   createTaskWorktree,

@@ -91,6 +91,13 @@ test('a forbidden action does not stop the stage: the agent goes on and the card
   const task = tasks.find((t) => t.title.startsWith('Limpiar temporales'));
   expect(task.blockedCommands.map((b) => b.command)).toEqual(['rm -rf /tmp/e2e-basura']);
   expect(task.error).toBeNull();
+  // The activity feed tells the story: each stage, the command it tried, the denial, the stage end.
+  await card.getByRole('button', { name: 'Ver actividad del agente' }).click();
+  const feed = card.locator('.activity-feed.full');
+  await expect(feed.locator('.act-stage')).toHaveCount(3);
+  await expect(feed.locator('.act-tool.tool-bash .act-detail')).toHaveText('rm -rf /tmp/e2e-basura');
+  await expect(feed.locator('.act-blocked')).toContainText('Bloqueado por seguridad: Bash');
+  await expect(feed.locator('.act-end')).toHaveCount(3);
   expect(errors).toEqual([]);
 });
 

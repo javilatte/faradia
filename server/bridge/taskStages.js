@@ -310,8 +310,41 @@ function parseDescription(text, target) {
 const AUTONOMY_RULE =
   'Trabaja de forma autónoma: decide tú los detalles razonables y anótalos en tu respuesta. Para solo si falta concreción o contexto que no puedas deducir del repo. Si una acción queda bloqueada por seguridad, no te detengas: sigue por otro camino y, si era imprescindible, di al final qué necesitabas y para qué (el usuario puede permitirla desde la tarjeta).';
 
+// optimia's instructions are in Spanish; the user's request may not be. Agents follow the language
+// of the prompt around them, so the request's language is detected and stated explicitly, in it.
+const ES_WORDS = new Set(
+  'de la que el en los las del para con una por como pero más este esta sin hay cuando todo también ya muy son al lo se no si sus le ha'.split(
+    ' '
+  )
+);
+const EN_WORDS = new Set(
+  'the and to of in for with is it that on are be this as by an at from or not have all must should when which'.split(
+    ' '
+  )
+);
+
+function requestLanguage(text) {
+  let es = 0;
+  let en = 0;
+  for (const word of String(text || '')
+    .toLowerCase()
+    .match(/[a-záéíóúñü]+/g) || []) {
+    if (ES_WORDS.has(word)) es++;
+    if (EN_WORDS.has(word)) en++;
+  }
+  return en > es ? 'en' : 'es';
+}
+
+function languageRule(task) {
+  return requestLanguage(`${task.title || ''}\n${task.instruction || ''}`) === 'en'
+    ? "LANGUAGE: the user's request is in English. Write everything you produce in English: what you say while you work, your report, your questions, commit messages and pull request texts. These instructions are in Spanish only because they are optimia's."
+    : 'Idioma: escribe todo lo que produzcas (lo que cuentas mientras trabajas, el informe, las preguntas, los mensajes de commit y de PR) en español, el idioma del encargo.';
+}
+
 function buildStagePrompt(task, stage, opts = {}) {
-  return `${buildStageBody(task, stage, opts)}\n\n${AUTONOMY_RULE}\n\n${SHELL_RULE}`;
+  const language = languageRule(task);
+  // First and last: the language is what agents most easily drift from in a long Spanish prompt.
+  return `${language}\n\n${buildStageBody(task, stage, opts)}\n\n${AUTONOMY_RULE}\n\n${language}\n\n${SHELL_RULE}`;
 }
 
 // What the previous stage wrote and the implementation stage needs.
@@ -566,6 +599,7 @@ function decideAfterStage(
 }
 
 module.exports = {
+  requestLanguage,
   DESCRIBE_TARGETS,
   parseDescription,
   parseCommitSuggestion,

@@ -1130,6 +1130,24 @@ body {
   padding: 10px 16px;
   border-bottom: 1px solid var(--separator);
 }
+.wiki-build {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 16px 10px;
+  border-bottom: 1px solid var(--separator);
+}
+.wiki-build-head {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--secondary-label);
+}
+.wiki-build.running .wiki-build-head {
+  color: var(--purple);
+}
+.wiki-build .activity-feed {
+  margin: 0;
+}
 .wiki-search {
   flex: 1;
   min-width: 160px;
