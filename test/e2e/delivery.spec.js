@@ -52,6 +52,10 @@ test('with a GitHub remote: PR and Jira descriptions are drafted by the agent an
   try {
     await openProject(page);
     const card = await readyTask(page, 'Tarea con PR');
+    // Before the commit the PR can already be drafted; creating it waits for the commit.
+    await expect(card.getByRole('tab', { name: 'Pull request' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Crear PR' })).toBeDisabled();
+    await expect(card).toContainText('se crea después del commit');
     await card.getByRole('button', { name: 'Commit', exact: true }).click();
     await expect(card.getByRole('tab', { name: 'Pull request' })).toHaveAttribute('aria-selected', 'true');
     // With a remote the PR is the main way out; merging locally (no PR, no push) stays possible.

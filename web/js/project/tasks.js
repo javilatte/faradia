@@ -662,12 +662,15 @@ function renderCommitAndMerge(taskId, task) {
   box.className = 'task-workspace';
   if (!task.lastCommit || task.uncommitted) {
     box.appendChild(renderCommitBox(taskId, task));
-    if (!task.lastCommit) return box;
+    // Without a commit yet, the PR can already be drafted (with a remote); the buttons wait for it.
+    if (!task.lastCommit && !repoDelivery?.remote) return box;
   }
-  const meta = document.createElement('div');
-  meta.className = 'task-meta';
-  meta.textContent = `Commit ${task.lastCommit.slice(0, 7)}: ${task.lastCommitMessage || ''}`;
-  box.appendChild(meta);
+  if (task.lastCommit) {
+    const meta = document.createElement('div');
+    meta.className = 'task-meta';
+    meta.textContent = `Commit ${task.lastCommit.slice(0, 7)}: ${task.lastCommitMessage || ''}`;
+    box.appendChild(meta);
+  }
   if (repoDelivery?.remote) {
     box.appendChild(renderDelivery(taskId, task));
   } else if (repoDelivery) {
@@ -795,7 +798,7 @@ function renderDelivery(taskId, task) {
     const send = (label, primary) =>
       actionButton(label, {
         primary,
-        disabled: Boolean(task.uncommitted) || generating,
+        disabled: Boolean(task.uncommitted) || !task.lastCommit || generating,
         onClick: () => createPullRequest(taskId, { title: title.value, body: body.value, draft: draft.checked })
       });
     if (!pr) {
@@ -817,7 +820,9 @@ function renderDelivery(taskId, task) {
     wrap.appendChild(row);
     const hint = document.createElement('div');
     hint.className = 'task-meta';
-    if (pr) {
+    if (!task.lastCommit) {
+      hint.textContent = 'Puedes ir redactando la PR; se crea después del commit.';
+    } else if (pr) {
       hint.textContent = behind
         ? 'Hay commits nuevos que la PR aún no tiene.'
         : pr.manual
@@ -867,7 +872,7 @@ function renderDelivery(taskId, task) {
 function commitOnlyButton(taskId, task, primary) {
   const btn = actionButton('Dejar en su rama', {
     primary,
-    disabled: Boolean(task.uncommitted),
+    disabled: Boolean(task.uncommitted) || !task.lastCommit,
     onClick: () => finishTask(taskId)
   });
   btn.title = `Termina la tarea con su commit en ${task.branch}, sin PR ni fusión. La rama se conserva para fusionarla cuando quieras.`;
@@ -878,7 +883,7 @@ function commitOnlyButton(taskId, task, primary) {
 function mergeButton(taskId, task, primary) {
   const btn = actionButton(`Fusionar en ${task.baseBranch || 'la base'}`, {
     primary,
-    disabled: Boolean(task.uncommitted),
+    disabled: Boolean(task.uncommitted) || !task.lastCommit,
     onClick: () => mergeTask(taskId)
   });
   btn.title = `Lleva el commit a ${task.baseBranch || 'la rama base'} en este equipo y termina la tarea. Sin PR ni push.`;

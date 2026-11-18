@@ -220,6 +220,8 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    'Puedes ir redactando la PR; se crea después del commit.':
+      'You can draft the PR now; it is created after the commit.',
     'Conectarse a internet fuera de los registros de paquetes': 'Connect to the internet outside package registries',
     'Dejar que instalen dependencias: acceso solo a los registros de paquetes (npm, PyPI, crates.io, Go, RubyGems, Maven)':
       'Let them install dependencies: access only to package registries (npm, PyPI, crates.io, Go, RubyGems, Maven)',
