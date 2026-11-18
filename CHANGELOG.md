@@ -2,6 +2,32 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **Gemini**: connect a free Google AI Studio key in Settings › Gemini (open AI Studio, paste the key, pick a model; a Hydrogen model is proposed when the key offers one). Use it as the main AI of the chat or of any agent.
+- **No stops when Claude runs out of usage**: the chat and running tasks go on with Gemini or the local model in the same session, with the whole conversation, and go back to Claude when the limit resets.
+- **Suggestions while you type**: a fast model (Gemini, then the local model, then Claude Haiku with low effort) proposes the skill, agent or task type that fits the message. Tab accepts, Esc dismisses; nothing is applied on its own.
+- **Permissions in the chat**: what needs permission shows up as a card in the conversation (Allow, Always allow in this repo, Deny) instead of jumping to the terminal. In automatic mode (the default with Claude) only risky actions ask.
+- **Built-in skills** for the chat and every agent: frontend-craft (optimia's checklist for interface work), unslop (Damir Sokolovsky, CC BY 4.0), security-audit (Cloudflare, MIT), plan-optimizer (Sean Geng, MIT) and ponytail with its review and audit (Dietrich Gebert, MIT), changed so it leaves no marker comments in the code.
+- **Archive of finished tasks**: what was asked, how it ended, which agents and models ran it and their report, with search; kept 30, 15, 7 or 1 days, or forever.
+- **What's new**: an optional tour on the first run (with help to connect an AI) and after each update.
+- **Problem report**: warnings and errors of every repo and of the page, grouped by kind, kept on this computer without keys or message text, exportable from Settings › Registro.
+- Agents can install dependencies: from their sandbox they reach package registries only (npm, PyPI, crates.io, Go, RubyGems, Maven).
+
+### Changed
+- Every session reads in parallel and makes its independent edits in one turn, checking once at the end.
+- Agents may delete files they created in their worktree; tracked files stay protected.
+- A task can end with its commit merged locally even when the repo has a remote, and the pull request can be drafted before the commit.
+- Settings follow macOS System Settings more closely: rows with the control on the right, skills as grouped lists with switches, settings that apply at once.
+- The chat folds the agent's steps into one line, opens with examples, and background shell commands no longer show up as agents.
+- Larger logo in the sidebar and an "Opt" favicon that reads in browser tabs.
+
+### Fixed
+- Errors of tasks that could not start were only in the browser console; they are said in the chat.
+- The verification stage could not report its progress.
+- Task titles were cut in the middle of a word; build outputs were listed as generated files.
+
 ## [2.2.0] - 2026-11-18
 
 ### Added
@@ -11,11 +37,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - A one-minute 4K video filmed from real agent runs, with its own synthesised soundtrack, and an animated demo at the top of the README.
 
 ### Changed
-- Agents write in the language of your request (narration, reports, questions, commit and PR texts), and the wiki in the interface's language.
+- Agents write in the language of your request (narration, reports, questions, commit and PR texts), and so does the wiki update that follows each task.
 
 ### Fixed
 - The Changes view lists an agent's worktree as soon as the agent starts, without reloading.
-- English interface: dates, optimia's chat notices and the Changes view were still in Spanish.
+- English interface: dates, optimia's chat notices, the Changes view, the dashboard and the reasons of blocked actions were still in Spanish.
 
 ## [2.1.1] - 2026-11-17
 
