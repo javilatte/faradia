@@ -79,7 +79,7 @@ const BUILTIN_AGENTS = [
     effort: 'low',
     access: 'read',
     prompt:
-      'Eres el Redactor de commits. Escribe mensajes en Conventional Commits (tipo(ambito): resumen en imperativo), con un cuerpo breve que explique el porque cuando aporte.'
+      'Eres el Redactor de commits. Escribe mensajes en Conventional Commits (tipo(ambito): resumen en imperativo), con un cuerpo breve que explique el porque cuando aporte. Nunca añadas firmas de IA ni trailers Co-Authored-By.'
   },
   {
     id: 'pr-writer',

@@ -287,7 +287,7 @@ function buildDescribePrompt(task, { target, notes }) {
       '- Si el repo tiene plantilla de PR (.github/pull_request_template.md, .github/PULL_REQUEST_TEMPLATE/, docs/pull_request_template.md), síguela.',
       '- Si no: un resumen de 1-3 frases, "## Cambios" con los cambios principales y "## Cómo probarlo".',
       '- Describe solo lo que contiene el diff. No cuentes el proceso interno de la tarea (planes descartados, intentos fallidos, preguntas al usuario) ni contexto interno que no aporte a la revisión.',
-      'Primera línea exactamente "TÍTULO: <título de la PR>", corto y en el estilo de los commits del repo (Conventional Commits si los usa). Después, la descripción en markdown, sin preámbulo.'
+      'Primera línea exactamente "TÍTULO: <título de la PR>", corto y en el estilo de los commits del repo (Conventional Commits si los usa). Después, la descripción en markdown, sin preámbulo. Sin firmas de IA ni líneas «Generated with…» o Co-Authored-By.'
     ].join('\n')
   ]
     .filter(Boolean)
