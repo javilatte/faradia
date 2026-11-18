@@ -38,14 +38,46 @@ function sandboxStatus({ platform = process.platform, has = onPath } = {}) {
 }
 
 // The "sandbox" block of the agents' Claude settings.
-function sandboxSettings(mode) {
+// Package registries agents may reach from the sandbox to install dependencies (and nothing else on
+// the network), and the package managers' caches they need to write to.
+const PACKAGE_REGISTRIES = [
+  'registry.npmjs.org',
+  'registry.yarnpkg.com',
+  'repo.yarnpkg.com',
+  'pypi.org',
+  'files.pythonhosted.org',
+  'crates.io',
+  'index.crates.io',
+  'static.crates.io',
+  'proxy.golang.org',
+  'sum.golang.org',
+  'rubygems.org',
+  'index.rubygems.org',
+  'repo.maven.apache.org',
+  'repo1.maven.org'
+];
+const PACKAGE_CACHES = [
+  '~/.npm',
+  '~/.cache',
+  '~/.yarn',
+  '~/.local/share/pnpm',
+  '~/.cargo/registry',
+  '~/go/pkg/mod',
+  '~/.gem',
+  '~/.m2/repository'
+];
+
+function sandboxSettings(mode, { registries = true } = {}) {
   if (mode === 'off') return undefined;
   return {
     enabled: true,
     // Never fall back to running unsandboxed.
     failIfUnavailable: true,
     allowUnsandboxedCommands: false,
-    autoAllowBashIfSandboxed: true
+    autoAllowBashIfSandboxed: true,
+    ...(registries
+      ? { network: { allowedDomains: PACKAGE_REGISTRIES }, filesystem: { allowWrite: PACKAGE_CACHES } }
+      : {})
   };
 }
 
@@ -58,4 +90,4 @@ function sandboxProblem(mode, status = sandboxStatus()) {
   return `los agentes necesitan el sandbox de Claude Code y faltan ${status.missing.join(' y ')}${status.install ? `: instálalos con «${status.install}»` : ''}. Si aceptas el riesgo, puedes desactivarlo en Ajustes › General › Seguridad.`;
 }
 
-module.exports = { sandboxStatus, sandboxSettings, sandboxProblem };
+module.exports = { sandboxStatus, sandboxSettings, sandboxProblem, PACKAGE_REGISTRIES };

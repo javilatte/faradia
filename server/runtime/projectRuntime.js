@@ -60,6 +60,8 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
   fs.mkdirSync(dir, { recursive: true });
   const env = { OPTIMIA_PORT: String(port), OPTIMIA_PROJECT: projectId };
   if (token) env.OPTIMIA_TOKEN = token;
+  // Expanded by Claude Code from the session's environment: set for task sessions, empty in the chat.
+  env.OPTIMIA_TASK_ID = '${OPTIMIA_TASK_ID:-}';
   const config = {
     mcpServers: {
       'optimia-tasks': {
@@ -287,7 +289,12 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     opts.disallowedTools = stageDisallowed(stage, agent);
     opts.gitHooksPath = ensureGitGuardHooks(projectRoot);
     // Exceptions to the safety policy approved from the cards, fixed for the whole stage.
-    opts.extraEnv = { OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)) };
+    opts.extraEnv = {
+      OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
+      // optimia's MCP server (a child of this session) reports progress for this task without
+      // depending on the model passing its id.
+      OPTIMIA_TASK_ID: task.id
+    };
     const session = new ClaudeSession(opts);
     session.engine = opts.engine;
     taskSessions.set(taskId, session);

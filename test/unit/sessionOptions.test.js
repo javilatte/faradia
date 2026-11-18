@@ -1,5 +1,7 @@
 'use strict';
 
+const { PACKAGE_REGISTRIES } = require('../../server/bridge/sandbox');
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
@@ -161,8 +163,11 @@ test('buildSessionOptions: chat and agents get their own optimia settings file v
     enabled: true,
     failIfUnavailable: true,
     allowUnsandboxedCommands: false,
-    autoAllowBashIfSandboxed: true
+    autoAllowBashIfSandboxed: true,
+    network: { allowedDomains: PACKAGE_REGISTRIES },
+    filesystem: { allowWrite: agentFile.sandbox.filesystem.allowWrite }
   });
+  assert.ok(agentFile.sandbox.filesystem.allowWrite.includes('~/.npm'));
 });
 
 test("buildSessionOptions: instructions for all repos and then the repo's own, in sections", (t) => {

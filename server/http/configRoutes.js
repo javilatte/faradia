@@ -26,7 +26,11 @@ async function handleConfigRoutes(req, res, url) {
       firstRun: portable.isFirstRun(),
       version: pkg.version,
       tourSeen: portable.tourSeen(),
-      sandbox: { mode: loadGlobalSettings().security.sandbox, ...sandboxStatus() }
+      sandbox: {
+        mode: loadGlobalSettings().security.sandbox,
+        registries: loadGlobalSettings().security.registries,
+        ...sandboxStatus()
+      }
     });
   }
   // The "what's new" tour was shown (or skipped) for this version.

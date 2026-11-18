@@ -220,6 +220,8 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    'Dejar que instalen dependencias: acceso solo a los registros de paquetes (npm, PyPI, crates.io, Go, RubyGems, Maven)':
+      'Let them install dependencies: access only to package registries (npm, PyPI, crates.io, Go, RubyGems, Maven)',
     Archivo: 'Archive',
     'Tareas terminadas': 'Finished tasks',
     'Archivo de tareas': 'Task archive',

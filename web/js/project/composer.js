@@ -148,6 +148,16 @@ chatKindSelect.addEventListener('change', () => {
 syncTaskControls();
 loadTaskKinds().catch(() => {});
 
+// A card title from the request: its first sentence, cut at a word (never mid-word) with "…".
+function shortTaskTitle(text, max = 70) {
+  const first = text.trim().split('\n')[0];
+  const sentence = (first.match(/^.+?[.:;!?](\s|$)/)?.[0] || first).trim().replace(/[.:;]$/, '');
+  if (sentence.length <= max) return sentence;
+  const cut = sentence.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[,\s]+$/, '')}…`;
+}
+
 async function createTaskFromChat(kind, text) {
   if (!currentChatId) return;
   if (!text) return;
@@ -155,7 +165,7 @@ async function createTaskFromChat(kind, text) {
     appendMessage('system', 'Las tareas todavía no admiten imágenes. Quítalas o cambia el modo a Chat.');
     return;
   }
-  const title = text.split('\n')[0].slice(0, 80);
+  const title = shortTaskTitle(text);
   input.value = '';
   input.style.height = 'auto';
   const res = await fetch(apiPath('/api/tasks'), {

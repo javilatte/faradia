@@ -82,4 +82,11 @@ test('sandbox: required by default, explained when its tools are missing', () =>
   assert.equal(sandboxProblem('off', missing), null);
   assert.equal(sandboxSettings('off'), undefined);
   assert.equal(sandboxSettings('required').failIfUnavailable, true);
+  // Package registries and the package managers' caches, so agents can install dependencies;
+  // nothing else on the network.
+  assert.ok(sandboxSettings('required').network.allowedDomains.includes('registry.npmjs.org'));
+  assert.ok(sandboxSettings('required').network.allowedDomains.includes('pypi.org'));
+  assert.ok(!sandboxSettings('required').network.allowedDomains.includes('github.com'));
+  assert.ok(sandboxSettings('required').filesystem.allowWrite.includes('~/.npm'));
+  assert.equal(sandboxSettings('required', { registries: false }).network, undefined);
 });

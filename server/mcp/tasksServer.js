@@ -23,6 +23,22 @@ const base = projectId ? `http://127.0.0.1:${port}/api/projects/${projectId}` : 
 const authHeaders = process.env.OPTIMIA_TOKEN ? { 'X-Optimia-Token': process.env.OPTIMIA_TOKEN } : {};
 const fixedTaskId = process.env.OPTIMIA_TASK_ID || null;
 
+// Without an id (the model left it out and the session has none fixed): the task whose worktree is
+// the folder this session runs in.
+async function taskOfThisFolder() {
+  try {
+    const res = await fetch(`${base}/tasks`, { headers: authHeaders });
+    if (!res.ok) return null;
+    const here = process.cwd();
+    const task = (await res.json()).find(
+      (t) => t.worktreePath && (here === t.worktreePath || here.startsWith(`${t.worktreePath}/`))
+    );
+    return task?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 const server = new McpServer({ name: 'optimia-tasks', version: '1.0.0' });
 
 server.registerTool(
@@ -74,7 +90,7 @@ server.registerTool(
     }
   },
   async ({ taskId, phase, status }) => {
-    const id = taskId || fixedTaskId;
+    const id = taskId || fixedTaskId || (await taskOfThisFolder());
     if (!id) {
       return {
         content: [

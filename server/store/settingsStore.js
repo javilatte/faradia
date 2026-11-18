@@ -155,7 +155,9 @@ function sanitizeGlobal(raw) {
     wiki: { autoUpdate: g.wiki?.autoUpdate !== false, preferLocal: g.wiki?.preferLocal !== false },
     // OPTIMIA_AGENT_SANDBOX=off forces it off (test runs with a fake claude).
     security: {
-      sandbox: g.security?.sandbox === 'off' || process.env.OPTIMIA_AGENT_SANDBOX === 'off' ? 'off' : 'required'
+      sandbox: g.security?.sandbox === 'off' || process.env.OPTIMIA_AGENT_SANDBOX === 'off' ? 'off' : 'required',
+      // Agents may reach package registries (npm, PyPI…) to install dependencies.
+      registries: g.security?.registries !== false
     }
   };
 }

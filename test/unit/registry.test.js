@@ -48,7 +48,9 @@ test('runtime: created on demand, once, and writes an mcp.json with the project 
   assert.deepEqual(mcp.mcpServers['optimia-tasks'].env, {
     OPTIMIA_PORT: '1234',
     OPTIMIA_PROJECT: id,
-    OPTIMIA_TOKEN: 't'
+    OPTIMIA_TOKEN: 't',
+    // Expanded by Claude Code: the task of the session, empty in the chat.
+    OPTIMIA_TASK_ID: '${OPTIMIA_TASK_ID:-}'
   });
   assert.equal(reg.runtime('000000000000'), null);
   reg.dispose();

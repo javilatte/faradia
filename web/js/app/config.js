@@ -804,7 +804,16 @@ function renderSecurityField(sandbox) {
           { class: 'error-text' },
           'Sin sandbox, solo las reglas de optimia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).'
         )
-      : null
+      : h(
+          'label',
+          { class: 'check-row' },
+          h('input', {
+            type: 'checkbox',
+            checked: sandbox.registries !== false,
+            onchange: (e) => api.patch('/api/settings', { scope: 'global', security: { registries: e.target.checked } })
+          }),
+          'Dejar que instalen dependencias: acceso solo a los registros de paquetes (npm, PyPI, crates.io, Go, RubyGems, Maven)'
+        )
   );
 }
 
