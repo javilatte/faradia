@@ -639,6 +639,7 @@ window.OPTIMIA_I18N_EN = {
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
+    ['^Una tarea: (.+)$', 'A task: $1'],
     ['^El agente quiere usar (.+)$', 'The agent wants to use $1'],
     ['^Activas \\((\\d+)\\)$', 'On ($1)'],
     ['^Comandos de ECC \\((\\d+)\\)$', 'ECC commands ($1)'],

@@ -139,7 +139,9 @@ function connect() {
         renderTasks();
       }
     } else if (msg.type === 'task_error') {
-      console.warn('[optimia] task_error', msg.taskId, msg.error);
+      // A task that could not start or go on: said in the conversation, not only in the console.
+      const task = tasks.get(msg.taskId);
+      appendMessage('error', `${task ? `«${task.title}»` : 'Una tarea'}: ${msg.error}`);
     } else if (msg.type === 'terminal_scrollback') {
       if (window.TerminalView) window.TerminalView.handleScrollback(msg.data);
     } else if (msg.type === 'terminal_data') {
