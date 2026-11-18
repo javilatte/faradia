@@ -63,7 +63,6 @@ test('enabled ECC skills reach every session through --add-dir; none, no folder'
     'plan-optimizer',
     'ponytail',
     'ponytail-audit',
-    'ponytail-debt',
     'ponytail-review',
     'security-audit',
     'unslop'
@@ -88,16 +87,7 @@ test("optimia's built-in skills always reach the sessions, unslop with its licen
   const { builtinSkills } = require('../../server/skills/library');
   assert.deepEqual(
     builtinSkills().map((s) => s.name),
-    [
-      'frontend-craft',
-      'plan-optimizer',
-      'ponytail',
-      'ponytail-audit',
-      'ponytail-debt',
-      'ponytail-review',
-      'security-audit',
-      'unslop'
-    ]
+    ['frontend-craft', 'plan-optimizer', 'ponytail', 'ponytail-audit', 'ponytail-review', 'security-audit', 'unslop']
   );
   assert.match(builtinSkills()[1].description, /^Iteratively optimize a plan/);
   assert.match(builtinSkills()[0].description, /Skeleton|skeletons/);
@@ -108,4 +98,15 @@ test("optimia's built-in skills always reach the sessions, unslop with its licen
   assert.match(fs.readFileSync(path.join(unslop, 'SOURCE.md'), 'utf8'), /Damir Sokolovsky/);
   assert.ok(fs.existsSync(path.join(dir, '.claude', 'skills', 'frontend-craft', 'SKILL.md')));
   assert.match(fs.readFileSync(path.join(dir, '.claude', 'skills', 'security-audit', 'LICENSE'), 'utf8'), /Cloudflare/);
+});
+
+test('ponytail is bundled without its code markers', () => {
+  const fs2 = require('fs');
+  const { builtinSkills } = require('../../server/skills/library');
+  const ponytail = builtinSkills().find((s) => s.name === 'ponytail');
+  const text = fs2.readFileSync(require('path').join(ponytail.dir, 'SKILL.md'), 'utf8');
+  assert.match(text, /Leave no marks in the code/);
+  assert.doesNotMatch(text, /gets a code comment in this form/);
+  assert.match(fs2.readFileSync(require('path').join(ponytail.dir, 'SOURCE.md'), 'utf8'), /Modified by optimia/);
+  assert.ok(!builtinSkills().some((s) => s.name === 'ponytail-debt'));
 });
