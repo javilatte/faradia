@@ -19,7 +19,7 @@ const { configDir } = require('./globalPaths');
 
 const THEMES = ['system', 'light', 'dark'];
 const CLOCKS = ['datetime', 'time'];
-const MODES = ['claude', 'local'];
+const MODES = ['claude', 'local', 'gemini'];
 const PROJECT_VERSION = 2;
 
 // Fields of `ai` a repo can override (dotted paths).
@@ -29,7 +29,7 @@ function defaultSettings() {
   return {
     ui: { theme: 'system', clock: 'datetime' },
     ai: {
-      mode: 'claude', // 'claude' | 'local'
+      mode: 'claude', // 'claude' | 'local' | 'gemini'
       claude: { model: 'default', effort: 'high' },
       localAi: { url: '', model: '', authHeader: '' }
     },

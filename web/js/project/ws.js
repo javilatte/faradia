@@ -2,6 +2,8 @@
 
 // WebSocket connection to the server and message dispatch.
 
+let lastTaskSwitchNote = '';
+
 function connect() {
   setConnectionState(false, 'Conectando...');
 
@@ -49,6 +51,27 @@ function connect() {
         );
         setWaiting(false);
       }
+    } else if (msg.type === 'provider_switch') {
+      const names = { claude: 'Claude', gemini: 'Gemini', local: 'el modelo local' };
+      const until = msg.until
+        ? new Date(msg.until).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : '';
+      let text;
+      if (msg.from === 'claude' && !msg.to)
+        text = `Claude se ha quedado sin uso${until ? ` hasta las ${until}` : ''}. Conecta Gemini o un modelo local en Ajustes para seguir sin esperar.`;
+      else if (msg.from === 'claude')
+        text = `Claude se ha quedado sin uso${until ? ` hasta las ${until}` : ''}. Sigo con ${names[msg.to] || msg.to}, con toda la conversación.`;
+      else text = `Vuelvo a ${names[msg.to] || msg.to}, con toda la conversación.`;
+      if (msg.scope === 'chat' && msg.id === currentChatId) appendMessage('system', text);
+      // Tasks: once per switch (several agents can hit the limit at the same time).
+      if (msg.scope === 'task' && lastTaskSwitchNote !== `${msg.from}>${msg.to}`) {
+        lastTaskSwitchNote = `${msg.from}>${msg.to}`;
+        appendMessage('system', `Agentes: ${text.replace('con toda la conversación', 'con todo su contexto')}`);
+      }
+      refreshProviderLabel();
     } else if (msg.type === 'client_error') {
       console.warn('[optimia] client_error', msg.error);
       appendMessage('error', msg.error);

@@ -5,6 +5,7 @@
 // broadcast over the shared WebSocket.
 
 const fs = require('fs');
+const { limitHit, markClaudeBlocked, fallbackEngine, claudeBlockedUntil } = require('../ai/fallback');
 const path = require('path');
 const crypto = require('crypto');
 const { parseDenial, approvedCommands } = require('../bridge/policy');
@@ -13,7 +14,7 @@ const { loadTasks, updateTask, updateTaskPhase } = require('../store/taskStore')
 const { loadChat, updateChatMeta, appendMessage } = require('../store/chatStore');
 const { ClaudeSession } = require('../bridge/claudeProcess');
 const { PtySession } = require('../bridge/ptySession');
-const { buildSessionOptions } = require('../bridge/sessionOptions');
+const { buildSessionOptions, engineFor } = require('../bridge/sessionOptions');
 const { resolveStageAgent, skippedStages } = require('../agents/stageMap');
 const { loadAgents } = require('../agents/catalog');
 const { createTaskWorktree, stageForReview, changedFiles, ignoredAmong } = require('../bridge/worktree');
@@ -211,7 +212,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // Starts a stage of the task's pipeline (see bridge/taskStages.js) in its worktree. One Claude
   // session per stage; when it ends, the stage decides the next state and, if needed, starts the
   // next stage automatically. Returns { task } or { error, code } for the HTTP route to answer.
-  function runTaskStage(taskId, { stage, answer, docOptions, describe } = {}) {
+  function runTaskStage(taskId, { stage, answer, docOptions, describe, afterSwitch } = {}) {
     const task = loadTasks(projectRoot).find((t) => t.id === taskId);
     if (!task) return { error: 'task not found', code: 404 };
     if (taskSessions.has(taskId)) return { error: 'la tarea ya tiene un agente en marcha', code: 409 };
@@ -224,7 +225,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     }
 
     const effectiveDocOptions = stage === 'write' ? docOptions || task.docOptions : undefined;
-    const problem = canRun(task, stage, { answer, docOptions: effectiveDocOptions });
+    // afterSwitch: the same stage goes on with another provider (Claude ran out of usage).
+    const problem = afterSwitch ? null : canRun(task, stage, { answer, docOptions: effectiveDocOptions });
     if (problem) return { error: problem, code: 409 };
     // describe: PR description or Jira comment, with optional notes from the user.
     let describeOptions;
@@ -267,10 +269,13 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     // Answering an implementation question resumes the same conversation (the previous stage's
     // session) so the agent keeps its context.
-    const resuming = answer !== undefined && Boolean(task.sessionId);
+    const resuming = (answer !== undefined || Boolean(afterSwitch)) && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
     let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent, describeOptions });
-    if (answer !== undefined)
+    if (afterSwitch && resuming)
+      prompt =
+        'Sigue exactamente donde lo dejaste en esta etapa: el modelo anterior se quedó sin uso y ahora continúas tú con todo el historial de arriba. No repitas lo que ya está hecho.';
+    else if (answer !== undefined)
       prompt = resuming
         ? answerPrompt(answer, stage)
         : `${prompt}\n\nRespuesta del usuario a tus preguntas:\n${answer.trim()}`;
@@ -282,6 +287,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // Exceptions to the safety policy approved from the cards, fixed for the whole stage.
     opts.extraEnv = { OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)) };
     const session = new ClaudeSession(opts);
+    session.engine = opts.engine;
     taskSessions.set(taskId, session);
     updateTaskPhase(projectRoot, taskId, STAGE_PHASE[stage], 'active');
     log.info('task.stage.start', {
@@ -309,8 +315,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
           stage,
           agentId: agent.id,
           agentName: agent.name,
-          engine: agent.engine,
-          model: agent.model || 'default',
+          engine: opts.engine || agent.engine,
+          model: opts.model || agent.model || 'default',
           startedAt: new Date().toISOString()
         }
       ],
@@ -323,6 +329,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // block with the same id.
     const toolUses = new Map();
     session.on('event', (event) => {
+      if (session._switching) return;
+      if (switchOnLimit('task', taskId, session, event)) return;
       broadcast({ type: 'task_claude_event', taskId, event });
       if (event.type === 'assistant') {
         for (const block of event.message?.content || []) {
@@ -390,6 +398,11 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     });
     session.on('exit', () => {
       if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
+      if (session._switching) {
+        const result = runTaskStage(taskId, { stage, afterSwitch: true });
+        if (result.error) broadcast({ type: 'task_error', taskId, error: result.error });
+        return;
+      }
       if (session._stageDone) return;
       // Exit without a `result` (failure, kill or handoff to the terminal): the task cannot stay
       // in_progress forever.
@@ -537,6 +550,68 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // is what makes "refresh the tab" stop killing the conversation: the
   // browser is just a viewer that replays the persisted transcript and,
   // if it's still running, re-attaches to the same live process.
+  /**
+   * Claude ran out of usage in this session: Claude is marked unavailable until the reset, the
+   * session is stopped and the same conversation goes on with Gemini or the local model (same
+   * session id, so the new provider gets the whole history). Returns true when it took over.
+   */
+  function switchOnLimit(scope, id, session, event) {
+    if (session.engine !== 'claude') return false;
+    const until = limitHit(event);
+    if (!until) return false;
+    markClaudeBlocked(until, event.rate_limit_info?.rateLimitType || '');
+    const to = fallbackEngine(loadSettings(projectRoot));
+    log.warn('provider.limit', { scope, id, until: new Date(until).toISOString(), to });
+    broadcast({ type: 'provider_switch', scope, id, from: 'claude', to, until });
+    if (!to) return false; // nothing to switch to: the error reaches the user as it is
+    session._switching = true;
+    if (scope === 'chat') {
+      chatSessions.delete(id);
+      session.kill();
+      setTimeout(() => {
+        try {
+          const next = startOrGetChatSession(id);
+          if (next && session._lastSend) {
+            next._busy = true;
+            next.send(
+              `(Mensaje reenviado: el modelo anterior se quedó sin uso antes de responder. Si ya aparece arriba, respóndelo una sola vez.)\n\n${session._lastSend.text}`,
+              session._lastSend.images
+            );
+          }
+        } catch (err) {
+          broadcast({ type: 'bridge_error', chatId: id, error: err.message });
+        }
+      }, 300).unref?.();
+    } else {
+      session._stageDone = true;
+      session.kill();
+    }
+    return true;
+  }
+
+  /**
+   * Before a new message: a chat left on the fallback provider goes back to its own engine once
+   * Claude is available again (and the other way round), between turns, keeping the session.
+   */
+  function realignChatEngine(chatId) {
+    const existing = chatSessions.get(chatId);
+    if (!existing || existing._busy) return;
+    const wanted = engineFor(loadSettings(projectRoot));
+    if (existing.engine === wanted) return;
+    existing._switching = true;
+    chatSessions.delete(chatId);
+    existing.kill();
+    log.info('provider.realign', { chatId, from: existing.engine, to: wanted });
+    broadcast({
+      type: 'provider_switch',
+      scope: 'chat',
+      id: chatId,
+      from: existing.engine,
+      to: wanted,
+      until: claudeBlockedUntil()
+    });
+  }
+
   function startOrGetChatSession(chatId) {
     const existing = chatSessions.get(chatId);
     if (existing) return existing;
@@ -549,6 +624,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     opts.resumeSessionId = chat.claudeSessionId || undefined;
 
     const session = new ClaudeSession(opts);
+    session.engine = opts.engine;
     chatSessions.set(chatId, session);
     log.info('claude.session.spawn', {
       scope: 'chat',
@@ -561,6 +637,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     }
 
     session.on('event', (event) => {
+      if (session._switching) return;
+      if (switchOnLimit('chat', chatId, session, event)) return;
+      if (event.type === 'result') session._busy = false;
       for (const block of event.message?.content || []) {
         if (event.type === 'assistant' && block.type === 'text' && block.text?.trim()) {
           log.info('chat.reply', { chatId, text: cut(block.text) });
@@ -593,7 +672,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       // watchForPermissionHandoff) — terminal_handoff already told the chat
       // what's happening, so skip the generic "session ended" broadcast. The
       // same goes for a stop the user asked for (stopChatSession).
-      if (!session._handoffInProgress && !session._stopRequested) broadcast({ type: 'claude_exit', chatId, info });
+      if (!session._handoffInProgress && !session._stopRequested && !session._switching)
+        broadcast({ type: 'claude_exit', chatId, info });
     });
 
     return session;
@@ -755,6 +835,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
       let session;
       try {
+        realignChatEngine(msg.chatId);
         session = startOrGetChatSession(msg.chatId);
       } catch (err) {
         return ws.send(JSON.stringify({ type: 'bridge_error', chatId: msg.chatId, error: err.message }));
@@ -785,7 +866,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         broadcast({ type: 'chat_renamed', chatId: msg.chatId, title });
       }
       try {
-        session.send(`${msg.text || ''}${attachmentsPrompt(attachments)}`, msg.images || []);
+        session._lastSend = { text: `${msg.text || ''}${attachmentsPrompt(attachments)}`, images: msg.images || [] };
+        session._busy = true;
+        session.send(session._lastSend.text, session._lastSend.images);
       } catch (err) {
         ws.send(JSON.stringify({ type: 'bridge_error', chatId: msg.chatId, error: err.message }));
       }

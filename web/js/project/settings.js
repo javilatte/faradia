@@ -16,7 +16,7 @@ async function loadInitialSettings() {
   const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
   if (pid !== currentProjectId) return;
   applyUi(settings.ui || {});
-  modeLabel.textContent = settings.ai.mode === 'local' ? 'IA local' : 'Claude Code';
+  modeLabel.textContent = ENGINE_LABEL[settings.ai.mode] || 'Claude Code';
   effortSelect.value = settings.ai.claude.effort || 'default';
   await populateChatModelSelect(settings);
 
@@ -539,7 +539,7 @@ async function patchSettings(body, rerender = false) {
     currentSettings = data;
     applyUi(data.ui);
     effortSelect.value = data.ai.claude.effort || 'default';
-    modeLabel.textContent = data.ai.mode === 'local' ? 'IA local' : 'Claude Code';
+    modeLabel.textContent = ENGINE_LABEL[data.ai.mode] || 'Claude Code';
     await populateChatModelSelect(data);
     if (rerender) populateSettingsForm();
     else for (const [el, dotted] of AI_INPUTS) renderFieldOrigin(el, dotted);

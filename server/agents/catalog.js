@@ -7,7 +7,7 @@ const path = require('path');
 const { configDir } = require('../store/globalPaths');
 
 // Agent catalog. An agent is a role with its own engine and model:
-//   id, name, description, engine (claude | local), model, effort, access (read | edit),
+//   id, name, description, engine (claude | local | gemini), model, effort, access (read | edit),
 //   enabled, and a role prompt (the body of the .md).
 // Three sources, from lowest to highest priority:
 //   builtin  default agents, defined in this file (restorable)
@@ -16,7 +16,7 @@ const { configDir } = require('../store/globalPaths');
 // A global or project file with a default agent's id overrides it field by field; a new id creates
 // a custom agent.
 
-const ENGINES = ['claude', 'local'];
+const ENGINES = ['claude', 'local', 'gemini'];
 const ACCESS = ['read', 'edit'];
 // --effort levels of the claude CLI (2.1.x: low, medium, high, xhigh, max).
 const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
@@ -309,7 +309,7 @@ function getAgent(projectRoot, id) {
 }
 
 function validateAgentInput(input, { isNew }) {
-  if (input.engine !== undefined && !ENGINES.includes(input.engine)) return 'motor no válido (claude o local)';
+  if (input.engine !== undefined && !ENGINES.includes(input.engine)) return 'motor no válido (claude, local o gemini)';
   if (input.access !== undefined && !ACCESS.includes(input.access)) return 'acceso no válido (read o edit)';
   if (input.effort !== undefined && !EFFORTS.includes(input.effort)) return 'effort no válido';
   if (input.model !== undefined && (typeof input.model !== 'string' || input.model.length > 100))

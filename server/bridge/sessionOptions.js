@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
 const { prepareActiveDir } = require('../ecc/library');
+const { sharedProxy } = require('../ai/anthropicProxy');
+const { engineOverride } = require('../ai/fallback');
 const wiki = require('../knowledge/wikiStore');
 const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
 
@@ -51,6 +53,17 @@ function localDefaults(ai) {
  * name as is to ANTHROPIC_BASE_URL ("qwen2.5-coder:7b", "google/gemma-4-12b"), so each agent can use
  * a different local model at the same time. See localAi.js for the environment of those sessions.
  */
+/**
+ * The engine a session runs on. A provider override (`settings.engineOverride`, set while Claude is
+ * out of usage, see ai/fallback.js) wins over the agent's and the chat's choice for Claude sessions.
+ */
+function engineFor(settings, agent) {
+  const wanted = agent ? agent.engine : ['local', 'gemini'].includes(settings.ai.mode) ? settings.ai.mode : 'claude';
+  if (wanted !== 'claude') return wanted;
+  const override = settings.engineOverride !== undefined ? settings.engineOverride : engineOverride(settings);
+  return override || 'claude';
+}
+
 function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;
   const opts = { projectRoot: cwd };
@@ -107,7 +120,19 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   if (opts.mcpConfigPath) parts.push(taskId ? taskProgressPrompt(taskId) : CHAT_TASKS_PROMPT);
   if (parts.length) opts.systemPrompt = parts.join('\n\n');
 
-  const engine = agent ? agent.engine : ai.mode === 'local' ? 'local' : 'claude';
+  const engine = engineFor(settings, agent);
+  opts.engine = engine;
+  if (engine === 'gemini') {
+    const proxy = sharedProxy();
+    const gemini = settings.providers?.gemini || {};
+    if (!gemini.apiKey) throw new Error('Gemini no está conectado: abre Ajustes › Gemini y pega tu API key');
+    if (!proxy?.url) throw new Error('el puente con Gemini aún no ha arrancado; inténtalo de nuevo en un momento');
+    opts.baseUrl = `${proxy.url}/gemini`;
+    opts.authToken = proxy.token;
+    opts.model = (agent?.engine === 'gemini' && agent.model) || gemini.model;
+    opts.effort = undefined;
+    return opts;
+  }
   if (engine === 'local') {
     Object.assign(opts, localDefaults(ai));
     if (!opts.baseUrl) {
@@ -115,7 +140,8 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
         `${agent ? `el agente "${agent.name}" usa un modelo local, pero` : 'el chat usa IA local, pero'} no hay servidor configurado: abre Ajustes › IA local y pulsa «Detectar servidores locales»`
       );
     }
-    const model = (agent ? agent.model : '') || ai.localAi.model;
+    // An agent that runs on the local model only because Claude is out keeps no Claude model name.
+    const model = (agent?.engine === 'local' ? agent.model : '') || ai.localAi.model;
     if (!model) throw new Error('elige un modelo local para este agente o en Ajustes > IA local');
     opts.model = model;
   } else {
@@ -127,4 +153,4 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   return opts;
 }
 
-module.exports = { buildSessionOptions };
+module.exports = { buildSessionOptions, engineFor };

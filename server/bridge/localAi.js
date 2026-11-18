@@ -126,11 +126,11 @@ async function confirm({ provider, url }, opts) {
  * the Claude model names. `authHeader` ("Name: value") is for servers behind a proxy that asks for
  * one.
  */
-function localSessionEnv(env, { baseUrl, authHeader, model }) {
+function localSessionEnv(env, { baseUrl, authHeader, authToken, model }) {
   const out = { ...env };
   delete out.ANTHROPIC_API_KEY;
   out.ANTHROPIC_BASE_URL = baseUrl;
-  out.ANTHROPIC_AUTH_TOKEN = 'optimia-local';
+  out.ANTHROPIC_AUTH_TOKEN = authToken || 'optimia-local';
   if (authHeader) out.ANTHROPIC_CUSTOM_HEADERS = authHeader;
   if (model) {
     out.ANTHROPIC_DEFAULT_OPUS_MODEL = model;

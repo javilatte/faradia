@@ -1,6 +1,7 @@
 'use strict';
 
 const http = require('http');
+const { createProxy, setSharedProxy } = require('./ai/anthropicProxy');
 const path = require('path');
 const { WebSocketServer, WebSocket } = require('ws');
 const { checkClaudeCapabilities } = require('./bridge/claudeVersion');
@@ -34,6 +35,10 @@ const PROJECT_ROUTE = /^\/api\/projects\/([a-f0-9]{12})(\/.*)$/;
 function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {}) {
   const sessionToken = token || process.env.OPTIMIA_TOKEN || security.createToken();
   const server = http.createServer();
+  // Anthropic-compatible endpoint backed by Gemini, for sessions that run on Gemini (see
+  // ai/anthropicProxy.js). The key is read on every request, so changing it needs no restart.
+  const geminiProxy = createProxy({ getConfig: () => loadGlobalSettings().providers.gemini });
+  geminiProxy.listen().then(() => setSharedProxy(geminiProxy));
   const wss = new WebSocketServer({ noServer: true });
   let registry = null;
   let monitor = null;

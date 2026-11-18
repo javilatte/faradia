@@ -37,6 +37,8 @@ const { getClaudeAuthStatus, openAuthLoginInTerminal } = require('../bridge/clau
 const { listModelsAt, detectLocalServers } = require('../bridge/localAi');
 const { getAiAssistSuggestion } = require('../bridge/aiAssist');
 const { suggest } = require('../ai/suggest');
+const { engineFor } = require('../bridge/sessionOptions');
+const { claudeBlockedUntil } = require('../ai/fallback');
 const { sendJson, readJsonBody } = require('../http/util');
 const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
@@ -107,7 +109,12 @@ function createApp(
           }
         }
       });
-      return { ...mask(effective), layers: { global: mask(global), project, overrides } };
+      return {
+        ...mask(effective),
+        activeEngine: engineFor(effective),
+        claudeBlockedUntil: claudeBlockedUntil(),
+        layers: { global: mask(global), project, overrides }
+      };
     };
 
     if (url.pathname === '/api/settings' && req.method === 'GET') {

@@ -63,6 +63,19 @@ async function populateChatModelSelect(settings) {
   }
   chatModelSelect.appendChild(claudeGroup);
 
+  // Gemini, when a key is connected (Settings › Gemini): the model chosen there.
+  const gemini = settings.providers?.gemini;
+  if (gemini?.hasKey && gemini.model) {
+    const group = document.createElement('optgroup');
+    group.label = 'Gemini';
+    const opt = document.createElement('option');
+    opt.value = `gemini:${gemini.model}`;
+    opt.textContent = gemini.model;
+    if (settings.ai.mode === 'gemini') opt.selected = true;
+    group.appendChild(opt);
+    chatModelSelect.appendChild(group);
+  }
+
   const { servers = [] } = await fetch(apiPath('/api/local-ai/detect'))
     .then((r) => r.json())
     .catch(() => ({}));
@@ -95,7 +108,8 @@ async function populateChatModelSelect(settings) {
     opt.selected = true;
     chatModelSelect.appendChild(opt);
   }
-  if (settings.ai.mode !== 'local') chatModelSelect.value = `claude:${settings.ai.claude.model || 'default'}`;
+  if (settings.ai.mode === 'claude') chatModelSelect.value = `claude:${settings.ai.claude.model || 'default'}`;
+  modeLabel.textContent = ENGINE_LABEL[settings.ai.mode] || 'Claude Code';
   if (typeof syncTaskControls === 'function') syncTaskControls();
 }
 
@@ -125,20 +139,33 @@ chatModelSelect.addEventListener('change', async () => {
   const ai =
     engine === 'local'
       ? { mode: 'local', localAi: { model, url: option?.dataset.url || settings.ai.localAi.url } }
-      : { mode: 'claude', claude: { model } };
+      : engine === 'gemini'
+        ? { mode: 'gemini' }
+        : { mode: 'claude', claude: { model } };
   await fetch(apiPath('/api/settings'), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scope: own ? 'project' : 'global', ai })
   });
-  modeLabel.textContent = engine === 'local' ? 'IA local' : 'Claude Code';
+  modeLabel.textContent = ENGINE_LABEL[engine] || 'Claude Code';
   syncTaskControls();
   const where = own ? 'solo en este repo' : 'en todos los repos';
-  const label = engine === 'local' ? `local "${model}"` : `"${model}"`;
+  const label = engine === 'local' ? `local "${model}"` : engine === 'gemini' ? `Gemini "${model}"` : `"${model}"`;
   appendMessage('system', `Modelo ${label} ${where}, desde la próxima sesión.`);
 });
 const connectionStatus = document.getElementById('connection-status');
 const modeLabel = document.getElementById('mode-label');
+const ENGINE_LABEL = { claude: 'Claude Code', local: 'IA local', gemini: 'Gemini' };
+// The header shows the provider in use, including a temporary switch while Claude is out of usage.
+async function refreshProviderLabel() {
+  const s = await fetch(apiPath('/api/settings'))
+    .then((r) => r.json())
+    .catch(() => null);
+  if (!s) return;
+  const engine = s.activeEngine || s.ai.mode;
+  modeLabel.textContent = ENGINE_LABEL[engine] || 'Claude Code';
+  modeLabel.title = s.claudeBlockedUntil ? 'Claude sin uso por ahora: se usa el proveedor de respaldo' : '';
+}
 const projectLabel = document.getElementById('project-label');
 
 // A colored dot with the text in a tooltip: the connection state takes no room in the toolbar and
