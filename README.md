@@ -20,11 +20,11 @@
 </p>
 
 <p align="center">
-  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4"><img src="docs/assets/demo-agents.gif" alt="Agents at work in optimia: their reasoning, a risky command blocked for safety, and three agents running at once in two repos" width="100%"></a>
+  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><img src="docs/assets/demo-agents.gif" alt="Agents at work in optimia: their reasoning, a risky command blocked for safety, and three agents running at once in two repos" width="100%"></a>
 </p>
 
 <p align="center">
-  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4"><b>▶ Watch optimia in one minute</b></a>
+  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><b>▶ Watch optimia in one minute</b></a>
 </p>
 
 ![optimia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
