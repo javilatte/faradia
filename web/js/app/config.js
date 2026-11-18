@@ -516,45 +516,79 @@ async function renderGeneralPane() {
   );
 }
 
-// ECC (Everything Claude Code, MIT), bundled: which of its skills and commands every session gets.
+// Settings › Skills: optimia's built-in skills (always on) and ECC's library (Everything Claude Code,
+// MIT), as grouped lists in the style of macOS System Settings: one row per skill with its name, a
+// one-line description and a switch.
 let eccFilter = '';
+let eccOnlyActive = false;
+
+function skillRow({ name, description, credit, checked, locked, onchange }) {
+  const id = `skill-switch-${name}`;
+  return h(
+    'li',
+    { class: 'skill-row' },
+    h(
+      'label',
+      { class: 'skill-row-text', for: locked ? null : id, title: description },
+      h(
+        'span',
+        { class: 'skill-row-name' },
+        `/${name}`,
+        credit ? h('span', { class: 'skill-row-credit' }, credit) : null
+      ),
+      h('span', { class: 'skill-row-desc' }, description)
+    ),
+    locked
+      ? h('span', { class: 'skill-row-state' }, 'Siempre')
+      : h('input', {
+          type: 'checkbox',
+          role: 'switch',
+          class: 'switch',
+          id,
+          checked,
+          'aria-label': `Activar /${name}`,
+          onchange
+        })
+  );
+}
+
 function renderEccField() {
-  const host = h('div', { class: 'settings-field', id: 'ecc-field' }, h('label', {}, 'Skills de optimia y de ECC'));
-  const body = h('div', {}, h('div', { class: 'muted' }, 'Cargando…'));
-  host.append(body);
+  const host = h('div', { class: 'skills-library' });
+  host.append(h('div', { class: 'muted' }, 'Cargando…'));
   const save = async (patch) => paint(await api.patch('/api/ecc', patch));
   function paint(st) {
-    const builtin = (st.builtin || []).length
-      ? h(
-          'div',
-          { class: 'muted builtin-skills' },
-          'Siempre activas: ',
-          ...st.builtin.flatMap((s, i) => [
-            i ? ', ' : '',
-            h('code', { title: s.description }, `/${s.name}`),
-            ` (${s.credit})`
-          ]),
-          '.'
-        )
-      : '';
+    const builtin = st.builtin || [];
+    const sections = [
+      h('h3', { class: 'group-title' }, 'De optimia'),
+      h(
+        'p',
+        { class: 'group-help' },
+        'Siempre disponibles en el chat y para los agentes. Claude las usa cuando encajan con lo que pides, o las llamas con /nombre.'
+      ),
+      h(
+        'ul',
+        { class: 'grouped-list' },
+        builtin.map((s) => skillRow({ name: s.name, description: s.description, credit: s.credit, locked: true }))
+      )
+    ];
     if (!st.available) {
-      body.replaceChildren(builtin, h('div', { class: 'muted' }, 'Esta instalación no incluye ECC.'));
+      host.replaceChildren(...sections, h('p', { class: 'group-help' }, 'Esta instalación no incluye ECC.'));
       return;
     }
     const on = st.skills.filter((s) => s.enabled);
-    const chars = on.reduce((n, s) => n + Math.min(s.description.length, 400), 0);
-    const list = h('div', { class: 'ecc-skill-list' });
+    const tokens = Math.round(on.reduce((n, s) => n + Math.min(s.description.length, 400), 0) / 4 / 100) * 100;
+    const list = h('ul', { class: 'grouped-list skills-scroll' });
     const fill = () => {
       const q = eccFilter.toLowerCase();
+      const shown = st.skills.filter(
+        (s) => (!eccOnlyActive || s.enabled) && (!q || s.name.includes(q) || s.description.toLowerCase().includes(q))
+      );
       list.replaceChildren(
-        ...st.skills
-          .filter((s) => !q || s.name.includes(q) || s.description.toLowerCase().includes(q))
-          .map((s) =>
-            h(
-              'label',
-              { class: 'check-row ecc-skill', title: s.description },
-              h('input', {
-                type: 'checkbox',
+        ...(shown.length
+          ? shown.map((s) =>
+              skillRow({
+                name: s.name,
+                description: s.description,
                 checked: s.enabled,
                 onchange: (e) => {
                   const names = new Set(on.map((x) => x.name));
@@ -562,55 +596,97 @@ function renderEccField() {
                   else names.delete(s.name);
                   save({ skills: [...names] });
                 }
-              }),
-              h('code', {}, s.name),
-              h('span', { class: 'muted' }, ` ${s.description.slice(0, 110)}${s.description.length > 110 ? '…' : ''}`)
+              })
             )
-          )
+          : [h('li', { class: 'skill-row empty' }, 'Ninguna skill coincide con la búsqueda.')])
       );
     };
     fill();
-    body.replaceChildren(
-      builtin,
+    const filterSeg = h(
+      'div',
+      { class: 'segmented', role: 'group', 'aria-label': 'Mostrar' },
+      [
+        [false, 'Todas'],
+        [true, `Activas (${on.length})`]
+      ].map(([value, label]) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            class: eccOnlyActive === value ? 'active' : '',
+            'aria-pressed': String(eccOnlyActive === value),
+            onclick: () => {
+              eccOnlyActive = value;
+              paint(st);
+            }
+          },
+          label
+        )
+      )
+    );
+    host.replaceChildren(
+      ...sections,
+      h('h3', { class: 'group-title' }, 'De ECC'),
+      h(
+        'p',
+        { class: 'group-help' },
+        `${st.skills.length} skills de Everything Claude Code (licencia MIT). Cada skill activa añade su descripción a cada sesión: ahora unos ${tokens || on.length * 30} tokens.`
+      ),
       h(
         'div',
-        { class: 'muted' },
-        `${st.skills.length} skills, ${st.commands.count} comandos y ${st.agents} agentes de Everything Claude Code (licencia MIT), incluidos en optimia. `,
-        `Las skills activas llegan al chat y a los agentes (/nombre). ${on.length} activas: unos ${Math.round(chars / 4 / 100) * 100 || on.length * 30} tokens por sesión. Los agentes de ECC están en Ajustes › Agentes y con @ en el chat.`
+        { class: 'skills-toolbar' },
+        h('input', {
+          type: 'search',
+          placeholder: 'Buscar (react, docker, security…)',
+          'aria-label': 'Buscar skills de ECC',
+          value: eccFilter,
+          oninput: (e) => {
+            eccFilter = e.target.value;
+            fill();
+          }
+        }),
+        filterSeg
       ),
-      h('input', {
-        type: 'search',
-        placeholder: 'Buscar skills (react, docker, security…)',
-        'aria-label': 'Buscar skills de ECC',
-        value: eccFilter,
-        oninput: (e) => {
-          eccFilter = e.target.value;
-          fill();
-        }
-      }),
       list,
       h(
-        'label',
-        { class: 'check-row' },
-        h('input', {
-          type: 'checkbox',
-          checked: st.commands.enabled,
-          onchange: (e) => save({ commands: e.target.checked })
-        }),
-        `Incluir también sus ${st.commands.count} comandos (/code-review, /tdd, /plan…)`
+        'ul',
+        { class: 'grouped-list' },
+        h(
+          'li',
+          { class: 'skill-row' },
+          h(
+            'label',
+            { class: 'skill-row-text', for: 'ecc-commands-switch' },
+            h('span', { class: 'skill-row-name plain' }, `Comandos de ECC (${st.commands.count})`),
+            h('span', { class: 'skill-row-desc' }, '/code-review, /tdd, /plan… en el chat y para los agentes.')
+          ),
+          h('input', {
+            type: 'checkbox',
+            role: 'switch',
+            class: 'switch',
+            id: 'ecc-commands-switch',
+            checked: st.commands.enabled,
+            onchange: (e) => save({ commands: e.target.checked })
+          })
+        )
       ),
       h(
         'div',
         { class: 'general-actions' },
-        h('button', { type: 'button', onclick: () => save({ skills: null }) }, 'Volver a la selección recomendada'),
-        h('button', { type: 'button', onclick: () => save({ skills: [] }) }, 'Ninguna')
+        h('button', { type: 'button', onclick: () => save({ skills: null }) }, 'Restaurar la selección recomendada'),
+        h('button', { type: 'button', onclick: () => save({ skills: [] }) }, 'Desactivar todas')
+      ),
+      h(
+        'p',
+        { class: 'group-help' },
+        `Los ${st.agents} agentes de ECC están en Ajustes › Agentes y se llaman con @ en el chat.`
       )
     );
   }
   api
     .get('/api/ecc')
     .then(paint)
-    .catch((err) => body.replaceChildren(h('div', { class: 'error-text' }, err.message)));
+    .catch((err) => host.replaceChildren(h('div', { class: 'error-text' }, err.message)));
   return host;
 }
 

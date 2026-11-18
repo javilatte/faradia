@@ -221,6 +221,18 @@ window.OPTIMIA_I18N_EN = {
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
     'Siempre activas:': 'Always on:',
+    'De optimia': 'From optimia',
+    'De ECC': 'From ECC',
+    Siempre: 'Always',
+    Todas: 'All',
+    'Siempre disponibles en el chat y para los agentes. Claude las usa cuando encajan con lo que pides, o las llamas con /nombre.':
+      'Always available in the chat and to the agents. Claude uses them when they fit what you ask, or you call them with /name.',
+    'Buscar (react, docker, security…)': 'Search (react, docker, security…)',
+    'Ninguna skill coincide con la búsqueda.': 'No skill matches the search.',
+    '/code-review, /tdd, /plan… en el chat y para los agentes.':
+      '/code-review, /tdd, /plan… in the chat and for the agents.',
+    'Restaurar la selección recomendada': 'Restore the recommended selection',
+    'Desactivar todas': 'Turn all off',
     '¿En qué trabajamos hoy?': 'What are we working on today?',
     'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que optimia vigila tus repos; el historial anterior está en Commits.':
       'No activity with these filters yet. Changes, commits and agents show up here from the moment optimia watches your repos; earlier history is under Commits.',
@@ -606,6 +618,17 @@ window.OPTIMIA_I18N_EN = {
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
+    ['^Activas \\((\\d+)\\)$', 'On ($1)'],
+    ['^Comandos de ECC \\((\\d+)\\)$', 'ECC commands ($1)'],
+    ['^Activar /(.+)$', 'Turn on /$1'],
+    [
+      '^(\\d+) skills de Everything Claude Code \\(licencia MIT\\)\\. Cada skill activa añade su descripción a cada sesión: ahora unos (\\d+) tokens\\.$',
+      '$1 skills from Everything Claude Code (MIT licence). Each skill that is on adds its description to every session: about $2 tokens now.'
+    ],
+    [
+      '^Los (\\d+) agentes de ECC están en Ajustes › Agentes y se llaman con @ en el chat\\.$',
+      "ECC's $1 agents are in Settings › Agents and are called with @ in the chat."
+    ],
     [
       '^Las skills de optimia y de ECC valen para todos los repos; las propias, solo para (.+)\\.$',
       "optimia's and ECC's skills apply to every repo; the repo's own, only to $1."
