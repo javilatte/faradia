@@ -121,6 +121,7 @@ const PIPELINE_STATE = {
   done: 'Hecha',
   asked: 'Esperando tu respuesta',
   error: 'Falló',
+  switched: 'Siguió con otro modelo (Claude se quedó sin uso)',
   blocked: 'Detenida por acciones prohibidas',
   skipped: 'Desactivada: se salta'
 };
@@ -306,34 +307,6 @@ const TASK_TYPE_LABEL = {
 // Actions the safety policy blocked: the agent went on another way. Each one says what the agent
 // wanted to do and why it was blocked and, when it can be approved, offers "Permitir" (for this exact
 // command in this repo). Shown while the task is open; the ones of earlier stages are kept too.
-// Output of builds, tests and installs (build/, dist/, coverage/…) is not something the task produced
-// for the user: left out of "generated files" and of the files offered for the commit.
-const BUILD_DIRS = new Set([
-  'build',
-  'dist',
-  'out',
-  '.next',
-  '.nuxt',
-  '.svelte-kit',
-  'coverage',
-  'target',
-  '__pycache__',
-  '.pytest_cache',
-  '.mypy_cache',
-  '.ruff_cache',
-  '.venv',
-  'venv',
-  '.cache',
-  '.turbo',
-  '.parcel-cache',
-  'node_modules'
-]);
-const isTaskOutput = (rel) =>
-  !String(rel)
-    .split('/')
-    .slice(0, -1)
-    .some((part) => BUILD_DIRS.has(part));
-
 // Tools whose name means nothing to a person.
 const BLOCKED_TOOL_LABEL = {
   SandboxNetworkAccess: 'Conectarse a internet fuera de los registros de paquetes'
@@ -629,7 +602,7 @@ function renderCommitBox(taskId, task) {
   msg.className = 'task-commit-msg';
   msg.setAttribute('aria-label', 'Mensaje de commit');
   row.appendChild(msg);
-  const ignored = (task.ignoredOutputs || []).filter(isTaskOutput);
+  const ignored = task.ignoredOutputs || [];
   const picks = [];
   row.appendChild(
     actionButton(task.lastCommit ? 'Commit de los cambios nuevos' : 'Commit', {
@@ -997,7 +970,7 @@ function renderTaskWorkspace(taskId, task) {
     meta.textContent = `Rama: ${task.branch}${task.baseBranch ? ` · base: ${task.baseBranch}` : ''}`;
     box.appendChild(meta);
   }
-  const files = gone ? [] : (task.outputFiles || []).filter(isTaskOutput);
+  const files = gone ? [] : task.outputFiles || [];
   if (files.length) {
     const title = document.createElement('div');
     title.className = 'task-meta';

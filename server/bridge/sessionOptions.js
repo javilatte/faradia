@@ -60,13 +60,13 @@ function localDefaults(ai) {
  * a different local model at the same time. See localAi.js for the environment of those sessions.
  */
 /**
- * The engine a session runs on. A provider override (`settings.engineOverride`, set while Claude is
- * out of usage, see ai/fallback.js) wins over the agent's and the chat's choice for Claude sessions.
+ * The engine a session runs on. While Claude is out of usage (see ai/fallback.js), the local model
+ * takes the place of Claude for the sessions that would use it.
  */
 function engineFor(settings, agent) {
   const wanted = agent ? agent.engine : settings.ai.mode === 'local' ? 'local' : 'claude';
   if (wanted !== 'claude') return wanted;
-  const override = settings.engineOverride !== undefined ? settings.engineOverride : engineOverride(settings);
+  const override = engineOverride(settings);
   return override || 'claude';
 }
 

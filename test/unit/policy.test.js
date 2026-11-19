@@ -83,12 +83,19 @@ test('sandbox: required by default, explained when its tools are missing', () =>
   assert.equal(sandboxProblem('off', missing), null);
   assert.equal(sandboxSettings('off'), undefined);
   assert.equal(sandboxSettings('required').failIfUnavailable, true);
-  // Package registries and the package managers' caches, so agents can install dependencies;
+  // Package registries, so agents can install dependencies;
   // nothing else on the network.
   assert.ok(sandboxSettings('required').network.allowedDomains.includes('registry.npmjs.org'));
   assert.ok(sandboxSettings('required').network.allowedDomains.includes('pypi.org'));
   assert.ok(!sandboxSettings('required').network.allowedDomains.includes('github.com'));
-  assert.ok(sandboxSettings('required').filesystem.allowWrite.includes('~/.npm'));
+  // Caches go to the agents' own folder, never to the user's (~/.npm, ~/.cache…), which the user's
+  // tools run code from outside the sandbox.
+  const { agentCacheDir, agentCacheEnv } = require('../../server/bridge/sandbox');
+  assert.deepEqual(sandboxSettings('required').filesystem.allowWrite, [agentCacheDir()]);
+  const env = agentCacheEnv();
+  for (const k of ['XDG_CACHE_HOME', 'npm_config_cache', 'CARGO_HOME', 'GOMODCACHE', 'YARN_CACHE_FOLDER']) {
+    assert.ok(env[k].startsWith(agentCacheDir()), k);
+  }
   assert.equal(sandboxSettings('required', { registries: false }).network, undefined);
 });
 

@@ -8,6 +8,7 @@ const { builtinSkills } = require('../skills/library');
 const ecc = require('../ecc/library');
 const { loadAgents } = require('../agents/catalog');
 const { TASK_TYPES } = require('../bridge/taskStages');
+const { claudeBlockedUntil } = require('./fallback');
 
 // While the user types in the chat, a cheap model reads the message and proposes at most two
 // things from what optimia offers: a skill (/name), an agent (@id) or a task type. It may only pick
@@ -226,7 +227,16 @@ async function askLocal(local, system, user, fetcher) {
   return data?.choices?.[0]?.message?.content || '';
 }
 
-function viaClaude(settings, system, user, { spawnFn = spawn } = {}) {
+// Suggestions still running per repo: a long message typed with pauses would otherwise start one
+// claude process per pause. Two may run (a late answer still helps, see intent.js); a third stops
+// the oldest.
+const running = new Map();
+const MAX_RUNNING = 2;
+
+function viaClaude(settings, system, user, { spawnFn = spawn, cwd = '', blockedUntil = claudeBlockedUntil } = {}) {
+  // Whoever chose the local model for the chat keeps what they type off the cloud; and while Claude
+  // is out of usage there is no point in asking it.
+  if (settings.ai?.mode === 'local' || blockedUntil()) return Promise.resolve(null);
   return new Promise((resolve, reject) => {
     const args = [
       '-p',
@@ -252,6 +262,15 @@ function viaClaude(settings, system, user, { spawnFn = spawn } = {}) {
     // From an empty folder: in the repo, Claude Code would load its CLAUDE.md, settings and hooks
     // (10x slower, and the model starts working on the repo instead of answering).
     const proc = spawnFn('claude', args, { cwd: os.tmpdir(), env: { ...process.env } });
+    const mine = running.get(cwd) || [];
+    mine.push(proc);
+    if (mine.length > MAX_RUNNING) mine.shift().kill();
+    running.set(cwd, mine);
+    const forget = () => {
+      const list = (running.get(cwd) || []).filter((p) => p !== proc);
+      if (list.length) running.set(cwd, list);
+      else running.delete(cwd);
+    };
     let out = '';
     const timer = setTimeout(() => {
       proc.kill();
@@ -260,10 +279,12 @@ function viaClaude(settings, system, user, { spawnFn = spawn } = {}) {
     proc.stdout.on('data', (c) => (out += c));
     proc.on('error', (err) => {
       clearTimeout(timer);
+      forget();
       reject(err);
     });
     proc.on('exit', (code) => {
       clearTimeout(timer);
+      forget();
       try {
         const data = JSON.parse(out);
         if (data.is_error) return reject(new Error(String(data.result || 'claude error')));
@@ -324,6 +345,7 @@ async function suggest({ text, projectRoot, settings, deps = {} }) {
 }
 
 module.exports = {
+  _viaClaude: viaClaude,
   _resetLocal: () => {
     localSkipUntil = 0;
   },

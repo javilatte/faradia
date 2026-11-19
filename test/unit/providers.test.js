@@ -27,6 +27,11 @@ test('Claude out of usage: detected from the stream, then sessions use the local
   );
   assert.ok(fallback.limitHit({ type: 'result', is_error: true, result: "You've hit your limit · resets 3pm" }, now));
   assert.equal(fallback.limitHit({ type: 'result', is_error: true, result: 'Bash failed' }, now), 0);
+  assert.equal(
+    fallback.limitHit({ type: 'result', is_error: true, api_error_status: 429, result: 'Rate limit exceeded' }, now),
+    0,
+    'a short rate limit is not running out of usage'
+  );
 
   const settings = defaultSettings();
   assert.equal(fallback.fallbackEngine(settings), null);
@@ -131,4 +136,57 @@ test('the local model answers suggestions only while it is fast; after a failure
   assert.equal(third.engine, 'local');
   assert.equal(claude.length, 2);
   clearInterval(keepAlive);
+});
+
+test('suggestions never go to Claude when the chat uses the local model, nor while Claude is out of usage', async () => {
+  const catalog = [{ kind: 'task', id: 'bugfix', description: 'fix a bug', core: true }];
+  let spawned = 0;
+  const spawnFn = () => {
+    spawned++;
+    throw new Error('should not run');
+  };
+  const settings = defaultSettings();
+  settings.ai.mode = 'local';
+  const engines = [['claude', (s, sys, user, opts) => suggest._viaClaude(s, sys, user, opts)]];
+  const r = await suggest.suggest({
+    text: 'revisa la seguridad del login ahora',
+    projectRoot: '/z',
+    settings,
+    deps: { catalog, engines, spawnFn }
+  });
+  assert.deepEqual(r.suggestions, []);
+  settings.ai.mode = 'claude';
+  const blocked = await suggest._viaClaude(settings, 's', 'u', { spawnFn, blockedUntil: () => Date.now() + 1000 });
+  assert.equal(blocked, null);
+  assert.equal(spawned, 0);
+});
+
+test('at most two Haiku suggestions run per repo: a third stops the oldest', async () => {
+  const { EventEmitter } = require('events');
+  const procs = [];
+  const spawnFn = () => {
+    const proc = new EventEmitter();
+    proc.stdout = new EventEmitter();
+    proc.stdin = { end: () => {} };
+    proc.killed = false;
+    proc.kill = () => {
+      proc.killed = true;
+      setImmediate(() => proc.emit('exit', null));
+    };
+    procs.push(proc);
+    return proc;
+  };
+  const settings = defaultSettings();
+  const ask = () =>
+    suggest._viaClaude(settings, 's', 'u', { spawnFn, cwd: '/repo', blockedUntil: () => 0 }).catch((e) => e);
+  const first = ask();
+  ask();
+  ask();
+  assert.equal(procs[0].killed, true);
+  assert.equal(procs[1].killed, false);
+  assert.ok((await first) instanceof Error);
+  for (const p of procs.slice(1)) {
+    p.stdout.emit('data', JSON.stringify({ result: '{}' }));
+    p.emit('exit', 0);
+  }
 });

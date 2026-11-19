@@ -26,7 +26,6 @@ class ClaudeSession extends EventEmitter {
     effort,
     baseUrl,
     authHeader,
-    authToken,
     systemPrompt,
     mcpConfigPath,
     extraMcpConfigPaths = [],
@@ -102,7 +101,7 @@ class ClaudeSession extends EventEmitter {
       env.GIT_CONFIG_VALUE_0 = gitHooksPath;
     }
     // Local model: the account's credentials stay out of the request (see localAi.js).
-    const finalEnv = baseUrl ? localSessionEnv(env, { baseUrl, authHeader, authToken, model }) : env;
+    const finalEnv = baseUrl ? localSessionEnv(env, { baseUrl, authHeader, model }) : env;
 
     this.proc = spawn('claude', args, { cwd: projectRoot, env: finalEnv });
 
@@ -209,6 +208,18 @@ class ClaudeSession extends EventEmitter {
   kill() {
     if (this._exited) return;
     this.proc.kill();
+  }
+
+  /** Resolves once the process has exited (at most `timeoutMs` later, if it never says so). */
+  exited(timeoutMs = 5000) {
+    if (this._exited || !this.proc) return Promise.resolve();
+    return new Promise((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs);
+      this.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
   }
 }
 

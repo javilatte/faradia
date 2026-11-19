@@ -31,7 +31,7 @@ function relPath(base, p) {
 }
 const { ensureGitGuardHooks } = require('../bridge/gitGuard');
 const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
-const { sandboxProblem } = require('../bridge/sandbox');
+const { sandboxProblem, agentCacheEnv } = require('../bridge/sandbox');
 const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
 const { adoptPendingMemory } = require('../knowledge/bundle');
 const { loadAttachments, attachmentsPrompt } = require('../bridge/attachments');
@@ -289,7 +289,10 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     opts.disallowedTools = stageDisallowed(stage, agent);
     opts.gitHooksPath = ensureGitGuardHooks(projectRoot);
     // Exceptions to the safety policy approved from the cards, fixed for the whole stage.
+    const security = settings.security;
     opts.extraEnv = {
+      // Package caches in the agents' own folder (see sandbox.js), when they may install packages.
+      ...(security.sandbox !== 'off' && security.registries !== false ? agentCacheEnv() : {}),
       OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
       // optimia's MCP server (a child of this session) reports progress for this task without
       // depending on the model passing its id.
@@ -408,6 +411,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     session.on('exit', () => {
       if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
       if (session._switching) {
+        // The run that was cut off ends here; the same stage starts a new one with the other model.
+        const before = loadTasks(projectRoot).find((t) => t.id === taskId);
+        updateTask(projectRoot, taskId, { stageRuns: closeLastRun(before, stage, 'switched') });
         const result = runTaskStage(taskId, { stage, afterSwitch: true });
         if (result.error) broadcast({ type: 'task_error', taskId, error: result.error });
         return;
@@ -602,18 +608,20 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
    * Before a new message: a chat left on the fallback provider goes back to its own engine once
    * Claude is available again (and the other way round), between turns, keeping the session.
    */
+  // Returns a promise when it stopped the chat's process: the next one resumes the same session, so
+  // it must wait for this one to be gone (two processes on one transcript would mix it up).
   function realignChatEngine(chatId) {
     const existing = chatSessions.get(chatId);
-    if (!existing || existing._busy) return;
+    if (!existing || existing._busy) return null;
     const settings = loadSettings(projectRoot);
     const wanted = engineFor(settings);
     // A change of the chat permissions setting also starts a new process (same conversation).
-    if (existing.engine === wanted && existing.chatPermissions === (settings.chat?.permissions || 'auto')) return;
+    if (existing.engine === wanted && existing.chatPermissions === (settings.chat?.permissions || 'auto')) return null;
     if (existing.engine === wanted) {
       existing._switching = true;
       chatSessions.delete(chatId);
       existing.kill();
-      return;
+      return existing.exited();
     }
     existing._switching = true;
     chatSessions.delete(chatId);
@@ -627,6 +635,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       to: wanted,
       until: claudeBlockedUntil()
     });
+    return existing.exited();
   }
 
   // Commands that only read: allowed in the chat without asking (each part of a pipeline must match).
@@ -950,7 +959,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
       let session;
       try {
-        realignChatEngine(msg.chatId);
+        const previous = realignChatEngine(msg.chatId);
+        // The message goes on once the previous process is gone (it is handled again from the top).
+        if (previous) return void previous.then(() => handleWsMessage(msg, ws));
         session = startOrGetChatSession(msg.chatId);
       } catch (err) {
         return ws.send(JSON.stringify({ type: 'bridge_error', chatId: msg.chatId, error: err.message }));

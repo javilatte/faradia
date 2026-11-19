@@ -5,6 +5,7 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'Siguió con otro modelo (Claude se quedó sin uso)': 'Went on with another model (Claude ran out of usage)',
     'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups':
       "another computer's copy could not be applied; it was kept in ~/.config/optimia/backups",
     'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing… En los demás equipos elige la misma.':

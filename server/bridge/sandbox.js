@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { dataDir } = require('../store/globalPaths');
 
 // Claude Code's OS sandbox for agent sessions: Bash can only write inside the task's worktree.
 // macOS uses Seatbelt (built in); Linux needs bubblewrap and socat. Without them Claude Code would
@@ -39,7 +40,7 @@ function sandboxStatus({ platform = process.platform, has = onPath } = {}) {
 
 // The "sandbox" block of the agents' Claude settings.
 // Package registries agents may reach from the sandbox to install dependencies (and nothing else on
-// the network), and the package managers' caches they need to write to.
+// the network).
 const PACKAGE_REGISTRIES = [
   'registry.npmjs.org',
   'registry.yarnpkg.com',
@@ -56,16 +57,29 @@ const PACKAGE_REGISTRIES = [
   'repo.maven.apache.org',
   'repo1.maven.org'
 ];
-const PACKAGE_CACHES = [
-  '~/.npm',
-  '~/.cache',
-  '~/.yarn',
-  '~/.local/share/pnpm',
-  '~/.cargo/registry',
-  '~/go/pkg/mod',
-  '~/.gem',
-  '~/.m2/repository'
-];
+// Package managers write their caches in the agents' own folder, never in the user's (~/.npm,
+// ~/.cargo, ~/.cache…): the user's tools run code from those outside the sandbox, so an agent that
+// could write there could get code run without it. Shared by every agent, so a package downloads once.
+function agentCacheDir() {
+  return path.join(dataDir(), 'agent-cache');
+}
+
+/** Environment of an agent session that sends every package manager's cache to agentCacheDir(). */
+function agentCacheEnv(dir = agentCacheDir()) {
+  fs.mkdirSync(dir, { recursive: true });
+  const at = (name) => path.join(dir, name);
+  return {
+    XDG_CACHE_HOME: at('xdg'), // pip, uv, poetry, go build, pre-commit…
+    npm_config_cache: at('npm'), // npm and npx
+    npm_config_store_dir: at('pnpm'),
+    YARN_CACHE_FOLDER: at('yarn'),
+    CARGO_HOME: at('cargo'),
+    GOMODCACHE: at('go-mod'),
+    BUNDLE_PATH: at('bundle'),
+    GRADLE_USER_HOME: at('gradle'),
+    MAVEN_OPTS: `-Dmaven.repo.local=${at('maven')}`
+  };
+}
 
 function sandboxSettings(mode, { registries = true } = {}) {
   if (mode === 'off') return undefined;
@@ -76,7 +90,7 @@ function sandboxSettings(mode, { registries = true } = {}) {
     allowUnsandboxedCommands: false,
     autoAllowBashIfSandboxed: true,
     ...(registries
-      ? { network: { allowedDomains: PACKAGE_REGISTRIES }, filesystem: { allowWrite: PACKAGE_CACHES } }
+      ? { network: { allowedDomains: PACKAGE_REGISTRIES }, filesystem: { allowWrite: [agentCacheDir()] } }
       : {})
   };
 }
@@ -90,4 +104,4 @@ function sandboxProblem(mode, status = sandboxStatus()) {
   return `los agentes necesitan el sandbox de Claude Code y faltan ${status.missing.join(' y ')}${status.install ? `: instálalos con «${status.install}»` : ''}. Si aceptas el riesgo, puedes desactivarlo en Ajustes › General › Seguridad.`;
 }
 
-module.exports = { sandboxStatus, sandboxSettings, sandboxProblem, PACKAGE_REGISTRIES };
+module.exports = { sandboxStatus, sandboxSettings, sandboxProblem, agentCacheDir, agentCacheEnv, PACKAGE_REGISTRIES };

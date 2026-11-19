@@ -19,6 +19,8 @@ const pkg = require('../../package.json');
 //   agents       the global agents (their .md files as they are)
 //   stageMap     which agent runs each stage (global)
 //   preferences  signals, thresholds and notifications
+// Security (sandbox, package registries) is exported for reference but not imported: whether the
+// sandbox can run depends on each machine.
 // It leaves out what depends on the machine (workbenches, repo paths, watchlists)
 // and what belongs to each repo (its memory and overrides). The local AI auth
 // header is a secret: it is only included on request.

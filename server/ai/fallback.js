@@ -14,7 +14,9 @@ const { dataDir } = require('../store/globalPaths');
 // same session (claude --resume), so the conversation and the task keep all their context.
 
 const FILE = () => path.join(dataDir(), 'claude-usage.json');
-const LIMIT_TEXT = /(usage limit|hit your limit|limit reached|out of (extra )?usage|rate limit)/i;
+// Wording of the account's usage limit. A plain rate limit (429, "rate limit exceeded") lasts
+// seconds and the CLI retries it: it is not a reason to leave Claude for hours.
+const LIMIT_TEXT = /(usage limit|hit your limit|limit reached|out of (extra )?usage)/i;
 const DEFAULT_BLOCK_MS = 60 * 60 * 1000;
 
 let state = null;
@@ -52,7 +54,7 @@ function limitHit(event, now = Date.now()) {
   }
   if (event?.type === 'result' && event.is_error) {
     const text = `${event.result || ''} ${(event.errors || []).join(' ')}`;
-    if (event.api_error_status === 429 || LIMIT_TEXT.test(text)) {
+    if (LIMIT_TEXT.test(text)) {
       const m = /\|(\d{10})\b/.exec(text); // "Claude AI usage limit reached|1794957000"
       return m ? Number(m[1]) * 1000 : now + DEFAULT_BLOCK_MS;
     }

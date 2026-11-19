@@ -2,17 +2,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFile, execFileSync } = require('child_process');
+const { execFile, execFileSync, spawnSync } = require('child_process');
 
-// Folders that are never a "stage result": dependencies, metadata and optimia's own state.
-// Not shown as "generated files": tool folders and the output of builds, tests and installs that a
-// verification leaves behind (they are noise next to the files the task really produced).
-const SKIP_DIRS = new Set([
-  '.git',
-  'node_modules',
-  '.optimia',
-  '.claude',
-  '.codegraph',
+// Not shown as "generated files": tool folders, always, and the output of builds, tests and installs
+// that a verification leaves behind, when git ignores it (dist/, coverage/…). A folder with one of
+// those names that git does not ignore (src/build/) holds real files of the task and is listed.
+const TOOL_DIRS = new Set(['.git', 'node_modules', '.optimia', '.claude', '.codegraph']);
+const BUILD_DIRS = new Set([
   'build',
   'dist',
   'out',
@@ -31,6 +27,12 @@ const SKIP_DIRS = new Set([
   '.turbo',
   '.parcel-cache'
 ]);
+
+function gitIgnores(worktreeDir, rel) {
+  const res = spawnSync('git', ['check-ignore', '-q', '--', rel], { cwd: worktreeDir });
+  return res.status === 0;
+}
+
 const MAX_FILES = 500;
 const MAX_PREVIEW_BYTES = 1_000_000;
 
@@ -50,7 +52,9 @@ function listFilesModifiedSince(worktreeDir, sinceMs) {
       if (out.length >= MAX_FILES) return;
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) walk(abs);
+        if (TOOL_DIRS.has(entry.name)) continue;
+        if (BUILD_DIRS.has(entry.name) && gitIgnores(worktreeDir, path.relative(worktreeDir, abs))) continue;
+        walk(abs);
       } else if (entry.isFile()) {
         const stat = fs.statSync(abs);
         if (stat.mtimeMs >= sinceMs) out.push(path.relative(worktreeDir, abs).split(path.sep).join('/'));

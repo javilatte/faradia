@@ -151,7 +151,9 @@ loadTaskKinds().catch(() => {});
 // A card title from the request: its first sentence, cut at a word (never mid-word) with "…".
 function shortTaskTitle(text, max = 70) {
   const first = text.trim().split('\n')[0];
-  const sentence = (first.match(/^.+?[.:;!?](\s|$)/)?.[0] || first).trim().replace(/[.:;]$/, '');
+  // The first sentence when it says enough; never cut at ":" ("Bug: el login falla…", "fix: …").
+  const end = first.match(/^.+?[.!?](\s|$)/)?.[0].trim();
+  const sentence = (end && end.split(/\s+/).length >= 3 ? end : first).trim().replace(/[.:;]$/, '');
   if (sentence.length <= max) return sentence;
   const cut = sentence.slice(0, max);
   const space = cut.lastIndexOf(' ');

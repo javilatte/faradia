@@ -170,7 +170,7 @@ test('buildSessionOptions: chat and agents get their own optimia settings file v
     network: { allowedDomains: PACKAGE_REGISTRIES },
     filesystem: { allowWrite: agentFile.sandbox.filesystem.allowWrite }
   });
-  assert.ok(agentFile.sandbox.filesystem.allowWrite.includes('~/.npm'));
+  assert.ok(!agentFile.sandbox.filesystem.allowWrite.some((p) => p.startsWith('~')), "never the user's caches");
 });
 
 test("buildSessionOptions: instructions for all repos and then the repo's own, in sections", (t) => {

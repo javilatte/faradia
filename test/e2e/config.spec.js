@@ -39,8 +39,12 @@ test('first run: import the configuration from the welcome sheet, export it, and
   const file = path.join(e2eTmp(), 'optimia-config-test.json');
   fs.writeFileSync(file, JSON.stringify(mine));
 
-  // A fresh machine: no global settings, no global agents and no "welcomed" mark.
-  fs.rmSync(path.join(configDir(), 'state.json'), { force: true });
+  // A fresh machine: no global settings, no global agents and no "welcomed" mark (the what's new
+  // tour stays seen: it is not what this test is about).
+  fs.writeFileSync(
+    path.join(configDir(), 'state.json'),
+    JSON.stringify({ tourSeen: require('../../package.json').version })
+  );
   fs.rmSync(path.join(configDir(), 'settings.json'), { force: true });
   for (const name of fs.existsSync(path.join(configDir(), 'agents'))
     ? fs.readdirSync(path.join(configDir(), 'agents'))
