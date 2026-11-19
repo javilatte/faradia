@@ -5,6 +5,8 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups':
+      "another computer's copy could not be applied; it was kept in ~/.config/optimia/backups",
     'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing… En los demás equipos elige la misma.':
       'A folder you already sync between your computers: Google Drive for desktop, Dropbox, iCloud, Syncthing… Pick the same one on your other computers.',
     'Cifra la copia en este equipo antes de guardarla en la carpeta. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).':
@@ -874,6 +876,10 @@ window.OPTIMIA_I18N_EN = {
       'Effort "$1" $2, from the next session.'
     ],
     ['^No se pudo sincronizar: (.+)$', 'Could not sync: $1'],
+    [
+      '^la copia de (.+) no se pudo aplicar \\((.+)\\); quedó guardada en ~/\\.config/optimia/backups$',
+      'the copy from $1 could not be applied ($2); it was kept in ~/.config/optimia/backups'
+    ],
     ['^No se pudo (.+): (.+)$', 'Could not $1: $2'],
     ['^(.+) \\(ECC\\)$', '$1 (ECC)'],
     ['^Agentes de ECC \\((\\d+)(?:, (\\d+) activos)?\\)$', 'ECC agents ($1)'],

@@ -36,7 +36,8 @@ const ACTION_TEXT = {
   up: 'se subieron los cambios de este equipo',
   down: 'se aplicaron los cambios de otro equipo',
   'conflict-down': 'había cambios en los dos lados: se quedó la versión más reciente (la de otro equipo)',
-  'conflict-up': 'había cambios en los dos lados: se quedó la versión más reciente (la de este equipo)'
+  'conflict-up': 'había cambios en los dos lados: se quedó la versión más reciente (la de este equipo)',
+  unusable: 'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups'
 };
 
 function syncWhen(iso) {

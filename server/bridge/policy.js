@@ -55,9 +55,12 @@ function segments(command) {
 function checkCommand(command, approved = [], { canDelete } = {}) {
   const exact = String(command || '').trim();
   if (approved.includes(exact)) return null;
-  for (const seg of segments(command)) {
+  const parts = segments(command);
+  // ownFilesOnly resolves paths from the session's folder: not valid once the command moves.
+  const movesDir = parts.some((seg) => /^(cd|pushd|popd)(\s|$)/.test(seg));
+  for (const seg of parts) {
     const rule = RULES.find((r) => r.re.test(seg));
-    if (rule?.id === 'delete' && canDelete?.(seg)) continue;
+    if (rule?.id === 'delete' && !movesDir && canDelete?.(seg)) continue;
     if (rule) return rule;
   }
   return null;
@@ -74,6 +77,8 @@ function ownFilesOnly(segment, cwd, { tracked } = {}) {
   const fs = require('fs');
   const path = require('path');
   if (!cwd || /[*?[\]{}$`~"'\\]/.test(segment)) return false;
+  // Only a plain `rm …` (not `xargs rm`, `find … -delete`, `command rm`…): its words are the targets.
+  if (!/^rm(\s|$)/.test(segment.trim())) return false;
   const words = segment.trim().split(/\s+/).slice(1);
   const targets = words.filter((w) => !w.startsWith('-'));
   if (!targets.length || words.some((w) => w === '--')) return false;
@@ -92,8 +97,8 @@ function ownFilesOnly(segment, cwd, { tracked } = {}) {
     let st;
     try {
       st = fs.lstatSync(abs);
-    } catch {
-      return true; // already gone: nothing to protect
+    } catch (err) {
+      return err.code === 'ENOENT'; // already gone: nothing to protect; anything else, blocked
     }
     if (st.isSymbolicLink()) return false;
     // Reached through a symlinked folder: the real path leaves the worktree.

@@ -149,3 +149,44 @@ test('only writes to the global configuration trigger a sync', () => {
   assert.ok(!isConfigWrite(req('GET'), '/api/settings'));
   assert.ok(!isConfigWrite(req('POST'), '/api/tasks'));
 });
+
+test('sync: a copy this version cannot apply is kept aside and does not block uploads', async (t) => {
+  const { a, shared, on } = setup(t);
+  on(a);
+  const sync = createSync();
+  await sync.connect({ kind: 'folder', path: shared }, PASS);
+  sync.stop();
+  // Another computer (another optimia version) writes a configuration this one rejects.
+  const foreign = envelope.seal({ format: 'optimia-config', formatVersion: 99 }, PASS, {
+    updatedAt: new Date().toISOString(),
+    machine: 'portatil',
+    machineId: 'other'
+  });
+  fs.writeFileSync(path.join(shared, targets.FILE_NAME), JSON.stringify(foreign));
+  assert.equal(await sync.syncOnce(), 'unusable');
+  assert.match(sync.status().lastError, /portatil/);
+  assert.ok(fs.readdirSync(path.join(a, 'optimia', 'backups')).some((n) => n.endsWith('-sync-unreadable')));
+  store.saveGlobalSettings({ preferences: { instructions: 'sigue subiendo' } });
+  assert.equal(await sync.syncOnce(), 'up');
+});
+
+test('sync: if the first pass fails, sync stays off instead of half on', async (t) => {
+  const { a, shared, on } = setup(t);
+  on(a);
+  // The folder can be read but not written (a mount that went read-only).
+  fs.chmodSync(shared, 0o555);
+  const sync = createSync();
+  await assert.rejects(sync.connect({ kind: 'folder', path: shared }, PASS), /EACCES/);
+  fs.chmodSync(shared, 0o755);
+  assert.equal(sync.status().enabled, false);
+});
+
+test('sync: conflict copies survive the rotation of import backups', async (t) => {
+  const { a, on } = setup(t);
+  on(a);
+  const portable = require('../../server/config/portable');
+  const root = path.join(a, 'optimia', 'backups');
+  fs.mkdirSync(path.join(root, '2026-01-01T00-00-00-000Z-sync-remote'), { recursive: true });
+  for (let i = 0; i < 12; i++) portable.importConfig(portable.exportConfig({ includeSecrets: true }));
+  assert.ok(fs.existsSync(path.join(root, '2026-01-01T00-00-00-000Z-sync-remote')));
+});

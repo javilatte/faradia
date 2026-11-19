@@ -207,7 +207,11 @@ function backupGlobal() {
   const dir = path.join(root, new Date().toISOString().replace(/[:.]/g, '-'));
   fs.mkdirSync(dir, { recursive: true });
   writeJson(path.join(dir, 'optimia-config.json'), exportConfig({ includeSecrets: true }));
-  const all = fs.readdirSync(root).sort();
+  // Copies set aside by sync (…-sync-remote) rotate on their own (sync/engine.js).
+  const all = fs
+    .readdirSync(root)
+    .filter((n) => !/-sync-[a-z]+$/.test(n))
+    .sort();
   for (const old of all.slice(0, Math.max(0, all.length - 10))) {
     fs.rmSync(path.join(root, old), { recursive: true, force: true });
   }

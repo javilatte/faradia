@@ -75,10 +75,20 @@ function localModifiedAt() {
 
 const stampOf = (remote) => (remote ? `${remote.updatedAt}|${remote.machineId}` : null);
 
+// Copies that sync set aside (the other computer's version after a conflict, or one it could not
+// apply), next to the import backups but rotated on their own: the last 20 are kept.
 function keepCopy(config, why) {
-  const dir = path.join(configDir(), 'backups', `${new Date().toISOString().replace(/[:.]/g, '-')}-${why}`);
+  const root = path.join(configDir(), 'backups');
+  const dir = path.join(root, `${new Date().toISOString().replace(/[:.]/g, '-')}-${why}`);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'optimia-config.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
+  const mine = fs
+    .readdirSync(root)
+    .filter((n) => /-sync-[a-z]+$/.test(n))
+    .sort();
+  for (const old of mine.slice(0, Math.max(0, mine.length - 20))) {
+    fs.rmSync(path.join(root, old), { recursive: true, force: true });
+  }
 }
 
 function createSync({ log = () => {}, onChange = () => {} } = {}) {
@@ -131,22 +141,45 @@ function createSync({ log = () => {}, onChange = () => {} } = {}) {
     return { lastHash: localSnapshot().hash, lastRemoteStamp: stampOf(remote) };
   }
 
-  /** One pass. Returns what it did: 'up', 'down', 'none', or 'conflict-up'/'conflict-down'. */
+  /** One pass. Returns what it did: 'up', 'down', 'none', 'unusable', or 'conflict-up'/'conflict-down'. */
   async function syncOnce() {
     const target = targetOf();
     if (!target) return 'none';
+    const started = state.target;
     const local = localSnapshot();
     const remote = await target.read();
     let action = 'none';
     let next = {};
+    let problem = null;
     if (!remote) {
       next = await push(target, local);
       action = 'up';
     } else {
       const remoteChanged = stampOf(remote) !== state.lastRemoteStamp;
       const localChanged = local.hash !== state.lastHash;
+      // A copy this version cannot apply (another version of optimia, a damaged file) is kept
+      // aside and stops blocking: this computer's changes go up again from the next change on.
+      let unusable = null;
+      let config = null;
       if (remoteChanged) {
-        const config = envelope.open(remote, state.passphrase);
+        config = envelope.open(remote, state.passphrase);
+        try {
+          portable.validateConfig(config);
+        } catch (err) {
+          if (!(err instanceof portable.ConfigError)) throw err;
+          unusable = err.message;
+        }
+      }
+      if (unusable) {
+        keepCopy(config, 'sync-unreadable');
+        problem = `la copia de ${remote.machine || 'otro equipo'} no se pudo aplicar (${unusable}); quedó guardada en ~/.config/optimia/backups`;
+        next = { lastRemoteStamp: stampOf(remote) };
+        action = 'unusable';
+        if (localChanged) {
+          next = await push(target, local);
+          action = 'up';
+        }
+      } else if (remoteChanged) {
         const remoteHash = (() => {
           const { exportedAt, optimiaVersion, ...content } = config;
           return crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex');
@@ -169,13 +202,15 @@ function createSync({ log = () => {}, onChange = () => {} } = {}) {
         action = 'up';
       }
     }
+    // Turned off (or pointed elsewhere) while this pass ran: what it found no longer applies.
+    if (state.target !== started) return 'none';
     record({
       ...next,
       lastSyncAt: new Date().toISOString(),
       ...(action !== 'none' ? { lastAction: action } : {}),
-      lastError: null
+      lastError: problem
     });
-    if (action !== 'none') log('sync.done', { action, kind: state.target.kind });
+    if (action !== 'none') log('sync.done', { action });
     return action;
   }
 
@@ -201,8 +236,18 @@ function createSync({ log = () => {}, onChange = () => {} } = {}) {
     const remote = await target.read();
     if (remote) envelope.open(remote, passphrase);
     // A new target starts from scratch: whatever is there wins over this computer, which is backed up.
+    const before = state;
     record({ target: targetConfig, passphrase, lastHash: null, lastRemoteStamp: null, lastError: null });
-    const action = await run();
+    let action;
+    try {
+      action = await run();
+    } catch (err) {
+      // The first pass failed: sync stays as it was, instead of looking on while nothing runs.
+      state = before;
+      saveState(state);
+      onChange(status());
+      throw err;
+    }
     start();
     return { action, existing: Boolean(remote) };
   }

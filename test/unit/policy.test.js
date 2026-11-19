@@ -131,4 +131,8 @@ test('an agent may delete what it created in its worktree, never tracked files o
   const canDelete = (seg) => ownFilesOnly(seg, repo);
   assert.equal(checkCommand('rm package-lock.json && git status', [], { canDelete }), null);
   assert.equal(checkCommand('rm package.json', [], { canDelete }).id, 'delete');
+  // Paths are checked from the worktree: a command that moves first is not checked, it is blocked.
+  assert.equal(checkCommand('cd .. && rm -rf other-repo', [], { canDelete }).id, 'delete');
+  assert.equal(checkCommand('cd build && rm package-lock.json', [], { canDelete }).id, 'delete');
+  assert.ok(!ownFilesOnly('xargs rm package-lock.json', repo), 'only a plain rm');
 });
