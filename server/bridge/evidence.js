@@ -23,6 +23,27 @@ function evidenceDir(projectRoot, taskId) {
   return path.join(evidenceRoot(projectRoot), taskId);
 }
 
+// Summaries test runners, linters and compilers print when something failed. A pipe (`npm test |
+// tail`) hides the exit code, so the output is read too.
+const FAILED_OUTPUT = [
+  /^# fail [1-9]/m, // node --test, TAP
+  /^\s*ℹ fail [1-9]/m, // node --test (spec reporter)
+  /\b[1-9]\d* failing\b/, // mocha
+  /^Tests:\s+.*\b[1-9]\d* failed/m, // jest, vitest
+  /^\s*Test Files\s+.*\b[1-9]\d* failed/m, // vitest
+  /^=+ .*\b[1-9]\d* (failed|errors?)\b.* =+$/m, // pytest
+  /^(--- )?FAIL\b/m, // go test, jest
+  /^test result: FAILED/m, // cargo test
+  /✖ [1-9]\d* problems?/, // eslint
+  /\berror TS\d{3,5}:/, // tsc
+  /^npm ERR! /m,
+  /^Found [1-9]\d* errors?/m // tsc --build, mypy, ruff
+];
+
+function outputFailed(text) {
+  return FAILED_OUTPUT.some((re) => re.test(text));
+}
+
 function resultText(block) {
   return Array.isArray(block.content) ? block.content.map((c) => c.text || '').join('\n') : String(block.content || '');
 }
@@ -46,9 +67,11 @@ function createRecorder({ isDenied = () => false, now = Date.now } = {}) {
           const text = resultText(block);
           const denied = Boolean(block.is_error) && Boolean(isDenied(text));
           const exit = /^Exit code (\d+)/m.exec(text);
+          const failedOutput = !block.is_error && outputFailed(text);
           checks.push({
             command: use.command,
-            ok: denied ? null : !block.is_error,
+            ok: denied ? null : !block.is_error && !failedOutput,
+            ...(failedOutput ? { failedInOutput: true } : {}),
             ...(denied ? { denied: true } : {}),
             ...(exit ? { exitCode: Number(exit[1]) } : {}),
             ms: Math.max(0, now() - use.startedAt),
@@ -136,4 +159,14 @@ function removeEvidence(projectRoot, taskId) {
   }
 }
 
-module.exports = { evidenceRoot, evidenceDir, createRecorder, saveRun, listRuns, mediaPath, removeEvidence, MEDIA };
+module.exports = {
+  outputFailed,
+  evidenceRoot,
+  evidenceDir,
+  createRecorder,
+  saveRun,
+  listRuns,
+  mediaPath,
+  removeEvidence,
+  MEDIA
+};

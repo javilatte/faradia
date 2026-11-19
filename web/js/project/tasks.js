@@ -485,7 +485,9 @@ function fillEvidence(taskId, body, run) {
       c.ok === true
         ? 'Terminó bien'
         : c.ok === false
-          ? `Falló${c.exitCode ? ` (código ${c.exitCode})` : ''}`
+          ? c.failedInOutput
+            ? 'Falló según su salida (el código de salida se perdió en una tubería)'
+            : `Falló${c.exitCode ? ` (código ${c.exitCode})` : ''}`
           : 'Bloqueado: no se ejecutó';
     const cmd = document.createElement('code');
     cmd.textContent = c.command;

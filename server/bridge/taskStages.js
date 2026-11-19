@@ -363,7 +363,14 @@ function previousOutput(task, stage) {
   return idx > 0 ? out(pipeline[idx - 1]) : '';
 }
 
-function buildStageBody(task, stage, { docOptions, agent, describeOptions, evidenceDir } = {}) {
+// The bundled skills reach a session through --add-dir (ecc/library.js), not the worktree: a prompt
+// that sends the agent to read one gives its absolute path. pstack's skills cannot be invoked with
+// the Skill tool (disable-model-invocation), so they are read and followed.
+function skillFile(skillsDir, name) {
+  return skillsDir ? path.join(skillsDir, name, 'SKILL.md') : `la skill ${name} (/${name})`;
+}
+
+function buildStageBody(task, stage, { docOptions, agent, describeOptions, evidenceDir, skillsDir } = {}) {
   const goal = task.instruction || task.title;
   const out = (s) => (task.stageOutputs && task.stageOutputs[s]) || '';
   switch (stage) {
@@ -415,16 +422,16 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         'Etapa de LIMPIEZA DE COMENTARIOS de los cambios de este worktree.',
         `Encargo original:\n${goal}`,
         'Alcance: solo las líneas que añadió esta tarea (git diff HEAD, incluidos los ficheros nuevos sin seguimiento). No toques comentarios que ya estaban en el repo.',
-        'Lee .claude/skills/no-comments/SKILL.md como referencia; aquí tú eres Comment Sicko y no hay subagentes: haz tú mismo la pasada. Borra los comentarios que narran el código, los que justifican un apaño y el código comentado. Respeta las excepciones de tu método (licencias, comportamiento impuesto por algo externo, contratos de API pública, prettier-ignore) y las convenciones de comentarios que el repo pida expresamente en sus instrucciones.',
+        `Lee ${skillFile(skillsDir, 'no-comments')} como referencia; aquí tú eres Comment Sicko y no hay subagentes: haz tú mismo la pasada. Borra los comentarios que narran el código, los que justifican un apaño y el código comentado. Respeta las excepciones de tu método (licencias, comportamiento impuesto por algo externo, contratos de API pública, prettier-ignore) y las convenciones de comentarios que el repo pida expresamente en sus instrucciones.`,
         'No cambies el código de la aplicación. Si un comentario defendía una restricción («no quitar», «IMPORTANT», «no cambiar sin…»), no la codifiques tú: bórralo solo si la restricción no es real y, en cualquier caso, propón cómo hacerla cumplir con una línea exactamente así por cada una:\nPROPUESTA: <la regla> → <la comprobación que la haría cumplir: tipo, lint, test o arquitectura>',
         'No hagas git commit ni git push.',
-        'Termina con el número de comentarios borrados, los que has dejado y por qué, y las líneas PROPUESTA si hay.'
+        'Termina con el número de comentarios borrados, los que has dejado y por qué, y las líneas PROPUESTA. Si no hay ninguna restricción que proponer, no escribas ninguna línea PROPUESTA.'
       ].join('\n\n');
     case 'correct':
       return [
         'Etapa de CORRECCION. Un agente ha cometido un error que el usuario no quiere volver a ver; haz que el siguiente agente no pueda repetirlo.',
         `Lo que pide el usuario:\n${goal}`,
-        'Lee y sigue .claude/skills/correct/SKILL.md, limitado a este error (no busques otras clases de errores). Elige el nivel más alto que funcione: 1) arquitectura (que el camino incorrecto no exista), 2) tipos, 3) una regla de lint o un check de CI cuyo mensaje diga qué usar en su lugar, 4) un test de comportamiento, 5) documentación o instrucciones, solo si es una cuestión de criterio. Si el patrón ya es habitual en el repo, que la comprobación falle solo con usos nuevos o arregla los existentes si son pocos.',
+        `Lee y sigue ${skillFile(skillsDir, 'correct')}, limitado a este error (no busques otras clases de errores). Elige el nivel más alto que funcione: 1) arquitectura (que el camino incorrecto no exista), 2) tipos, 3) una regla de lint o un check de CI cuyo mensaje diga qué usar en su lugar, 4) un test de comportamiento, 5) documentación o instrucciones, solo si es una cuestión de criterio. Si el patrón ya es habitual en el repo, que la comprobación falle solo con usos nuevos o arregla los existentes si son pocos.`,
         'Demuestra que la comprobación funciona: ejecútala sobre el error real (reintrodúcelo un momento o usa el commit donde ocurrió) y muestra el comando y su salida fallando; después, que pasa con el código correcto. Deja el repo sin el error reintroducido.',
         'Mantén en el CLAUDE.md o AGENTS.md del repo (el que exista; si no hay ninguno, crea CLAUDE.md) una tabla de reglas con dos columnas: la regla y qué la hace cumplir. Añade esta.',
         ASK_RULE('implement'),
@@ -435,7 +442,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
       return [
         'Etapa de KIT DE VERIFICACION. Vas a dar a este repo una forma guionizada de probar la aplicación de verdad.',
         `Indicaciones del usuario:\n${goal}`,
-        'Lee y sigue .claude/skills/create-verification-skill/SKILL.md. Donde diga .cursor/skills usa .claude/skills (el adaptador de Claude Code está en .claude/docs/harness/claude-code.md junto a las skills). No hay nadie a quien preguntar durante la entrevista: deduce las respuestas del repo y anota las suposiciones en la skill.',
+        `Lee y sigue ${skillFile(skillsDir, 'create-verification-skill')}. Donde diga .cursor/skills usa .claude/skills de este worktree (el adaptador de Claude Code está en ${skillsDir ? path.join(path.dirname(skillsDir), 'docs', 'harness', 'claude-code.md') : '.claude/docs/harness/claude-code.md'}). No hay nadie a quien preguntar durante la entrevista: deduce las respuestas del repo y anota las suposiciones en la skill.`,
         'Crea la skill en .claude/skills/verify-<app>/ de este worktree, con su mapa de funciones, y ejecútala al menos una vez para demostrar que arranca la aplicación y comprueba una función.',
         'No hagas git commit ni git push.'
       ].join('\n\n');
@@ -551,11 +558,14 @@ function parseCorrection(text) {
 
 // "PROPUESTA: <rule> → <check>" lines of the comments stage: constraints a comment defended that a
 // check should enforce. Each one can become a correction task.
+const NO_PROPOSAL = /^\W*(ninguna|ninguno|nada|no hay|none|n\/a)\b/i;
 function parseRuleProposals(text) {
   const out = [];
   for (const m of String(text || '').matchAll(/^\s*[-*]?\s*\**PROPUESTA:\**\s*(.+)$/gim)) {
     const [rule, check] = m[1].split(/\s*(?:→|->)\s*/);
-    if (rule && rule.trim()) out.push({ rule: rule.trim().slice(0, 300), check: (check || '').trim().slice(0, 300) });
+    // "PROPUESTA: ninguna" is a report that there is nothing to propose.
+    if (!rule || !rule.trim() || NO_PROPOSAL.test(rule)) continue;
+    out.push({ rule: rule.trim().slice(0, 300), check: (check || '').trim().slice(0, 300) });
   }
   return out.slice(0, 10);
 }

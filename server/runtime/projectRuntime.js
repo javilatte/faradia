@@ -288,7 +288,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       docOptions: effectiveDocOptions,
       agent,
       describeOptions,
-      evidenceDir
+      evidenceDir,
+      skillsDir: opts.skillsDir
     });
     if (afterSwitch && resuming)
       prompt =

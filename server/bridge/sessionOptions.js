@@ -110,7 +110,10 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   // Claude Code reads with --add-dir).
   try {
     const eccDir = prepareActiveDir(settings.ecc || {});
-    if (eccDir) opts.addDirs = [eccDir];
+    if (eccDir) {
+      opts.addDirs = [eccDir];
+      opts.skillsDir = path.join(eccDir, '.claude', 'skills');
+    }
   } catch {
     /* without them */
   }

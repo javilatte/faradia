@@ -90,16 +90,23 @@ test('tidy: only the lines of this task, reports constraints as PROPUESTA lines 
   );
 });
 
-test('parseRuleProposals: nothing, or at most ten', () => {
+test('parseRuleProposals: nothing, "none", or at most ten', () => {
   assert.deepEqual(parseRuleProposals('sin propuestas'), []);
+  assert.deepEqual(
+    parseRuleProposals('- **PROPUESTA:** ninguna, porque no había restricciones defendidas con comentarios.'),
+    []
+  );
+  assert.deepEqual(parseRuleProposals('PROPUESTA: none'), []);
   assert.equal(parseRuleProposals(Array.from({ length: 15 }, (_, i) => `PROPUESTA: r${i}`).join('\n')).length, 10);
 });
 
 // ---------- corrections ----------
 
 test('correction: follows the correct skill, proves the check fails on the real mistake and reports its level', () => {
-  const prompt = buildStagePrompt(task('correction'), 'correct');
-  assert.match(prompt, /\.claude\/skills\/correct\/SKILL\.md/);
+  const prompt = buildStagePrompt(task('correction'), 'correct', { skillsDir: '/data/optimia/ecc/.claude/skills' });
+  // The skills reach the session through --add-dir, not the worktree: the absolute path.
+  assert.match(prompt, /Lee y sigue \/data\/optimia\/ecc\/\.claude\/skills\/correct\/SKILL\.md/);
+  assert.match(buildStagePrompt(task('correction'), 'correct'), /la skill correct \(\/correct\)/);
   assert.match(prompt, /ejecútala sobre el error real/);
   assert.match(prompt, /CLAUDE\.md o AGENTS\.md/);
   assert.equal(canRun(task('correction'), 'correct'), null);
@@ -121,8 +128,9 @@ test('parseCorrection: the last NIVEL line, only known levels', () => {
 });
 
 test('verification-kit: follows create-verification-skill in .claude/skills and is a test commit', () => {
-  const prompt = buildStagePrompt(task('verification-kit'), 'verification-kit');
-  assert.match(prompt, /create-verification-skill\/SKILL\.md/);
+  const prompt = buildStagePrompt(task('verification-kit'), 'verification-kit', { skillsDir: '/d/.claude/skills' });
+  assert.match(prompt, /\/d\/\.claude\/skills\/create-verification-skill\/SKILL\.md/);
+  assert.match(prompt, /\/d\/\.claude\/docs\/harness\/claude-code\.md/);
   assert.match(prompt, /\.claude\/skills\/verify-<app>/);
 });
 
@@ -265,4 +273,47 @@ test("the sandbox lets the agents' commands write the evidence folder, with or w
   assert.deepEqual(without.filesystem.allowWrite, ['/repo/.optimia/evidence']);
   assert.equal(without.network, undefined);
   assert.equal(sandboxSettings('off', { extraWrite: ['/x'] }), undefined);
+});
+
+test('sessions know where the bundled skills are, so stage prompts can point at them', (t) => {
+  const data = mkTmpDir('skills-data');
+  const repo = mkTmpDir('skills-repo');
+  const prev = process.env.XDG_DATA_HOME;
+  process.env.XDG_DATA_HOME = data;
+  t.after(() => {
+    process.env.XDG_DATA_HOME = prev;
+    rmTmpDir(data);
+    rmTmpDir(repo);
+  });
+  const { buildSessionOptions } = require('../../server/bridge/sessionOptions');
+  const opts = buildSessionOptions(defaultSettings(), repo);
+  assert.ok(fs.existsSync(path.join(opts.skillsDir, 'correct', 'SKILL.md')));
+  assert.equal(path.dirname(path.dirname(opts.skillsDir)), opts.addDirs[0]);
+});
+
+test('a failure a pipe hid from the exit code is read from the output', () => {
+  const rec = evidence.createRecorder();
+  rec.onEvent(bash('a', 'node --test test/ 2>&1 | tail -12'));
+  rec.onEvent(result('a', '# tests 3\n# pass 2\n# fail 1\n# cancelled 0'));
+  rec.onEvent(bash('b', 'npm test 2>&1 | tail -3'));
+  rec.onEvent(result('b', '# tests 3\n# pass 3\n# fail 0'));
+  rec.onEvent(bash('c', 'npx eslint src | tail -2'));
+  rec.onEvent(result('c', '✖ 2 problems (2 errors, 0 warnings)'));
+  rec.onEvent(bash('d', 'npx jest 2>&1 | tail'));
+  rec.onEvent(result('d', 'Tests:       1 failed, 4 passed, 5 total'));
+  rec.onEvent(bash('e', 'pytest -q | tail -1'));
+  rec.onEvent(result('e', '========= 12 passed in 0.31s ========='));
+  assert.deepEqual(
+    rec.checks().map((c) => [c.ok, Boolean(c.failedInOutput)]),
+    [
+      [false, true],
+      [true, false],
+      [false, true],
+      [false, true],
+      [true, false]
+    ]
+  );
+  assert.equal(evidence.outputFailed('========= 1 failed, 11 passed in 0.4s ========='), true);
+  assert.equal(evidence.outputFailed('ok  	example.com/pkg	0.01s'), false);
+  assert.equal(evidence.outputFailed('--- FAIL: TestCart (0.00s)'), true);
 });
