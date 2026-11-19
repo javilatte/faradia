@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -176,7 +177,7 @@ function saveAttachment(projectRoot, chatId, { name, mediaType = '', data }) {
   const out = { id, name: safeName(name), size: buf.length, path: file, mediaType };
   const result = describe(buf, file, ext, out, mediaType);
   // Kept next to the file: the message refers to attachments by id.
-  fs.writeFileSync(path.join(dir, `${id}.json`), JSON.stringify(result));
+  writeJsonFile(path.join(dir, `${id}.json`), result);
   return result;
 }
 

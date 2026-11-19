@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('./jsonFile');
 const fs = require('fs');
 const path = require('path');
 const { configDir } = require('./globalPaths');
@@ -61,10 +62,7 @@ function readJson(file) {
 }
 
 function writeJson(file, value) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n');
-  fs.renameSync(tmp, file);
+  writeJsonFile(file, value);
 }
 
 function getPath(obj, dotted) {

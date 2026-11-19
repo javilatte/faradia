@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('./jsonFile');
 const fs = require('fs');
 const path = require('path');
 
@@ -28,10 +29,7 @@ function read(projectRoot) {
 }
 
 function write(projectRoot, list) {
-  fs.mkdirSync(path.dirname(archivePath(projectRoot)), { recursive: true });
-  const tmp = `${archivePath(projectRoot)}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(list, null, 2) + '\n');
-  fs.renameSync(tmp, archivePath(projectRoot));
+  writeJsonFile(archivePath(projectRoot), list);
 }
 
 function outcomeOf(task) {

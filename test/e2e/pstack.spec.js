@@ -73,7 +73,7 @@ test('a constraint a comment defended becomes a correction task that ends with i
   await expect(correction.locator('.task-output')).toContainText('probada contra el error real');
 
   const call = claudeCalls()
-    .filter((c) => c.cwd.includes('/.optimia/worktrees/'))
+    .filter((c) => c.cwd.includes('/optimia/worktrees/'))
     .find((c) => (argAfter(c.args, '--append-system-prompt') || '').includes('## Tu rol: Corrector'));
   expect(call).toBeTruthy();
   expect(argAfter(call.args, '--append-system-prompt')).toContain('### Encode Lessons in Structure');

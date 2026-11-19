@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('./jsonFile');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -17,7 +18,7 @@ function loadTasks(projectRoot) {
 function saveTasks(projectRoot, tasks) {
   const dir = path.join(projectRoot, '.optimia');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(tasksPath(projectRoot), JSON.stringify(tasks, null, 2) + '\n');
+  writeJsonFile(tasksPath(projectRoot), tasks);
 }
 
 function addTask(

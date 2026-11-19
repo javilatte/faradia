@@ -264,3 +264,21 @@ test('createTaskWorktree: links the installed dependencies, keeps them out of gi
   removeTaskWorktree(dir, { worktreePath: wt, branch });
   assert.ok(fs.existsSync(path.join(dir, 'node_modules', 'left-pad', 'index.js')));
 });
+
+test("createTaskWorktree: the worktree lives outside the repo, where the repo's tools do not see it", (t) => {
+  const dir = mkTmpDir('wt-outside');
+  initGitRepo(dir);
+  const { dir: wt, branch } = createTaskWorktree(dir, 'task-outside');
+  t.after(() => {
+    removeTaskWorktree(dir, { worktreePath: wt, branch });
+    rmTmpDir(dir);
+  });
+  assert.ok(!wt.startsWith(fs.realpathSync(dir)) && !wt.startsWith(dir), wt);
+  assert.ok(fs.existsSync(path.join(wt, 'README.md')));
+  assert.equal(worktreeDir(dir, 'task-outside'), wt);
+  // Another repo with the same folder name gets its own place.
+  const other = mkTmpDir('wt-outside');
+  t.after(() => rmTmpDir(other));
+  assert.notEqual(path.dirname(worktreeDir(other, 'x')), path.dirname(worktreeDir(dir, 'x')));
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: dir, encoding: 'utf8' }), '');
+});

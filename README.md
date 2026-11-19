@@ -443,7 +443,7 @@ with a sandbox CSP.
 ├── tasks.json, chats.json       kanban and chat state
 ├── tasks-archive.json           finished tasks (Archive)
 ├── agents/                      project agents and stage map
-├── worktrees/                   one git worktree per agent task
+├── evidence/<task>/             what the Verifier ran, with its results and captures
 └── logs/optimia.log             activity log (Settings → Log)
 
 ~/.config/optimia/               global
@@ -456,13 +456,16 @@ with a sandbox CSP.
 └── backups/                     configuration before each import or sync conflict
 
 ~/.local/share/optimia/
+├── worktrees/<repo>/<task>/     one git worktree per agent task, outside the repo
 ├── timeline/events.jsonl        the timeline
 ├── issues.jsonl                 problem report
 └── trash/                       files deleted from the explorer
 ```
 
 optimia leaves your repo alone: `.optimia` is excluded through `.git/info/exclude`
-(never your `.gitignore`), and the Claude Code permissions of its own sessions —
+(never your `.gitignore`), its JSON is written the way Prettier formats it (with your
+print width), so `prettier --check .` stays green, and the task worktrees live outside
+the repo, where your linters, test runners and watchers do not see them; and the Claude Code permissions of its own sessions —
 including the "Forbidden" list — live in `.optimia/claude-settings*.json` and are
 passed with `claude --settings`, so your project's `.claude/` is never touched.
 

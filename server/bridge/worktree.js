@@ -2,10 +2,30 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execFileSync, spawnSync } = require('child_process');
+const { dataDir } = require('../store/globalPaths');
+
+// Task worktrees live in optimia's data folder, not inside the repo: a worktree in the repo is a
+// second copy of the code that the repo's own tools find (`eslint .`, `prettier --check .`, test
+// runners, watchers, editors' search). Older tasks keep the path they were created with.
+function repoKey(projectRoot) {
+  let real = projectRoot;
+  try {
+    real = fs.realpathSync(projectRoot);
+  } catch {
+    /* as given */
+  }
+  const name =
+    path
+      .basename(real)
+      .replace(/[^A-Za-z0-9._-]/g, '-')
+      .slice(0, 40) || 'repo';
+  return `${name}-${crypto.createHash('sha256').update(real).digest('hex').slice(0, 10)}`;
+}
 
 function worktreeDir(projectRoot, taskId) {
-  return path.join(projectRoot, '.optimia', 'worktrees', taskId);
+  return path.join(dataDir(), 'worktrees', repoKey(projectRoot), taskId);
 }
 
 function git(projectRoot, args) {
@@ -58,11 +78,13 @@ function createTaskWorktree(projectRoot, taskId, { baseRef, branchName, existing
   const branch = branchName || `optimia/task-${taskId.slice(0, 8)}`;
   if (existingBranch) {
     // A branch shared by several tasks: the task continues where the previous one left it.
+    fs.mkdirSync(path.dirname(dir), { recursive: true });
     git(projectRoot, ['worktree', 'add', dir, branch]);
     linkDependencies(projectRoot, dir);
     return { dir, branch };
   }
   const base = baseRef || git(projectRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  fs.mkdirSync(path.dirname(dir), { recursive: true });
   git(projectRoot, ['worktree', 'add', '-b', branch, dir, base]);
   linkDependencies(projectRoot, dir);
   // The session's permissions come with --settings (.optimia/claude-settings-agents.json): nothing

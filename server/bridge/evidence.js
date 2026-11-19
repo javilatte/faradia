@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
 const path = require('path');
 
@@ -126,7 +127,7 @@ function saveRun(projectRoot, taskId, { checks, startedAt, finishedAt = Date.now
     checks,
     images: mediaSince(dir, startedAt)
   };
-  fs.writeFileSync(path.join(dir, `verify-${run}.json`), JSON.stringify(record, null, 2) + '\n');
+  writeJsonFile(path.join(dir, `verify-${run}.json`), record);
   return record;
 }
 

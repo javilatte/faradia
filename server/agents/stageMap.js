@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
 const path = require('path');
 const { STAGES } = require('../bridge/taskStages');
@@ -61,7 +62,7 @@ function saveStageMap(projectRoot, scope, changes) {
     current[stage] = agentId;
   }
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
+  writeJsonFile(file, current);
   return loadStageMap(projectRoot);
 }
 

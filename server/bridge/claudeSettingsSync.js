@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -100,7 +101,7 @@ function syncClaudeSettings(projectRoot, noGo) {
   const file = optimiaClaudeSettingsPath(projectRoot);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const settings = buildClaudeSettings(noGo);
-  fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
+  writeJsonFile(file, settings);
   // Agents: the safety policy (policy.js) runs as a hook so the user can approve exceptions; if the
   // hook cannot run, plain deny rules take its place (fail closed). Commit, push, merge and rebase
   // are always denied. The OS sandbox keeps Bash writes inside the worktree.
@@ -118,7 +119,7 @@ function syncClaudeSettings(projectRoot, noGo) {
       : {}),
     ...(sandbox ? { sandbox } : {})
   };
-  fs.writeFileSync(agentClaudeSettingsPath(projectRoot), JSON.stringify(agents, null, 2) + '\n');
+  writeJsonFile(agentClaudeSettingsPath(projectRoot), agents);
   cleanupLegacyClaudeSettings(projectRoot, noGo);
   return file;
 }

@@ -40,7 +40,7 @@ test("each stage uses its agent's model, and the model can be changed per repo",
   await expect(card.locator('.pipeline-step.done')).toHaveCount(4);
   await expect(card.locator('.verification-line')).toHaveText('✓ Verificación superada');
 
-  const stageCalls = claudeCalls().filter((c) => c.cwd.includes('/.optimia/worktrees/'));
+  const stageCalls = claudeCalls().filter((c) => c.cwd.includes('/optimia/worktrees/'));
   const models = stageCalls.map((c) => argAfter(c.args, '--model'));
   expect(models.slice(-4)).toEqual(['haiku', 'sonnet', 'sonnet', 'sonnet']);
   const prompts = stageCalls.slice(-4).map((c) => argAfter(c.args, '--append-system-prompt'));
@@ -77,7 +77,7 @@ test('a custom agent shows in the mode selector and runs its single-stage task',
   await expect(task).toContainText('Informe entregado');
   // The task's stage ran in its worktree (the report then goes to the wiki with another session).
   const last = claudeCalls()
-    .filter((c) => c.cwd.includes('/.optimia/worktrees/'))
+    .filter((c) => c.cwd.includes('/optimia/worktrees/'))
     .pop();
   expect(argAfter(last.args, '--model')).toBe('opus');
   expect(argAfter(last.args, '--append-system-prompt')).toContain('Revisa la accesibilidad (WCAG).');
