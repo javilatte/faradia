@@ -33,7 +33,7 @@ test('create a workbench, search repos in a folder and switch project', async ({
   await page.goto('/?token=e2e-token');
   await page.locator('#wb-manage').click();
   await page.getByLabel('Nombre del nuevo workbench').fill('Clientes');
-  await page.getByRole('button', { name: 'Crear' }).click();
+  await page.getByRole('button', { name: 'Crear', exact: true }).click();
   await expect(page.locator('.wb-list')).toContainText('Clientes');
 
   await page.getByLabel('Carpeta donde buscar').fill(root);
@@ -75,7 +75,7 @@ test('switching repos is instant: no reload, each repo keeps its chat and draft,
   await page.goto('/?token=e2e-token');
   await page.locator('#wb-manage').click();
   await page.getByLabel('Nombre del nuevo workbench').fill('Cambio rápido');
-  await page.getByRole('button', { name: 'Crear' }).click();
+  await page.getByRole('button', { name: 'Crear', exact: true }).click();
   await expect(page.locator('#wb-manager .settings-content-header')).toContainText('Cambio rápido');
   await page.getByLabel('Carpeta donde buscar').fill(root);
   await page.getByRole('button', { name: 'Buscar' }).click();

@@ -5,6 +5,38 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'regla de lint': 'lint rule',
+    arquitectura: 'architecture',
+    tipos: 'types',
+    documentación: 'documentation',
+    'Convierte un error que se repite en una comprobación que lo impide (arquitectura, tipos, lint o test).':
+      'Turns a repeated mistake into a check that prevents it (architecture, types, lint or test).',
+    'Quita los comentarios que narran o justifican un apaño en los cambios de la tarea y propone una comprobación en su lugar.':
+      "Removes the comments that narrate or excuse a workaround in the task's changes and proposes a check instead.",
+    Comentarios: 'Comments',
+    Corrección: 'Correction',
+    'Kit de verificación': 'Verification kit',
+    Cazacomentarios: 'Comment hunter',
+    Corrector: 'Corrector',
+    'Crear corrección': 'Create correction',
+    'Evitar que se repita…': 'Stop it happening again…',
+    'Reglas que defendía un comentario: mejor una comprobación que un comentario.':
+      'Rules a comment was defending: a check is better than a comment.',
+    'Principios de ingeniería': 'Engineering principles',
+    'Cada agente recibe los principios de pstack (Lauren Tan, MIT) que encajan con su etapa —demostrar que funciona, arreglar la causa raíz, restar antes de sumar…— y dice en su informe cuál cambió una decisión. Igual en todos los repos.':
+      'Each agent gets the pstack principles (Lauren Tan, MIT) that fit its stage (prove it works, fix root causes, subtract before you add…) and says in its report which one changed a decision. The same in every repo.',
+    'Principios activados': 'Principles on',
+    'Principios desactivados': 'Principles off',
+    'Sin principios': 'No principles',
+    Ocultar: 'Hide',
+    'El agente no ejecutó ningún comando.': 'The agent ran no command.',
+    'No hay evidencia de esta verificación.': 'There is no evidence for this verification.',
+    'No se pudo cargar la evidencia.': 'The evidence could not be loaded.',
+    '(sin salida)': '(no output)',
+    'Terminó bien': 'Finished fine',
+    'Bloqueado: no se ejecutó': 'Blocked: it did not run',
+    'Solo documentación: nada falla si un agente la ignora.':
+      'Documentation only: nothing fails if an agent ignores it.',
     'Siguió con otro modelo (Claude se quedó sin uso)': 'Went on with another model (Claude ran out of usage)',
     'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups':
       "another computer's copy could not be applied; it was kept in ~/.config/optimia/backups",
@@ -742,6 +774,16 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^Evidencia: (\\d+) comprobaci(?:ón|ones)$', 'Evidence: $1 check(s)'],
+    ['^Evidencia: (\\d+) comprobaci(?:ón|ones) \\((\\d+) con fallos\\)$', 'Evidence: $1 check(s) ($2 failing)'],
+    ['^Evidencia: (\\d+) comprobaci(?:ón|ones), (\\d+) capturas?$', 'Evidence: $1 check(s), $2 capture(s)'],
+    [
+      '^Evidencia: (\\d+) comprobaci(?:ón|ones) \\((\\d+) con fallos\\), (\\d+) capturas?$',
+      'Evidence: $1 check(s) ($2 failing), $3 capture(s)'
+    ],
+    ['^Comprobación: (.+)$', 'Check: $1'],
+    ['^Principios: (.+)$', 'Principles: $1'],
+    ['^En la tarea «(.+)» el agente se equivocó: $', 'In the task “$1” the agent got it wrong: '],
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],

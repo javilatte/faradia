@@ -81,17 +81,19 @@ function agentCacheEnv(dir = agentCacheDir()) {
   };
 }
 
-function sandboxSettings(mode, { registries = true } = {}) {
+// extraWrite: folders outside the worktree an agent's commands may write to (the verification
+// evidence of the repo's tasks, see evidence.js).
+function sandboxSettings(mode, { registries = true, extraWrite = [] } = {}) {
   if (mode === 'off') return undefined;
+  const allowWrite = [...(registries ? [agentCacheDir()] : []), ...extraWrite];
   return {
     enabled: true,
     // Never fall back to running unsandboxed.
     failIfUnavailable: true,
     allowUnsandboxedCommands: false,
     autoAllowBashIfSandboxed: true,
-    ...(registries
-      ? { network: { allowedDomains: PACKAGE_REGISTRIES }, filesystem: { allowWrite: [agentCacheDir()] } }
-      : {})
+    ...(registries ? { network: { allowedDomains: PACKAGE_REGISTRIES } } : {}),
+    ...(allowWrite.length ? { filesystem: { allowWrite } } : {})
   };
 }
 

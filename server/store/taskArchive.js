@@ -71,8 +71,9 @@ function snapshot(task, now = new Date()) {
     })),
     report: cut(task.output, 12000),
     verification: task.verification
-      ? { verdict: task.verification.verdict, summary: cut(task.verification.summary, 2000) }
-      : undefined
+      ? { verdict: cut(task.verification.line, 300), evidence: task.verification.evidence || undefined }
+      : undefined,
+    correction: task.correction || undefined
   };
 }
 

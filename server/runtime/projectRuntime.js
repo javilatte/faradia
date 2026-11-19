@@ -36,6 +36,7 @@ const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
 const { adoptPendingMemory } = require('../knowledge/bundle');
 const { loadAttachments, attachmentsPrompt } = require('../bridge/attachments');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
+const evidence = require('../bridge/evidence');
 const {
   STAGE_PHASE,
   firstStage,
@@ -275,7 +276,20 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // session) so the agent keeps its context.
     const resuming = (answer !== undefined || Boolean(afterSwitch)) && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
-    let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent, describeOptions });
+    // Verification: optimia keeps what the Verifier runs as evidence, and gives it a folder outside
+    // the worktree for screenshots (evidence.js).
+    let evidenceDir;
+    if (stage === 'verify') {
+      evidenceDir = evidence.evidenceDir(projectRoot, task.id);
+      fs.mkdirSync(evidenceDir, { recursive: true });
+      opts.addDirs = [...(opts.addDirs || []), evidenceDir];
+    }
+    let prompt = buildStagePrompt(task, stage, {
+      docOptions: effectiveDocOptions,
+      agent,
+      describeOptions,
+      evidenceDir
+    });
     if (afterSwitch && resuming)
       prompt =
         'Sigue exactamente donde lo dejaste en esta etapa: el modelo anterior se quedó sin uso y ahora continúas tú con todo el historial de arriba. No repitas lo que ya está hecho.';
@@ -296,10 +310,12 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
       // optimia's MCP server (a child of this session) reports progress for this task without
       // depending on the model passing its id.
-      OPTIMIA_TASK_ID: task.id
+      OPTIMIA_TASK_ID: task.id,
+      ...(evidenceDir ? { OPTIMIA_EVIDENCE_DIR: evidenceDir } : {})
     };
     const session = new ClaudeSession(opts);
     session.engine = opts.engine;
+    if (evidenceDir) session._evidence = evidence.createRecorder({ isDenied: (text) => Boolean(parseDenial(text)) });
     taskSessions.set(taskId, session);
     updateTaskPhase(projectRoot, taskId, STAGE_PHASE[stage], 'active');
     log.info('task.stage.start', {
@@ -344,6 +360,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       if (session._switching) return;
       if (switchOnLimit('task', taskId, session, event)) return;
       broadcast({ type: 'task_claude_event', taskId, event });
+      session._evidence?.onEvent(event);
       if (event.type === 'assistant') {
         for (const block of event.message?.content || []) {
           if (block.type === 'tool_use') toolUses.set(block.id, { name: block.name, input: block.input });
@@ -474,6 +491,17 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     const phaseStatus = (current.phases || []).find((p) => p.key === STAGE_PHASE[stage])?.status;
     const agent = resolveStageAgent(projectRoot, current, stage);
+    let verifyEvidence;
+    if (session._evidence && event.is_error !== true) {
+      try {
+        verifyEvidence = evidence.saveRun(projectRoot, taskId, {
+          checks: session._evidence.checks(),
+          startedAt: session._startedAt || Date.now()
+        });
+      } catch (err) {
+        log.warn('task.evidence_error', { taskId, error: err.message });
+      }
+    }
     const { patch, next } = decideAfterStage(current, stage, {
       text,
       hasChanges,
@@ -481,7 +509,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       isError: event.is_error === true,
       skip: skippedStages(projectRoot),
       agent,
-      describeTarget: current.describeTarget
+      describeTarget: current.describeTarget,
+      evidence: verifyEvidence
     });
     const touched = changedFiles(worktreeDir);
     log.info('file.stage_changes', { taskId, stage, files: touched.slice(0, 200), total: touched.length });

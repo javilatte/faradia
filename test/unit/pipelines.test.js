@@ -35,8 +35,12 @@ test('pipelines: each type starts with its first stage', () => {
 
 test('nextStage: follows the pipeline and only skips disabled optional stages', () => {
   assert.equal(nextStage('bugfix', 'diagnose'), 'implement');
-  assert.equal(nextStage('bugfix', 'implement'), 'verify');
-  assert.equal(nextStage('bugfix', 'implement', { skip: ['verify'] }), null);
+  assert.equal(nextStage('bugfix', 'implement'), 'tidy');
+  assert.equal(nextStage('bugfix', 'implement', { skip: ['tidy'] }), 'verify');
+  assert.equal(nextStage('bugfix', 'tidy'), 'verify');
+  assert.equal(nextStage('bugfix', 'implement', { skip: ['tidy', 'verify'] }), null);
+  assert.equal(nextStage('correction', 'correct'), 'verify');
+  assert.equal(nextStage('verification-kit', 'verification-kit'), null);
   assert.equal(nextStage('tests', 'plan'), 'write-tests');
   assert.equal(nextStage('tests', 'plan', { skip: ['write-tests'] }), 'write-tests'); // not optional
   assert.equal(nextStage('audit', 'audit'), null);

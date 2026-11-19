@@ -5,6 +5,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { hookWorks, HARD_DENY, FALLBACK_DENY } = require('./policy');
 const { sandboxSettings } = require('./sandbox');
+const { evidenceRoot } = require('./evidence');
 const { loadGlobalSettings } = require('../store/settingsStore');
 
 // Baseline allow-list and mode — not user-editable via the Settings UI for
@@ -105,7 +106,10 @@ function syncClaudeSettings(projectRoot, noGo) {
   // are always denied. The OS sandbox keeps Bash writes inside the worktree.
   const hookOk = policyHookWorks();
   const security = loadGlobalSettings().security;
-  const sandbox = sandboxSettings(security.sandbox, { registries: security.registries !== false });
+  const sandbox = sandboxSettings(security.sandbox, {
+    registries: security.registries !== false,
+    extraWrite: [evidenceRoot(projectRoot)]
+  });
   const agents = {
     enableAllProjectMcpServers: true,
     permissions: { deny: [...settings.permissions.deny, ...HARD_DENY, ...(hookOk ? [] : FALLBACK_DENY)] },

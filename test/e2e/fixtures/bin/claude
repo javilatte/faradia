@@ -97,7 +97,7 @@ rl.on('line', (line) => {
       JSON.stringify({ text }) + '\n'
     );
   }
-  const editing = /IMPLEMENTACION|REDACCION|TESTS|VERIFICACION/.test(text);
+  const editing = /IMPLEMENTACION|REDACCION|TESTS|VERIFICACION|CORRECCION/.test(text);
   if (editing) {
     const file = path.join(process.cwd(), 'e2e-agent-output.txt');
     fs.appendFileSync(file, `cambio del agente (${model})\n`);
@@ -139,7 +139,35 @@ rl.on('line', (line) => {
     });
     return;
   }
-  const verifying = /VERIFICACION/.test(text);
+  const verifying = /Etapa de VERIFICACION/.test(text);
+  // The verifier runs a real command, so optimia has evidence ("[e2e:verifica-mal]": the tests fail
+  // and the agent still says OK).
+  if (verifying) {
+    const id = `toolu_v${Date.now()}`;
+    const fails = /\[e2e:verifica-mal\]/.test(text);
+    emit({
+      type: 'assistant',
+      session_id: sessionId,
+      message: { role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'npm test' } }] }
+    });
+    emit({
+      type: 'user',
+      session_id: sessionId,
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: id,
+            content: fails ? 'Exit code 1\n1 failing' : '12 passing',
+            is_error: fails
+          }
+        ]
+      }
+    });
+  }
+  const tidying = /Etapa de LIMPIEZA DE COMENTARIOS/.test(text);
+  const correcting = /Etapa de CORRECCION/.test(text);
   const describing = /Etapa de DESCRIPCION/.test(text);
   const jira = describing && /ticket de Jira/.test(text);
   const reply = jira
@@ -148,9 +176,13 @@ rl.on('line', (line) => {
       ? 'TÍTULO: feat: cambio simulado\n\nResumen simulado.\n\n## Cambios\n- e2e-agent-output.txt'
       : verifying
         ? 'Tests ejecutados.\nVEREDICTO: OK'
-        : editing
-          ? 'He hecho el cambio pedido.'
-          : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
+        : tidying
+          ? `Borrados 0 comentarios.${/\[e2e:propuesta\]/.test(text) ? '\nPROPUESTA: no usar console.log en src → regla de lint no-console' : ''}`
+          : correcting
+            ? 'Regla añadida y probada contra el error real.\n\nNIVEL: lint — no-console en src'
+            : editing
+              ? 'He hecho el cambio pedido.'
+              : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
   emit({
     type: 'assistant',
     session_id: sessionId,

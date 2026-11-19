@@ -119,15 +119,24 @@ test('decideAfterStage: a blocked implementation moves to awaiting_input with th
   assert.deepEqual(patch.pendingQuestion, { kind: 'implement-details', text: 'Necesito el color?' });
 });
 
-test('decideAfterStage: an implementation with changes chains the verification', () => {
+test('decideAfterStage: an implementation with changes chains the comments pass, then the verification', () => {
   const { patch, next } = decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, phaseStatus: 'done' });
-  assert.equal(next, 'verify');
+  assert.equal(next, 'tidy');
+  assert.equal(
+    decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, skip: ['tidy'] }).next,
+    'verify',
+    'with the comment hunter off, straight to the verification'
+  );
   assert.equal(patch.status, 'pending');
   assert.equal(patch.error, null);
 });
 
 test('decideAfterStage: with the Verifier disabled, the implementation becomes ready for review', () => {
-  const { patch, next } = decideAfterStage(base, 'implement', { text: 'hecho', hasChanges: true, skip: ['verify'] });
+  const { patch, next } = decideAfterStage(base, 'implement', {
+    text: 'hecho',
+    hasChanges: true,
+    skip: ['tidy', 'verify']
+  });
   assert.equal(next, null);
   assert.equal(patch.status, 'ready_to_test');
 });

@@ -13,6 +13,8 @@ const {
 } = require('../store/settingsStore');
 const { loadTasks, addTask, updateTask, updateTaskPhase, deleteTask } = require('../store/taskStore');
 const { archiveTask, listArchive, removeArchived, clearArchive } = require('../store/taskArchive');
+const { listRuns, mediaPath, removeEvidence } = require('../bridge/evidence');
+const { serveRaw } = require('../http/fsRoutes');
 const { listChats, loadChat, createChat, updateChatMeta, deleteChat } = require('../store/chatStore');
 const { checkClaudeCapabilities } = require('../bridge/claudeVersion');
 const { syncClaudeSettings } = require('../bridge/claudeSettingsSync');
@@ -137,6 +139,7 @@ function createApp(
           security: body.security,
           wiki: body.wiki,
           suggestions: body.suggestions,
+          principles: body.principles,
           chat: body.chat,
           tasks: body.tasks
         });
@@ -365,8 +368,25 @@ function createApp(
         log.warn('task.archive_failed', { taskId, error: err.message });
       }
       deleteTask(projectRoot, taskId);
+      removeEvidence(projectRoot, taskId);
       log.info('task.delete', { taskId, branch: task.branch });
       return sendJson(res, 200, { ok: true });
+    }
+
+    // Evidence of the task's verifications (bridge/evidence.js).
+    //   GET /api/tasks/:id/evidence                {runs: [{run, checks, images, ...}]}
+    //   GET /api/tasks/:id/evidence/media?name=    one image or video
+    if (/^\/api\/tasks\/[^/]+\/evidence$/.test(url.pathname) && req.method === 'GET') {
+      const taskId = url.pathname.split('/')[3];
+      if (!loadTasks(projectRoot).some((t) => t.id === taskId)) return sendJson(res, 404, { error: 'task not found' });
+      return sendJson(res, 200, { runs: listRuns(projectRoot, taskId) });
+    }
+    if (/^\/api\/tasks\/[^/]+\/evidence\/media$/.test(url.pathname) && req.method === 'GET') {
+      const taskId = url.pathname.split('/')[3];
+      if (!loadTasks(projectRoot).some((t) => t.id === taskId)) return sendJson(res, 404, { error: 'task not found' });
+      const file = mediaPath(projectRoot, taskId, url.searchParams.get('name'));
+      if (!file) return sendJson(res, 404, { error: 'no existe esa evidencia' });
+      return serveRaw(req, res, file);
     }
 
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/files/preview') && req.method === 'GET') {

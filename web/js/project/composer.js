@@ -10,7 +10,9 @@ const CHAT_KIND_LABEL = {
   bugfix: 'de bug',
   tests: 'de tests',
   documentation: 'de documentación',
-  audit: 'de auditoría'
+  audit: 'de auditoría',
+  correction: 'de corrección',
+  'verification-kit': 'de kit de verificación'
 };
 const chatKindSelect = document.getElementById('chat-kind-select');
 chatKindSelect.value = localStorage.getItem('optimia:chat-kind') || 'chat';
@@ -158,6 +160,22 @@ function shortTaskTitle(text, max = 70) {
   const cut = sentence.slice(0, max);
   const space = cut.lastIndexOf(' ');
   return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[,\s]+$/, '')}…`;
+}
+
+// Puts a task in the message box for the user to read, complete and send (never sent on its own):
+// the mode selector on that task type and the text in the box.
+function prefillTask(kind, text) {
+  const values = [...chatKindSelect.querySelectorAll('option')].map((o) => o.value);
+  if (!values.includes(kind)) return;
+  chatKindSelect.value = kind;
+  localStorage.setItem('optimia:chat-kind', kind);
+  syncTaskControls();
+  input.value = text;
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  input.dispatchEvent(new Event('input'));
 }
 
 async function createTaskFromChat(kind, text) {

@@ -27,6 +27,8 @@ const short = (s) => {
   return one.length > MAX_DESC ? `${one.slice(0, MAX_DESC - 1)}…` : one;
 };
 
+const PSTACK_CORE = new Set(['correct', 'tdd', 'interrogate', 'blast-radius']);
+
 /** What can be suggested in this repo: [{kind, id, description}]. */
 function buildCatalog(projectRoot, settings) {
   const items = [];
@@ -44,11 +46,18 @@ function buildCatalog(projectRoot, settings) {
       bugfix: 'fix a bug or an error: diagnose, fix and verify',
       tests: 'write NEW automated tests or improve the test suite (not for just running the existing tests)',
       documentation: 'write or update documentation (README, guides, docs)',
-      audit: 'review the code (security, performance, quality) and report, without changes'
+      audit: 'review the code (security, performance, quality) and report, without changes',
+      correction:
+        'the user is correcting a mistake agents keep repeating ("don\'t do X again", "always/never X", "stop using X") and wants it made impossible with a check (lint, type, test), not a reminder',
+      'verification-kit':
+        'give the repo a scripted way to run the real app and prove features work (feature map + driver), when it has none'
     }[type];
     add('task', type, `${def.label}: ${what || def.label}`, true);
   }
-  for (const s of builtinSkills()) add('skill', s.name, s.description, true);
+  // pstack's skills are many and situational: only a few always reach the model; the rest compete
+  // on words like the ECC ones.
+  for (const s of builtinSkills())
+    add('skill', s.name, s.description, !s.credit.includes('pstack') || PSTACK_CORE.has(s.name));
   try {
     for (const s of listSkills(projectRoot)) add('skill', s.slug, s.description);
   } catch {
@@ -114,7 +123,21 @@ const SYNONYMS = {
   revisar: 'review',
   revisa: 'review',
   refactorizar: 'refactor',
-  tipos: 'types typescript'
+  tipos: 'types typescript',
+  vuelvas: 'again mistake repeating',
+  repitas: 'again mistake repeating',
+  siempre: 'always',
+  nunca: 'never',
+  deja: 'stop',
+  dejes: 'stop',
+  otra: 'again',
+  vez: 'again',
+  regla: 'rule lint check',
+  comentarios: 'comments',
+  romper: 'break blast radius',
+  rompe: 'break blast radius',
+  verificar: 'verify verification prove',
+  demostrar: 'prove verification'
 };
 
 const tokens = (text) =>
