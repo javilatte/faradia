@@ -25,8 +25,11 @@
 
 <p align="center">
   <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><b>▶ Watch optimia in one minute</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://optimia.jagoan.es/media/optimia-2.3.0.mp4"><b>▶ What's new in 2.3</b></a>
+</p>
+
+<p align="center">
+  <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4"><img src="docs/assets/whats-new-2.3.gif" alt="What's new in optimia 2.3: a 40-second video" width="60%"></a><br>
+  <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4"><b>▶ What's new in 2.3</b></a>
 </p>
 
 ![optimia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
