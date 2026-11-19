@@ -81,3 +81,34 @@ test('a command that needs permission is asked in the chat, not in the terminal'
   await expect(page.locator('#chat-log')).toContainText('No me dejaste ejecutarlo.', { timeout: 10_000 });
   expect(errors).toEqual([]);
 });
+
+test('suggestions while typing: a late answer still shows if the user only kept typing, and Tab applies it', async ({
+  page
+}) => {
+  const errors = trackErrors(page);
+  let calls = 0;
+  await page.route('**/api/suggest', async (route) => {
+    calls++;
+    // Slow like a real model: the user keeps typing meanwhile.
+    await new Promise((r) => setTimeout(r, 1200));
+    await route.fulfill({
+      json: {
+        engine: 'claude',
+        suggestions: [{ kind: 'skill', id: 'security-audit', reason: 'revisión de seguridad', description: '' }]
+      }
+    });
+  });
+  await openProject(page);
+  await page.locator('#chat-kind-select').selectOption('tests');
+  const box = page.locator('#chat-input');
+  await box.pressSequentially('revisa la seguridad del login', { delay: 20 });
+  await page.waitForTimeout(900); // the pause that asks for a suggestion
+  await box.pressSequentially(' y del registro', { delay: 20 });
+  const chip = page.locator('.intent-chip').first();
+  await expect(chip).toContainText('/security-audit', { timeout: 5000 });
+  expect(calls).toBeGreaterThan(0);
+  await box.press('Tab');
+  await expect(box).toHaveValue('/security-audit revisa la seguridad del login y del registro');
+  await expect(chip).toBeHidden();
+  expect(errors).toEqual([]);
+});

@@ -237,6 +237,10 @@ function viaClaude(settings, system, user, { spawnFn = spawn } = {}) {
       '--output-format',
       'json',
       '--strict-mcp-config',
+      // Nothing to keep or load: no saved session per suggestion (they would fill the user's
+      // history), no skills or commands.
+      '--no-session-persistence',
+      '--disable-slash-commands',
       // A classifier: no tools and one turn, or it starts doing what the request asks.
       '--tools',
       '',

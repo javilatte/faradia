@@ -17,6 +17,9 @@ const INTENT_DELAY = 700;
 let intentTimer = null;
 let intentToken = 0;
 let intentItems = [];
+// The text the chips on screen answer, and the request they came from.
+let intentFor = '';
+let intentShown = 0;
 let intentDismissed = '';
 let intentOff = false;
 
@@ -26,6 +29,9 @@ function hideIntent() {
   intentBar.hidden = true;
   intentBar.replaceChildren();
   intentItems = [];
+  intentFor = '';
+  // Answers still on their way are for what was just hidden (sent, dismissed or changed).
+  intentShown = intentToken + 1;
 }
 
 function intentLabel(s) {
@@ -107,7 +113,11 @@ async function fetchIntent(text, token) {
       body: JSON.stringify({ text })
     });
     const data = await res.json();
-    if (token !== intentToken || intentKey(input.value) !== intentKey(text)) return;
+    // The answer takes a moment: it still counts if the user only kept typing after the text it
+    // answers (not if they changed it), unless a newer answer is already shown.
+    if (token < intentShown || !intentKey(input.value).startsWith(intentKey(text))) return;
+    intentShown = token;
+    intentFor = intentKey(text);
     intentOff = Boolean(data.off);
     // A task type already chosen in "Modo" is not worth proposing.
     intentItems = (data.suggestions || []).filter((s) => !(s.kind === 'task' && s.id === chatKindSelect.value));
@@ -121,8 +131,8 @@ function scheduleIntent() {
   clearTimeout(intentTimer);
   const text = input.value;
   const key = intentKey(text);
-  // Changing the message hides the previous chips (they were for another text).
-  if (intentItems.length) hideIntent();
+  // Changing what the chips were for hides them; adding to it keeps them until a newer answer.
+  if (intentItems.length && !key.startsWith(intentFor)) hideIntent();
   if (intentOff) return;
   if (!key || key === intentDismissed || /^[@/]/.test(key) || key.split(' ').length < 4) return;
   const token = ++intentToken;
