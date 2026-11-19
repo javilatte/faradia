@@ -2,7 +2,7 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [2.3.0] - 2026-11-19
 
 ### Added
 - **Sync between computers** (Settings › Sincronización): settings, AI keys, agents, stages, instructions and notices stay the same on every computer. The copy lives in a folder the user already syncs (Google Drive for desktop, Dropbox, iCloud, Syncthing…) and is encrypted on the computer with a passphrase (scrypt + AES-256-GCM) before it is written; whoever stores the folder cannot read it. Changes sync a few seconds after they happen and every few minutes; on a conflict the newest wins and the other is kept in `~/.config/optimia/backups`. Turning it off can also delete the copy.
@@ -24,6 +24,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Larger logo in the sidebar and an "Opt" favicon that reads in browser tabs.
 
 ### Fixed
+- Esc closes Settings, as it does every other sheet.
 - Importing a configuration file now also brings the chat permissions, the archive retention, the wiki settings and the chosen ECC skills.
 - Errors of tasks that could not start were only in the browser console; they are said in the chat.
 - The verification stage could not report its progress.

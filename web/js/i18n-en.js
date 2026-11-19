@@ -25,8 +25,10 @@ window.OPTIMIA_I18N_EN = {
     'Se abrió una terminal con «claude auth login». Completa el inicio de sesión ahí y pulsa Actualizar.':
       'A terminal opened with “claude auth login”. Finish signing in there and click Refresh.',
     'Tu configuración en todos tus equipos': 'Your configuration on all your computers',
-    'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de salir.':
-      'Turn it on in Settings › Sync with a folder you already sync. It is encrypted on your computer with a passphrase only you know before it leaves.',
+    'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de guardarla.':
+      'Turn it on in Settings › Sync with a folder you already sync. It is encrypted on your computer with a passphrase only you know before it is saved.',
+    'Las tareas terminadas quedan en el Archivo del tablero, con su resultado, sus agentes y su informe. Tú decides cuánto se guardan.':
+      'Finished tasks stay in the board’s Archive, with how they ended, their agents and their report. You choose how long they are kept.',
     'Activar sincronización…': 'Turn on sync…',
     'Igual en todos los repos y en todos tus equipos.': 'The same in every repo and on all your computers.',
     Sincronización: 'Sync',
@@ -315,7 +317,6 @@ window.OPTIMIA_I18N_EN = {
     'Conectar…': 'Connect…',
     'Detectar…': 'Detect…',
     'Modelo local': 'Local model',
-    'Gratis con una clave de Google': 'Free with a Google key',
     'Ollama o LM Studio': 'Ollama or LM Studio',
     'Conecta una IA y listo': 'Connect an AI and you are set',
     'Pide en el chat': 'Ask in the chat',
@@ -387,9 +388,6 @@ window.OPTIMIA_I18N_EN = {
       'No problems recorded. If something fails, it shows up here grouped by kind.',
     'Exportar informe…': 'Export report…',
     Vaciar: 'Clear',
-    'Entra con tu cuenta de Google.': 'Sign in with your Google account.',
-    'Se comprueba con Google antes de guardarla. Solo se guarda en este equipo.':
-      'It is checked with Google before it is saved. It stays on this computer.',
     Comprobar: 'Check',
     'Elige el modelo': 'Pick the model',
     'Quitar la clave': 'Remove the key',
@@ -788,7 +786,6 @@ window.OPTIMIA_I18N_EN = {
     ['^Solo de este repo \\((.+)\\)\\.$', 'Only this repo ($1).'],
     ['^(.+) · recomendado$', '$1 · recommended'],
     ['^(\\d+) modelos disponibles con tu clave\\.$', '$1 models available with your key.'],
-    ['^Clave guardada \\((.+)\\)\\. Pega otra para cambiarla$', 'Saved key ($1). Paste another to change it'],
     ['^(\\d+) ficheros?$', '$1 files'],
     ['^(\\d+) ficheros? · (.+)$', '$1 files · $2'],
     ['^Un agente ha cambiado (\\d+) ficheros? de test$', 'An agent changed $1 test files'],

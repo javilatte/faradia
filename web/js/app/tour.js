@@ -15,7 +15,9 @@ const ICONS = {
   book: 'M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4V4zM20 4h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7V4z',
   spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18',
   swap: 'M4 8h13l-4-4M20 16H7l4 4',
-  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'
+  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+  archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
+  cloud: 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18zM12 12v4M10 14l2-2 2 2'
 };
 
 function icon(name) {
@@ -112,12 +114,6 @@ const NEWS = [
     version: '2.3.0',
     cards: [
       {
-        icon: 'swap',
-        title: 'Sin cortes si Claude se agota',
-        text: 'Si Claude se queda sin uso, el chat y las tareas siguen con tu modelo local en la misma sesión, con todo su contexto, y vuelven a Claude cuando se renueva.',
-        action: { label: 'Configurar la IA local…', run: () => openPane('local-ai') }
-      },
-      {
         icon: 'spark',
         title: 'Sugerencias mientras escribes',
         text: 'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.'
@@ -128,15 +124,26 @@ const NEWS = [
         text: 'Cuando el agente necesita permiso, lo pide con una tarjeta en la conversación. En modo automático solo pregunta lo arriesgado.'
       },
       {
-        icon: 'swap',
+        icon: 'archive',
+        title: 'Archivo de tareas',
+        text: 'Las tareas terminadas quedan en el Archivo del tablero, con su resultado, sus agentes y su informe. Tú decides cuánto se guardan.'
+      },
+      {
+        icon: 'cloud',
         title: 'Tu configuración en todos tus equipos',
-        text: 'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de salir.',
+        text: 'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de guardarla.',
         action: { label: 'Activar sincronización…', run: () => openPane('sync') }
       },
       {
         icon: 'list',
         title: 'Skills de serie',
         text: 'ponytail (la solución más simple que funcione), frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.'
+      },
+      {
+        icon: 'swap',
+        title: 'Sin cortes si Claude se agota',
+        text: 'Si Claude se queda sin uso, el chat y las tareas siguen con tu modelo local en la misma sesión, con todo su contexto, y vuelven a Claude cuando se renueva.',
+        action: { label: 'Configurar la IA local…', run: () => openPane('local-ai') }
       }
     ]
   }
