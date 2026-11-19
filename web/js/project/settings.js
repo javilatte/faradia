@@ -431,6 +431,14 @@ settingsClose.addEventListener('click', closeSettings);
 settingsOverlay.addEventListener('click', (e) => {
   if (e.target === settingsOverlay) closeSettings();
 });
+// Esc closes Settings, as any sheet, unless something inside it (a menu, a sheet on top) uses it.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || settingsOverlay.hidden || e.defaultPrevented) return;
+  if (document.querySelector('.sheet-overlay')) return;
+  e.preventDefault();
+  closeSettings();
+  settingsButton.focus();
+});
 
 settingsNavItems.forEach((item) => {
   item.addEventListener('click', () => {
