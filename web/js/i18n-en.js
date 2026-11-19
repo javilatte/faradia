@@ -5,6 +5,13 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    '! Sin verificar: lo que se ejecutó no respalda el «OK» del agente':
+      "! Not verified: what ran does not back the agent's “OK”",
+    'Debía fallar y terminó bien': 'It should have failed and it finished fine',
+    'Falló a propósito: demuestra que la comprobación detecta el error':
+      'Failed on purpose: it shows the check catches the mistake',
+    'Falló según su salida (el código de salida se perdió en una tubería)':
+      'Failed according to its output (a pipe lost the exit code)',
     'regla de lint': 'lint rule',
     arquitectura: 'architecture',
     tipos: 'types',

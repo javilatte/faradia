@@ -11,6 +11,7 @@ const {
   parseCorrection,
   parseRuleProposals,
   crossCheckVerdict,
+  isCheckCommand,
   canRun
 } = require('../../server/bridge/taskStages');
 const evidence = require('../../server/bridge/evidence');
@@ -184,6 +185,7 @@ test('an "OK" the evidence contradicts becomes unverified', () => {
   assert.equal(none.ok, false);
   assert.equal(none.unverified, true);
   assert.match(none.line, /no ejecutó ninguna comprobación/);
+  assert.equal(none.contradicted, true, 'the card says the evidence contradicts it, not that checks could not run');
   const failed = crossCheckVerdict(ok, {
     checks: [
       { command: 'npm test', ok: false },
@@ -316,4 +318,68 @@ test('a failure a pipe hid from the exit code is read from the output', () => {
   assert.equal(evidence.outputFailed('========= 1 failed, 11 passed in 0.4s ========='), true);
   assert.equal(evidence.outputFailed('ok  	example.com/pkg	0.01s'), false);
   assert.equal(evidence.outputFailed('--- FAIL: TestCart (0.00s)'), true);
+});
+
+test('only commands whose program is a test runner, linter, type checker or build count as checks', () => {
+  for (const cmd of [
+    'npm test',
+    'npm run lint 2>&1 | tail -5',
+    'cd web && pnpm build',
+    'CI=1 npx vitest run',
+    'node --test test/',
+    'python -m pytest -q',
+    'cargo clippy --all-targets',
+    'go test ./...',
+    'make test',
+    './gradlew check',
+    'npx --yes eslint src',
+    'git diff --stat && npm test 2>&1 | tail -3'
+  ]) {
+    assert.ok(isCheckCommand(cmd), cmd);
+  }
+  for (const cmd of [
+    `node -e "const {test} = require('./x'); test()"`,
+    'grep -rn "test" src',
+    'cat test/cart.test.js',
+    'ls test',
+    'git log --oneline -5',
+    'echo check'
+  ]) {
+    assert.ok(!isCheckCommand(cmd), cmd);
+  }
+  // A script the verifier ran to show a mutation throws does not turn its OK into unverified.
+  const ok = { ok: true, unverified: false, line: 'VEREDICTO: OK' };
+  assert.equal(
+    crossCheckVerdict(ok, {
+      checks: [
+        { command: 'npm test', ok: true },
+        { command: 'node -e "require(\'./src/cart\').addItem(frozen, {}) // test"', ok: false }
+      ]
+    }),
+    ok
+  );
+});
+
+test('a command marked "# se espera que falle" shows its failure but does not count against the OK', () => {
+  const rec = evidence.createRecorder();
+  rec.onEvent(bash('a', 'git stash && npm test # se espera que falle'));
+  rec.onEvent(result('a', 'Exit code 1\n# fail 1', true));
+  rec.onEvent(bash('b', 'npm test'));
+  rec.onEvent(result('b', '# pass 3\n# fail 0'));
+  const checks = rec.checks();
+  assert.equal(checks[0].expectedFailure, true);
+  assert.equal(checks[0].ok, false);
+  const ok = { ok: true, unverified: false, line: 'VEREDICTO: OK' };
+  assert.equal(
+    crossCheckVerdict(ok, {
+      checks: [checks[0], { command: 'npm test # se espera que falle', ok: false, expectedFailure: true }, checks[1]]
+    }),
+    ok
+  );
+  assert.match(buildStagePrompt(task('coding'), 'verify'), /# se espera que falle/);
+  // On the step that fails of a longer command (break, show it fails, restore, run again).
+  const multi = evidence.createRecorder();
+  multi.onEvent(bash('m', 'cp a b\nnpm test | grep fail # se espera que falle\ncp b a; npm test'));
+  multi.onEvent(result('m', '# fail 3\n# fail 0'));
+  assert.equal(multi.checks()[0].expectedFailure, true);
 });

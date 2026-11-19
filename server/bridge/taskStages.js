@@ -452,7 +452,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         `Encargo original:\n${goal}`,
         'Ejecuta los tests, el lint y la compilacion que tenga el proyecto. Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
         'Si el repo tiene una skill de verificación (.claude/skills/verify-*/SKILL.md), úsala para probar en la aplicación real lo que cambió esta tarea.',
-        'optimia guarda como evidencia cada comando que ejecutes y su resultado: ejecuta las comprobaciones de verdad, una por comando, en vez de describirlas.',
+        'optimia guarda como evidencia cada comando que ejecutes y su resultado: ejecuta las comprobaciones de verdad, una por comando, en vez de describirlas. Si ejecutas algo que debe fallar a propósito (por ejemplo, para demostrar que una comprobación detecta el error), termina ese comando con el comentario "# se espera que falle"; si no, su fallo cuenta como un fallo de la verificación.',
         evidenceDir
           ? `Si el cambio se ve en una interfaz y puedes capturarla (por ejemplo con Playwright), guarda las capturas o vídeos como evidencia en ${evidenceDir} (PNG, JPG, WEBP, GIF o MP4), con nombres que digan qué muestran.`
           : null,
@@ -572,8 +572,23 @@ function parseRuleProposals(text) {
 
 // What optimia saw the verifier run contradicts its "OK": no command at all, or the last check that
 // looks like tests, lint or a build failed. The verdict becomes "unverified" with the reason.
-const CHECK_COMMAND =
-  /\b(test|tests|lint|eslint|build|check|tsc|typecheck|pytest|vitest|jest|mocha|cargo|go\s+(?:test|vet|build)|mvn|gradle|make|ruff|mypy|rspec|phpunit|bats|playwright)\b/i;
+// A command is a check when one of its steps starts with a test runner, a linter, a type checker or a
+// build: what follows (`node -e "...test..."`, a grep) is not looked at, so a script the agent runs
+// to show something fails on purpose does not count.
+const CHECK_STEP =
+  /^(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:test|lint|build|check|typecheck|type-check|ci|verify)\b|npx\s+(?:--?\S+\s+)*(?:jest|vitest|mocha|eslint|tsc|playwright|prettier\s+--check|biome|ava|tap)\b|node\s+--test\b|deno\s+(?:test|lint|check)\b|(?:jest|vitest|mocha|eslint|tsc|pytest|py\.test|tox|nox|ruff|mypy|pyright|flake8|rspec|rubocop|phpunit|pest|bats|playwright|ctest|swift\s+test|dotnet\s+(?:test|build))\b|python3?\s+-m\s+(?:pytest|unittest|mypy|ruff)\b|cargo\s+(?:test|build|check|clippy|nextest)\b|go\s+(?:test|vet|build)\b|make(?:\s+(?:test|check|lint|build|ci|all))?\s*$|mvn\b|\.\/gradlew\b|gradle\b|bundle\s+exec\s+(?:rspec|rake|rubocop)\b)/;
+function isCheckCommand(command) {
+  return String(command || '')
+    .split(/&&|\|\||;|\n|\|/)
+    .map((step) =>
+      step
+        .trim()
+        .replace(/^(?:\w+=\S*\s+)+/, '')
+        .replace(/^(?:cd\s+\S+|time|timeout\s+\S+)\s*/, '')
+    )
+    .some((step) => CHECK_STEP.test(step));
+}
+/\b(test|tests|lint|eslint|build|check|tsc|typecheck|pytest|vitest|jest|mocha|cargo|go\s+(?:test|vet|build)|mvn|gradle|make|ruff|mypy|rspec|phpunit|bats|playwright)\b/i;
 function crossCheckVerdict(verdict, evidence) {
   if (!verdict || !verdict.ok || !evidence) return verdict;
   const checks = evidence.checks || [];
@@ -581,15 +596,21 @@ function crossCheckVerdict(verdict, evidence) {
     return {
       ok: false,
       unverified: true,
+      contradicted: true,
       line: 'VEREDICTO: SIN VERIFICAR (dice OK, pero no ejecutó ninguna comprobación)'
     };
   }
   const lastByCommand = new Map();
-  for (const c of checks) if (CHECK_COMMAND.test(c.command)) lastByCommand.set(c.command, c);
+  for (const c of checks) if (!c.expectedFailure && isCheckCommand(c.command)) lastByCommand.set(c.command, c);
   const failed = [...lastByCommand.values()].find((c) => c.ok === false);
   if (failed) {
     const cmd = failed.command.length > 80 ? `${failed.command.slice(0, 77)}...` : failed.command;
-    return { ok: false, unverified: true, line: `VEREDICTO: SIN VERIFICAR (dice OK, pero \`${cmd}\` falló)` };
+    return {
+      ok: false,
+      unverified: true,
+      contradicted: true,
+      line: `VEREDICTO: SIN VERIFICAR (dice OK, pero \`${cmd}\` falló)`
+    };
   }
   return verdict;
 }
@@ -760,5 +781,6 @@ module.exports = {
   parseCorrection,
   parseRuleProposals,
   crossCheckVerdict,
+  isCheckCommand,
   decideAfterStage
 };

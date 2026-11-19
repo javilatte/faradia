@@ -17,7 +17,11 @@ const ICONS = {
   swap: 'M4 8h13l-4-4M20 16H7l4 4',
   list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
   archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
-  cloud: 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18zM12 12v4M10 14l2-2 2 2'
+  cloud: 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18zM12 12v4M10 14l2-2 2 2',
+  check: 'M4 4h16v16H4zM8 12l3 3 5-6',
+  lock: 'M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3',
+  eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  scissors: 'M6 6a2 2 0 1 0 0 .01M6 18a2 2 0 1 0 0 .01M8 7l12 10M8 17L20 7'
 };
 
 function icon(name) {
@@ -110,6 +114,32 @@ const INTRO = [
 
 // What changed in each version (newest last). Only versions newer than the one seen are shown.
 const NEWS = [
+  {
+    version: '2.4.0',
+    cards: [
+      {
+        icon: 'lock',
+        title: 'Que no vuelva a pasar',
+        text: 'Cuando un agente se equivoque, crea una tarea de Corrección: el error se convierte en una comprobación que falla (arquitectura, tipos, lint o test) y se demuestra con el error real. Mejor que una línea más en las instrucciones.'
+      },
+      {
+        icon: 'eye',
+        title: 'Evidencia, no palabras',
+        text: 'La verificación guarda cada comando que ejecutó el agente con su resultado y sus capturas. Si dice «OK» pero los tests fallaron, optimia no se lo cree.'
+      },
+      {
+        icon: 'scissors',
+        title: 'Sin comentarios de apaño',
+        text: 'Una pasada nueva quita los comentarios que narran el código o justifican un parche, y propone una comprobación para cada regla que defendían.'
+      },
+      {
+        icon: 'check',
+        title: 'Principios en cada agente',
+        text: 'Los agentes trabajan con los principios de pstack de Lauren Tan (demostrar que funciona, arreglar la causa raíz, restar antes de sumar…) y dicen cuál cambió una decisión.',
+        action: { label: 'Ver los agentes…', run: () => openPane('agents') }
+      }
+    ]
+  },
   {
     version: '2.3.0',
     cards: [

@@ -32,7 +32,7 @@ test('the verification shows the evidence optimia saw, and an OK the tests contr
   const bad = page.locator('.task-card', { hasText: 'Importar desde CSV' });
   await expect(bad).toHaveClass(/ready/, { timeout: 30_000 });
   await expect(bad.locator('.verification')).toHaveClass(/unverified/);
-  await expect(bad.locator('.verification summary').first()).toContainText('Sin verificar');
+  await expect(bad.locator('.verification summary').first()).toContainText('no respalda el «OK» del agente');
   await bad.locator('.verification summary').first().click();
   await expect(bad.locator('.verification-reason')).toContainText('npm test');
   await expect(bad.locator('.evidence > summary')).toHaveText('Evidencia: 1 comprobación (1 con fallos)');

@@ -2141,3 +2141,6 @@ input.switch:focus-visible {
   align-items: center;
   gap: 6px;
 }
+:root .evidence-check.expected .evidence-mark {
+  color: var(--secondary-label);
+}

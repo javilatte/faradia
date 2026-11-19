@@ -405,9 +405,11 @@ function renderVerification(taskId, task) {
   const reason = v.line.replace(/^\s*VEREDICTO:\s*(FALLA|SIN VERIFICAR)\s*(motivo:)?\s*/i, '').trim();
   const details = document.createElement('details');
   const summary = document.createElement('summary');
-  summary.textContent = v.unverified
-    ? '! Sin verificar: no se pudieron ejecutar las comprobaciones en este equipo'
-    : '✗ La verificación encontró problemas';
+  summary.textContent = v.contradicted
+    ? '! Sin verificar: lo que se ejecutó no respalda el «OK» del agente'
+    : v.unverified
+      ? '! Sin verificar: no se pudieron ejecutar las comprobaciones en este equipo'
+      : '✗ La verificación encontró problemas';
   details.appendChild(summary);
   const body = document.createElement('div');
   body.className = 'verification-reason';
@@ -476,19 +478,24 @@ function fillEvidence(taskId, body, run) {
   }
   for (const c of run.checks) {
     const item = document.createElement('details');
-    item.className = `evidence-check ${c.ok === true ? 'ok' : c.ok === false ? 'fail' : 'denied'}`;
+    const expected = c.expectedFailure && c.ok === false;
+    item.className = `evidence-check ${c.ok === true ? 'ok' : expected ? 'expected' : c.ok === false ? 'fail' : 'denied'}`;
     const line = document.createElement('summary');
     const mark = document.createElement('span');
     mark.className = 'evidence-mark';
-    mark.textContent = c.ok === true ? '✓' : c.ok === false ? '✗' : '–';
+    mark.textContent = c.ok === true ? '✓' : expected ? '⊘' : c.ok === false ? '✗' : '–';
     mark.title =
       c.ok === true
-        ? 'Terminó bien'
-        : c.ok === false
-          ? c.failedInOutput
-            ? 'Falló según su salida (el código de salida se perdió en una tubería)'
-            : `Falló${c.exitCode ? ` (código ${c.exitCode})` : ''}`
-          : 'Bloqueado: no se ejecutó';
+        ? c.expectedFailure
+          ? 'Debía fallar y terminó bien'
+          : 'Terminó bien'
+        : expected
+          ? 'Falló a propósito: demuestra que la comprobación detecta el error'
+          : c.ok === false
+            ? c.failedInOutput
+              ? 'Falló según su salida (el código de salida se perdió en una tubería)'
+              : `Falló${c.exitCode ? ` (código ${c.exitCode})` : ''}`
+            : 'Bloqueado: no se ejecutó';
     const cmd = document.createElement('code');
     cmd.textContent = c.command;
     const time = document.createElement('small');

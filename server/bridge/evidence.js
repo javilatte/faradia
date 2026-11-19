@@ -40,6 +40,11 @@ const FAILED_OUTPUT = [
   /^Found [1-9]\d* errors?/m // tsc --build, mypy, ruff
 ];
 
+// A command the agent runs to show that something fails (the mistake a check must catch) carries
+// this comment, at its end or on the step that fails (break, check it fails, restore, check again): its failure is expected and does not count against the verdict, but it stays on the
+// card for whoever reviews.
+const EXPECTED_FAILURE = /#\s*se espera que falle\b/i;
+
 function outputFailed(text) {
   return FAILED_OUTPUT.some((re) => re.test(text));
 }
@@ -70,6 +75,7 @@ function createRecorder({ isDenied = () => false, now = Date.now } = {}) {
           const failedOutput = !block.is_error && outputFailed(text);
           checks.push({
             command: use.command,
+            ...(EXPECTED_FAILURE.test(use.command.trim()) ? { expectedFailure: true } : {}),
             ok: denied ? null : !block.is_error && !failedOutput,
             ...(failedOutput ? { failedInOutput: true } : {}),
             ...(denied ? { denied: true } : {}),

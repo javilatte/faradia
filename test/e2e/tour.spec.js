@@ -12,16 +12,16 @@ test("after an update the what's new tour shows once, steps through, and Esc clo
   const errors = trackErrors(page);
   const state = JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
   // As if the last version seen were the previous one.
-  fs.writeFileSync(stateFile(), JSON.stringify({ ...state, tourSeen: '2.2.0' }));
+  fs.writeFileSync(stateFile(), JSON.stringify({ ...state, tourSeen: '2.3.0' }));
   try {
     await openProject(page);
     const tour = page.locator('.tour-sheet');
     await expect(tour).toContainText(`Novedades de optimia ${version}`);
-    await expect(tour).toContainText('Sugerencias mientras escribes');
+    await expect(tour).toContainText('Que no vuelva a pasar');
     await tour.getByRole('button', { name: 'Siguiente' }).click();
-    await expect(tour).toContainText('Permisos en el chat');
+    await expect(tour).toContainText('Evidencia, no palabras');
     await page.keyboard.press('ArrowLeft');
-    await expect(tour).toContainText('Sugerencias mientras escribes');
+    await expect(tour).toContainText('Que no vuelva a pasar');
     await page.keyboard.press('Escape');
     await expect(tour).toBeHidden();
     await expect.poll(() => JSON.parse(fs.readFileSync(stateFile(), 'utf8')).tourSeen).toBe(version);
