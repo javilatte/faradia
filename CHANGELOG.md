@@ -2,6 +2,21 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.4.0] - 2026-11-19
+
+Inspired by Lauren Tan's talk "Turn slop into gold" and her plugin [pstack](https://github.com/cursor/plugins/tree/main/pstack) (MIT): trust in agents comes from checks and evidence, not from more prose.
+
+### Added
+- **Corrections become checks**: a new *Corrección* task type turns a mistake agents keep making into the highest check that works (architecture, types, a lint rule whose message names the fix, a test; docs only for judgment calls), proves it fails on the real past mistake and keeps a rule ↔ enforcer table in the repo's `CLAUDE.md` or `AGENTS.md`. It can be started from the mode selector, a suggestion ("no vuelvas a…"), a finished task (*Evitar que se repita…*) or a proposal of the comments pass.
+- **Verification evidence**: optimia records every command the Verifier runs, with its result, from the session's own stream (not from what the agent says), plus the screenshots or videos it saves in a folder outside the worktree. The card lists them, and an "OK" with no command run, or with tests that failed, becomes *unverified*.
+- **Comments pass**: a new optional stage between implementation and verification, run by Comment Sicko, removes the comments a task added to narrate code or excuse a workaround, and turns the constraints they defended into proposals for a check.
+- **Principles per agent**: each agent works with the pstack principles of its stage (the Planner with foundational thinking and subtract before you add, the Debugger with fix root causes and attack the premise, the Verifier with prove it works…) and names in its report the one that changed a decision. They can be chosen per agent or turned off in Settings › Agents.
+- **Verification kit** task type: gives the repo a scripted way to run the real app and prove features, with a feature map, which the Verifier then uses.
+- Built-in pstack skills (Lauren Tan, MIT): correct, tdd, blast-radius, interrogate, arena, architect, how, why, in-your-own-words, no-comments, benchmark-checklist, create-verification-skill and maintain-verification-skill.
+
+### Fixed
+- The archive did not show how the verification ended.
+
 ## [2.3.0] - 2026-11-19
 
 ### Added

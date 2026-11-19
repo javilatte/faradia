@@ -39,6 +39,11 @@
 - **Agents that finish the job.** Every task runs a pipeline of agents (plan → implement →
   verify) in its own git worktree, with a model per agent. Agents only stop to ask when
   they lack context; anything blocked for safety can be allowed from the card.
+- **Trust from checks, not prose.** When an agent gets something wrong, a *Corrección*
+  task turns the mistake into a check that fails (architecture, types, lint, a test) and
+  proves it on the real mistake. The verification is reviewed as evidence: every command
+  the Verifier ran, with its result and its screenshots, and an "OK" the tests contradict
+  is not trusted. A comments pass removes the comments that excuse a workaround.
 - **A chat that knows its tools.** While you type, optimia proposes the skill, agent or
   task type that fits (Tab to use it). What needs permission is asked with a card in
   the conversation, never in a terminal; in automatic mode only risky actions ask.
@@ -62,8 +67,9 @@
   of usage, the chat and running tasks go on with the local model in the same session
   and come back to Claude when the limit resets.
 - **Good habits built in.** Skills for interface work (frontend-craft), plain writing
-  (unslop), security reviews (security-audit), plans (plan-optimizer) and the simplest
-  change that works (ponytail) are on for the chat and every agent.
+  (unslop), security reviews (security-audit), plans (plan-optimizer), the simplest
+  change that works (ponytail) and pstack's engineering skills (correct, tdd,
+  blast-radius, interrogate…) are on for the chat and every agent.
 - **Your setup on every computer.** Settings, agents and keys sync through a folder you
   already sync, encrypted with a passphrase only you know.
 - **Safe by default.** Agents run in Claude Code's OS sandbox, can never commit, push
@@ -160,9 +166,11 @@ own git worktree:
 
 | Task type | Pipeline |
 |---|---|
-| Code (`coding`) | plan → implement → verify |
-| Bug (`bugfix`) | diagnose → implement → verify |
-| Tests (`tests`) | plan → write tests → verify |
+| Code (`coding`) | plan → implement → comments → verify |
+| Bug (`bugfix`) | diagnose → implement → comments → verify |
+| Tests (`tests`) | plan → write tests → comments → verify |
+| Correction (`correction`) | correct → verify |
+| Verification kit (`verification-kit`) | the repo's verify skill and feature map |
 | Documentation (`documentation`) | research → (choose format and target) → write |
 | Audit (`audit`) | audit → report (no changes) |
 | Agente propio (`custom`) | one stage with one of your agents |
@@ -171,6 +179,40 @@ Review, commit preparation and the PR / Jira description run on demand once a ta
 is ready. The verifier runs
 the project's tests, lint and build and gives a verdict; disable it to skip that
 stage. Each task card shows which agent and model ran every stage.
+
+### Checks and evidence (pstack)
+
+Inspired by Lauren Tan's talk *Turn slop into gold* and her plugin
+[pstack](https://github.com/cursor/plugins/tree/main/pstack) (MIT): you trust agents
+because the repo stops them and their work comes with evidence, not because the
+instructions grow.
+
+- **Corrections.** A *Corrección* task follows pstack's `correct` skill for one mistake:
+  it picks the highest level that works (architecture, types, a lint rule whose message
+  names the fix, a test; docs only for judgment calls), runs the check against the real
+  past mistake to show it fails, and adds the rule to a rule ↔ enforcer table in the
+  repo's `CLAUDE.md` or `AGENTS.md`. Start one from the mode selector, from a suggestion
+  ("no vuelvas a…"), with *Evitar que se repita…* on a finished task, or from a proposal
+  of the comments pass. The card shows the level of the check it added.
+- **Evidence.** optimia records every command the Verifier runs and its result, from the
+  session's stream, plus the screenshots or videos it saves in
+  `.optimia/evidence/<task>/` (outside the worktree, never committed). The card lists
+  them. A verdict of "OK" with no command run, or with a test, lint or build command
+  that failed last, becomes *unverified*.
+- **Comments pass.** Comment Sicko removes the comments the task added to narrate code or
+  excuse a workaround, never the ones that were already there, and turns each constraint
+  a comment defended into a proposal you can make a correction of. Turn its agent off to
+  skip the stage.
+- **Principles.** Each agent works with the pstack principles of its stage and names the
+  one that changed a decision. Choose them per agent, or turn them off, in Settings →
+  Agents.
+- **Verification kit.** A task that follows `create-verification-skill` to give the repo
+  a scripted way to drive the real app, with a feature map; the Verifier uses it.
+
+pstack's skills that work in Claude Code are built in for the chat and every agent:
+`correct`, `tdd`, `blast-radius`, `interrogate`, `arena`, `architect`, `how`, `why`,
+`in-your-own-words`, `no-comments`, `benchmark-checklist`, `create-verification-skill`
+and `maintain-verification-skill` (`scripts/vendor-pstack.sh` updates them).
 
 In **Settings → Agents** you can change any agent's engine (Claude or local), model,
 effort and role prompt, choose which agent runs each stage, and create your own
