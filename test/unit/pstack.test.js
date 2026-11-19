@@ -104,9 +104,9 @@ test('parseRuleProposals: nothing, "none", or at most ten', () => {
 // ---------- corrections ----------
 
 test('correction: follows the correct skill, proves the check fails on the real mistake and reports its level', () => {
-  const prompt = buildStagePrompt(task('correction'), 'correct', { skillsDir: '/data/optimia/ecc/.claude/skills' });
+  const prompt = buildStagePrompt(task('correction'), 'correct', { skillsDir: '/data/faradia/ecc/.claude/skills' });
   // The skills reach the session through --add-dir, not the worktree: the absolute path.
-  assert.match(prompt, /Lee y sigue \/data\/optimia\/ecc\/\.claude\/skills\/correct\/SKILL\.md/);
+  assert.match(prompt, /Lee y sigue \/data\/faradia\/ecc\/\.claude\/skills\/correct\/SKILL\.md/);
   assert.match(buildStagePrompt(task('correction'), 'correct'), /la skill correct \(\/correct\)/);
   assert.match(prompt, /ejecútala sobre el error real/);
   assert.match(prompt, /CLAUDE\.md o AGENTS\.md/);
@@ -132,8 +132,8 @@ test('verification-kit: follows create-verification-skill in .claude/skills and 
   const prompt = buildStagePrompt(task('verification-kit'), 'verification-kit', { skillsDir: '/d/.claude/skills' });
   assert.match(prompt, /\/d\/\.claude\/skills\/create-verification-skill\/SKILL\.md/);
   // Claude Code does not let a session write in .claude/: the kit goes to a staging folder that
-  // optimia moves after the stage.
-  assert.match(prompt, /\.optimia-kit\/verify-<app>\//);
+  // Faradia moves after the stage.
+  assert.match(prompt, /\.faradia-kit\/verify-<app>\//);
   assert.match(prompt, /\.claude\/skills\/verify-<app>/);
 });
 
@@ -150,14 +150,14 @@ const result = (id, text, isError = false) => ({
 
 test('the recorder keeps each Bash command with its result, from the stream and not from the agent', () => {
   let clock = 1000;
-  const rec = evidence.createRecorder({ isDenied: (t) => t.includes('optimia bloqueó'), now: () => clock });
+  const rec = evidence.createRecorder({ isDenied: (t) => t.includes('faradia bloqueó'), now: () => clock });
   rec.onEvent(bash('a', 'npm test'));
   clock += 2500;
   rec.onEvent(result('a', '266 passing'));
   rec.onEvent(bash('b', 'npm run lint'));
   rec.onEvent(result('b', 'Exit code 1\nerror  no-console', true));
   rec.onEvent(bash('c', 'rm -rf /'));
-  rec.onEvent(result('c', 'optimia bloqueó este comando', true));
+  rec.onEvent(result('c', 'faradia bloqueó este comando', true));
   rec.onEvent({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'd', name: 'Read', input: {} }] } });
   rec.onEvent(result('d', 'file text'));
   const checks = rec.checks();
@@ -234,7 +234,7 @@ test('evidence runs are saved outside the worktree, numbered, with the images of
   const repo = mkTmpDir('evidence-repo');
   t.after(() => rmTmpDir(repo));
   const dir = evidence.evidenceDir(repo, 'task-1');
-  assert.equal(dir, path.join(repo, '.optimia', 'evidence', 'task-1'));
+  assert.equal(dir, path.join(repo, '.faradia', 'evidence', 'task-1'));
   fs.mkdirSync(dir, { recursive: true });
   const started = Date.now();
   fs.writeFileSync(path.join(dir, 'home.png'), 'png');
@@ -270,11 +270,11 @@ test('the verify prompt asks for real commands and offers the evidence folder fo
 
 test("the sandbox lets the agents' commands write the evidence folder, with or without registries", () => {
   const { sandboxSettings, agentCacheDir } = require('../../server/bridge/sandbox');
-  const withRegistries = sandboxSettings('on', { registries: true, extraWrite: ['/repo/.optimia/evidence'] });
-  assert.deepEqual(withRegistries.filesystem.allowWrite, [agentCacheDir(), '/repo/.optimia/evidence']);
+  const withRegistries = sandboxSettings('on', { registries: true, extraWrite: ['/repo/.faradia/evidence'] });
+  assert.deepEqual(withRegistries.filesystem.allowWrite, [agentCacheDir(), '/repo/.faradia/evidence']);
   assert.ok(withRegistries.network);
-  const without = sandboxSettings('on', { registries: false, extraWrite: ['/repo/.optimia/evidence'] });
-  assert.deepEqual(without.filesystem.allowWrite, ['/repo/.optimia/evidence']);
+  const without = sandboxSettings('on', { registries: false, extraWrite: ['/repo/.faradia/evidence'] });
+  assert.deepEqual(without.filesystem.allowWrite, ['/repo/.faradia/evidence']);
   assert.equal(without.network, undefined);
   assert.equal(sandboxSettings('off', { extraWrite: ['/x'] }), undefined);
 });
@@ -386,7 +386,7 @@ test('a command marked "# se espera que falle" shows its failure but does not co
   assert.equal(multi.checks()[0].expectedFailure, true);
 });
 
-test('optimia state is written the way Prettier formats JSON, with the repo print width', (t) => {
+test('faradia state is written the way Prettier formats JSON, with the repo print width', (t) => {
   const { stringify, printWidth, writeJsonFile, repoOf, _clearWidthCache } = require('../../server/store/jsonFile');
   assert.equal(
     stringify({ a: ['review'], b: {}, c: [], d: [{ x: 1 }] }),
@@ -410,7 +410,7 @@ test('optimia state is written the way Prettier formats JSON, with the repo prin
   fs.writeFileSync(path.join(repo, '.prettierrc'), '{ "printWidth": 160 }');
   _clearWidthCache();
   assert.equal(printWidth(repo), 160);
-  const file = path.join(repo, '.optimia', 'tasks.json');
+  const file = path.join(repo, '.faradia', 'tasks.json');
   assert.equal(repoOf(file), repo);
   writeJsonFile(file, { list: long });
   assert.match(fs.readFileSync(file, 'utf8'), /"list": \["item-0"/);

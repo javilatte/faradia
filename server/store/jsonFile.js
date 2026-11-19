@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// optimia's state lives in <repo>/.optimia/*.json. Many repos run `prettier --check .`, which also
+// faradia's state lives in <repo>/.faradia/*.json. Many repos run `prettier --check .`, which also
 // reads that folder (git's info/exclude does not reach it), so the files are written the way
 // Prettier formats JSON: objects expanded, an array of plain values on one line when it fits in the
 // repo's print width.
@@ -112,10 +112,10 @@ function stringify(value, width = DEFAULT_WIDTH) {
   return `${render(JSON.parse(JSON.stringify(value)), 0, '', '')}\n`;
 }
 
-// The repo a file of <repo>/.optimia/ belongs to, or null.
+// The repo a file of <repo>/.faradia/ belongs to, or null.
 function repoOf(file) {
   const parts = path.resolve(file).split(path.sep);
-  const i = parts.lastIndexOf('.optimia');
+  const i = parts.lastIndexOf('.faradia');
   return i > 0 ? parts.slice(0, i).join(path.sep) || path.sep : null;
 }
 

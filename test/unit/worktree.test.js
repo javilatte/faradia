@@ -47,7 +47,7 @@ test('createTaskWorktree: creates a real git worktree on its own branch and copi
   const { dir: wtDir, branch } = createTaskWorktree(dir, 'task-123');
 
   assert.equal(wtDir, worktreeDir(dir, 'task-123'));
-  assert.equal(branch, 'optimia/task-task-123'); // taskId.slice(0, 8) of "task-123" is "task-123" itself (8 chars)
+  assert.equal(branch, 'faradia/task-task-123'); // taskId.slice(0, 8) of "task-123" is "task-123" itself (8 chars)
   assert.equal(fs.existsSync(path.join(wtDir, 'README.md')), true);
   // An untracked .claude/ of the repo is not copied: it would end up in the task's commit.
   assert.equal(fs.existsSync(path.join(wtDir, '.claude', 'settings.json')), false);
@@ -119,7 +119,7 @@ test('tasks: start from the chosen base branch, with their own branch, and merge
   const dir = mkTmpDir('worktree-flow');
   t.after(() => rmTmpDir(dir));
   initGitRepo(dir);
-  fs.writeFileSync(path.join(dir, '.gitignore'), '/docs\n/.optimia\n');
+  fs.writeFileSync(path.join(dir, '.gitignore'), '/docs\n/.faradia\n');
   execFileSync('git', ['add', '.gitignore'], { cwd: dir });
   execFileSync('git', ['commit', '-q', '-m', 'ignore docs'], { cwd: dir });
   execFileSync('git', ['checkout', '-q', '-b', 'fix/rebranding'], { cwd: dir });

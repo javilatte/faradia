@@ -2,7 +2,7 @@
 'use strict';
 
 // PreToolUse hook of agent sessions (see policy.js). Claude Code passes the tool call as JSON on
-// stdin; a denial is answered on stdout. OPTIMIA_APPROVED_COMMANDS (JSON) lists the exact commands
+// stdin; a denial is answered on stdout. FARADIA_APPROVED_COMMANDS (JSON) lists the exact commands
 // the user approved from the task cards. It is fixed when the stage starts: an agent cannot grant
 // itself an exception by editing a file.
 
@@ -20,7 +20,7 @@ process.stdin.on('end', () => {
   if (call.tool_name !== 'Bash') return;
   let approved = [];
   try {
-    approved = JSON.parse(process.env.OPTIMIA_APPROVED_COMMANDS || '[]');
+    approved = JSON.parse(process.env.FARADIA_APPROVED_COMMANDS || '[]');
   } catch {
     approved = [];
   }

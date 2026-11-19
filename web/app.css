@@ -823,7 +823,7 @@
 .dl-empty {
   background: repeating-linear-gradient(135deg, transparent 0 6px, var(--panel) 6px 7px);
 }
-/* Shiki colors: one variable per theme, picked with optimia's theme. */
+/* Shiki colors: one variable per theme, picked with faradia's theme. */
 .dl-code span {
   color: var(--shiki-light);
 }

@@ -59,7 +59,7 @@ test('the policy hook denies, and only lets through approved commands from the e
     spawnSync(process.execPath, [hook], {
       input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
       encoding: 'utf8',
-      env: { ...process.env, OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approved || []) }
+      env: { ...process.env, FARADIA_APPROVED_COMMANDS: JSON.stringify(approved || []) }
     }).stdout;
   // `server` is tracked by git in this repo: deleting it is blocked unless approved.
   assert.equal(JSON.parse(run('rm -rf server')).hookSpecificOutput.permissionDecision, 'deny');

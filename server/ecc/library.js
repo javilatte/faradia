@@ -7,10 +7,10 @@ const { dataDir } = require('../store/globalPaths');
 const { builtinSkills, copyBuiltinSkills } = require('../skills/library');
 
 // ECC (Everything Claude Code, github.com/affaan-m/ECC, MIT) bundled in vendor/ecc: its agents,
-// skills and commands are part of optimia, not a plugin.
+// skills and commands are part of Faradia, not a plugin.
 //   - agents: an extra origin of the agent catalog (ids "ecc-<name>"), off until the user turns
 //     them on; then they work like any other agent (tasks, stages, model, prompt).
-//   - skills and commands: the ones the user enables are copied into <data>/optimia/ecc/.claude/
+//   - skills and commands: the ones the user enables are copied into <data>/faradia/ecc/.claude/
 //     and that folder goes to every session with --add-dir, where Claude Code loads them. Each
 //     enabled skill adds its description to the context of every session, hence the choice.
 
@@ -127,7 +127,7 @@ function activeDir() {
 }
 
 /**
- * Builds <data>/optimia/ecc/.claude/{skills,commands} with optimia's built-in skills (always) and
+ * Builds <data>/faradia/ecc/.claude/{skills,commands} with faradia's built-in skills (always) and
  * what is enabled of ECC, and returns that folder for --add-dir, or null when there is nothing.
  * Rebuilt only when the selection or the bundles change.
  */

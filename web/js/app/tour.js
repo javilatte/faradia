@@ -1,4 +1,4 @@
-// "What's new": a short, optional tour in a sheet. On the first run it shows how optimia works and
+// "What's new": a short, optional tour in a sheet. On the first run it shows how Faradia works and
 // helps connect an AI; after an update, only what changed since the version the user last saw.
 // Nothing to download: a few cards of text with small inline icons. Esc or "Saltar" closes it.
 
@@ -87,13 +87,13 @@ const INTRO = [
   {
     icon: 'plug',
     title: 'Conecta una IA y listo',
-    text: 'Con una basta. Si Claude se queda sin uso, optimia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.',
+    text: 'Con una basta. Si Claude se queda sin uso, Faradia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.',
     extra: connectCard
   },
   {
     icon: 'chat',
     title: 'Pide en el chat',
-    text: 'Mientras escribes, optimia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.'
+    text: 'Mientras escribes, Faradia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.'
   },
   {
     icon: 'agents',
@@ -115,6 +115,21 @@ const INTRO = [
 // What changed in each version (newest last). Only versions newer than the one seen are shown.
 const NEWS = [
   {
+    version: '3.0.0',
+    cards: [
+      {
+        icon: 'spark',
+        title: 'optimia ahora es Faradia',
+        text: 'Crea código de calidad automatizando tus procesos y multiplica tu productividad sin perder las riendas de tu trabajo. Es la misma app con otro nombre (ya había otras cosas llamadas Optimia): tus ajustes, agentes y repos se han movido solos.'
+      },
+      {
+        icon: 'plug',
+        title: 'Instala el paquete faradia',
+        text: 'A partir de ahora: npm i -g faradia, y arráncalo con faradia. El paquete optimia seguirá actualizándose unos meses más y abre Faradia, pero dejará de hacerlo.'
+      }
+    ]
+  },
+  {
     version: '2.4.0',
     cards: [
       {
@@ -125,7 +140,7 @@ const NEWS = [
       {
         icon: 'eye',
         title: 'Evidencia, no palabras',
-        text: 'La verificación guarda cada comando que ejecutó el agente con su resultado y sus capturas. Si dice «OK» pero los tests fallaron, optimia no se lo cree.'
+        text: 'La verificación guarda cada comando que ejecutó el agente con su resultado y sus capturas. Si dice «OK» pero los tests fallaron, Faradia no se lo cree.'
       },
       {
         icon: 'scissors',
@@ -146,7 +161,7 @@ const NEWS = [
       {
         icon: 'spark',
         title: 'Sugerencias mientras escribes',
-        text: 'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.'
+        text: 'faradia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.'
       },
       {
         icon: 'shield',
@@ -255,13 +270,13 @@ export function showTour({ cards, title }) {
 }
 
 export function showIntroTour() {
-  showTour({ cards: INTRO, title: 'Así funciona optimia' });
+  showTour({ cards: INTRO, title: 'Así funciona faradia' });
 }
 
 /** After an update: the news since the version last seen, once. */
 export function maybeShowNews(status) {
   const cards = newsSince(status.tourSeen, status.version);
-  if (cards.length) showTour({ cards, title: `Novedades de optimia ${status.version}` });
+  if (cards.length) showTour({ cards, title: `Novedades de Faradia ${status.version}` });
   else if (status.tourSeen !== status.version) api.post('/api/config/tour').catch(() => {});
 }
 
@@ -269,6 +284,6 @@ export function showAllNews(version) {
   const cards = newsSince(null, version);
   showTour({
     cards: cards.length ? cards : INTRO,
-    title: cards.length ? `Novedades de optimia ${version}` : 'Así funciona optimia'
+    title: cards.length ? `Novedades de Faradia ${version}` : 'Así funciona faradia'
   });
 }

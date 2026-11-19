@@ -321,7 +321,7 @@ function parseDescription(text, target) {
 const AUTONOMY_RULE =
   'Trabaja de forma autónoma: decide tú los detalles razonables y anótalos en tu respuesta. Para solo si falta concreción o contexto que no puedas deducir del repo. Si una acción queda bloqueada por seguridad, no te detengas: sigue por otro camino y, si era imprescindible, di al final qué necesitabas y para qué (el usuario puede permitirla desde la tarjeta).';
 
-// optimia's instructions are in Spanish; the user's request may not be. Agents follow the language
+// faradia's instructions are in Spanish; the user's request may not be. Agents follow the language
 // of the prompt around them, so the request's language is detected and stated explicitly, in it.
 const ES_WORDS = new Set(
   'de la que el en los las del para con una por como pero más este esta sin hay cuando todo también ya muy son al lo se no si sus le ha'.split(
@@ -348,7 +348,7 @@ function requestLanguage(text) {
 
 function languageRule(task) {
   return requestLanguage(`${task.title || ''}\n${task.instruction || ''}`) === 'en'
-    ? "LANGUAGE: the user's request is in English. Write everything you produce in English: what you say while you work, your report, your questions, commit messages and pull request texts. These instructions are in Spanish only because they are optimia's."
+    ? "LANGUAGE: the user's request is in English. Write everything you produce in English: what you say while you work, your report, your questions, commit messages and pull request texts. These instructions are in Spanish only because they are faradia's."
     : 'Idioma: escribe todo lo que produzcas (lo que cuentas mientras trabajas, el informe, las preguntas, los mensajes de commit y de PR) en español, el idioma del encargo.';
 }
 
@@ -369,9 +369,9 @@ function previousOutput(task, stage) {
 // The bundled skills reach a session through --add-dir (ecc/library.js), not the worktree: a prompt
 // that sends the agent to read one gives its absolute path. pstack's skills cannot be invoked with
 // the Skill tool (disable-model-invocation), so they are read and followed.
-// Where the verification kit stage writes the skill; optimia moves it to .claude/skills/ after the
+// Where the verification kit stage writes the skill; Faradia moves it to .claude/skills/ after the
 // stage (moveVerificationKit), because Claude Code does not let a session write in .claude/.
-const KIT_STAGING = '.optimia-kit';
+const KIT_STAGING = '.faradia-kit';
 
 function skillFile(skillsDir, name) {
   return skillsDir ? path.join(skillsDir, name, 'SKILL.md') : `la skill ${name} (/${name})`;
@@ -461,7 +461,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         'Etapa de KIT DE VERIFICACION. Vas a dar a este repo una forma guionizada de probar la aplicación de verdad.',
         `Indicaciones del usuario:\n${goal}`,
         `Lee y sigue ${skillFile(skillsDir, 'create-verification-skill')}. No hay nadie a quien preguntar durante la entrevista: deduce las respuestas del repo y anota las suposiciones en la skill.`,
-        `Claude Code no deja escribir en .claude/ desde una tarea: crea la skill en ${KIT_STAGING}/verify-<app>/ de este worktree (con su SKILL.md y su mapa de funciones) en lugar de .cursor/skills o .claude/skills, y escribe sus rutas como si ya estuviera en .claude/skills/verify-<app>/. Al terminar, optimia la mueve a .claude/skills/. Ejecútala al menos una vez para demostrar que arranca la aplicación y comprueba una función.`,
+        `Claude Code no deja escribir en .claude/ desde una tarea: crea la skill en ${KIT_STAGING}/verify-<app>/ de este worktree (con su SKILL.md y su mapa de funciones) en lugar de .cursor/skills o .claude/skills, y escribe sus rutas como si ya estuviera en .claude/skills/verify-<app>/. Al terminar, Faradia la mueve a .claude/skills/. Ejecútala al menos una vez para demostrar que arranca la aplicación y comprueba una función.`,
         'No hagas git commit ni git push.'
       ].join('\n\n');
     case 'verify':
@@ -470,7 +470,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         `Encargo original:\n${goal}`,
         'Ejecuta los tests, el lint y la compilacion que tenga el proyecto, completos y no solo los ficheros nuevos. Si faltan dependencias, instálalas primero con el gestor del proyecto (npm ci, pnpm install, uv sync, pip install -e ., bundle install…). Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
         'Si el repo tiene una skill de verificación (.claude/skills/verify-*/SKILL.md), úsala para probar en la aplicación real lo que cambió esta tarea.',
-        'optimia guarda como evidencia cada comando que ejecutes y su resultado: ejecuta las comprobaciones de verdad, una por comando, en vez de describirlas. Si ejecutas algo que debe fallar a propósito (por ejemplo, para demostrar que una comprobación detecta el error), termina ese comando con el comentario "# se espera que falle"; si no, su fallo cuenta como un fallo de la verificación.',
+        'faradia guarda como evidencia cada comando que ejecutes y su resultado: ejecuta las comprobaciones de verdad, una por comando, en vez de describirlas. Si ejecutas algo que debe fallar a propósito (por ejemplo, para demostrar que una comprobación detecta el error), termina ese comando con el comentario "# se espera que falle"; si no, su fallo cuenta como un fallo de la verificación.',
         evidenceDir
           ? `Si el cambio se ve en una interfaz y puedes capturarla (por ejemplo con Playwright), guarda las capturas o vídeos como evidencia en ${evidenceDir} (PNG, JPG, WEBP, GIF o MP4), con nombres que digan qué muestran.`
           : null,
@@ -491,7 +491,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         'Etapa de PREPARAR COMMIT. No ejecutes git add, git commit ni git push.',
         'Revisa los cambios staged (git diff --cached --stat y git diff --cached) y el estilo de los ultimos commits (git log --oneline -10).',
         'Propon un mensaje en formato Conventional Commits: tipo(ambito): resumen en minusculas, imperativo, sin punto final y de 72 caracteres como mucho; si hace falta, un cuerpo breve tras una línea en blanco. Sigue el idioma de los commits anteriores del repo. No anadas líneas Co-Authored-By ni firmas de agente.',
-        'Termina SIEMPRE con una línea exacta "MENSAJE: <primera línea del commit>", que optimia usa para rellenar el campo de commit.'
+        'Termina SIEMPRE con una línea exacta "MENSAJE: <primera línea del commit>", que Faradia usa para rellenar el campo de commit.'
       ].join('\n\n');
     case 'describe':
       return buildDescribePrompt(task, describeOptions || {});
@@ -518,7 +518,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
           '## Convenciones — estilo de código, idioma, mensajes de commit (según el historial), cómo se escriben los tests.',
           '## Cuidado con — trampas, ficheros generados, cosas que no se deben tocar.',
           'Sé concreto y breve (unas 60 líneas como mucho): es contexto que se paga en cada sesión.',
-          'Escribe solo conocimiento estable del repo. No incluyas nada de esta sesión: estás en un worktree temporal de optimia en una rama de tarea (optimia/task-…), y esa ruta y esa rama no son del repo. La rama principal sí. Tampoco repitas las instrucciones que ya recibes en el system prompt.'
+          'Escribe solo conocimiento estable del repo. No incluyas nada de esta sesión: estás en un worktree temporal de Faradia en una rama de tarea (faradia/task-…), y esa ruta y esa rama no son del repo. La rama principal sí. Tampoco repitas las instrucciones que ya recibes en el system prompt.'
         ].join('\n')
       ].join('\n\n');
     case 'audit':
@@ -588,7 +588,7 @@ function parseRuleProposals(text) {
   return out.slice(0, 10);
 }
 
-// What optimia saw the verifier run contradicts its "OK": no command at all, or the last check that
+// What Faradia saw the verifier run contradicts its "OK": no command at all, or the last check that
 // looks like tests, lint or a build failed. The verdict becomes "unverified" with the reason.
 // A command is a check when one of its steps starts with a test runner, a linter, a type checker or a
 // build: what follows (`node -e "...test..."`, a grep) is not looked at, so a script the agent runs

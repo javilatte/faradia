@@ -6,8 +6,8 @@ const path = require('path');
 const { test, expect } = require('@playwright/test');
 const { trackErrors, openProject, e2eTmp } = require('./helpers');
 
-const HEADERS = { 'X-Optimia-Token': 'e2e-token' };
-const configDir = () => path.join(e2eTmp(), 'home', '.config', 'optimia');
+const HEADERS = { 'X-Faradia-Token': 'e2e-token' };
+const configDir = () => path.join(e2eTmp(), 'home', '.config', 'faradia');
 
 // Drops a file on the window the way a browser does when dragging from the desktop.
 async function dropFile(page, name, content) {
@@ -36,7 +36,7 @@ test('first run: import the configuration from the welcome sheet, export it, and
     settings: { ...original.settings, preferences: { instructions: 'Mi flujo: Conventional Commits.', noGo: [] } },
     agents: [{ id: 'traductor', content: '---\nname: Traductor\naccess: read\n---\nTraduce al inglés.\n' }]
   };
-  const file = path.join(e2eTmp(), 'optimia-config-test.json');
+  const file = path.join(e2eTmp(), 'faradia-config-test.json');
   fs.writeFileSync(file, JSON.stringify(mine));
 
   // A fresh machine: no global settings, no global agents and no "welcomed" mark (the what's new
@@ -53,7 +53,7 @@ test('first run: import the configuration from the welcome sheet, export it, and
   }
   await openProject(page);
   const welcome = page.locator('.welcome-sheet');
-  await expect(welcome).toContainText('Bienvenido a optimia');
+  await expect(welcome).toContainText('Bienvenido a faradia');
 
   const chooser = page.waitForEvent('filechooser');
   await welcome.getByRole('button', { name: 'Elegir fichero…' }).click();
@@ -76,7 +76,7 @@ test('first run: import the configuration from the welcome sheet, export it, and
   // until the preview shows.
   const sheet = page.locator('.import-sheet');
   await expect(async () => {
-    if (!(await sheet.isVisible())) await dropFile(page, 'optimia-config-original.json', JSON.stringify(original));
+    if (!(await sheet.isVisible())) await dropFile(page, 'faradia-config-original.json', JSON.stringify(original));
     await expect(sheet).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
   await sheet.getByRole('button', { name: 'Importar' }).click();
@@ -86,10 +86,10 @@ test('first run: import the configuration from the welcome sheet, export it, and
   expect(errors).toEqual([]);
 });
 
-test('a non-optimia JSON file is rejected with a clear message', async ({ page }) => {
+test('a non-faradia JSON file is rejected with a clear message', async ({ page }) => {
   await openProject(page);
   await dropFile(page, 'package.json', JSON.stringify({ name: 'x' }));
-  await expect(page.locator('.toast').last()).toContainText('no es un fichero de configuración de optimia');
+  await expect(page.locator('.toast').last()).toContainText('no es un fichero de configuración de faradia');
   await expect(page.locator('.import-sheet')).toHaveCount(0);
 });
 
@@ -100,7 +100,7 @@ test('a newer version shows a notice in the toolbar with how to update', async (
         current: '2.0.0',
         latest: '2.1.0',
         updateAvailable: true,
-        installCommand: 'npm install -g @javilatte/optimia@latest',
+        installCommand: 'npm install -g faradia@latest',
         releaseUrl: 'https://github.com/javilatte/optimia/releases/tag/v2.1.0'
       }
     })
@@ -108,11 +108,11 @@ test('a newer version shows a notice in the toolbar with how to update', async (
   await openProject(page);
   const pill = page.locator('#update-button');
   await expect(pill).toBeVisible();
-  await expect(pill).toHaveText('optimia 2.1.0');
+  await expect(pill).toHaveText('faradia 2.1.0');
   await pill.click();
   const sheet = page.locator('.sheet');
-  await expect(sheet).toContainText('optimia 2.1.0 está disponible');
-  await expect(sheet.locator('.update-command')).toHaveText('npm install -g @javilatte/optimia@latest');
+  await expect(sheet).toContainText('faradia 2.1.0 está disponible');
+  await expect(sheet.locator('.update-command')).toHaveText('npm install -g faradia@latest');
   await sheet.getByRole('button', { name: 'Ahora no' }).click();
   await expect(pill).toBeHidden();
 });

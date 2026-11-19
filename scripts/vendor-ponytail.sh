@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Bundles ponytail's skills (Dietrich Gebert, MIT) with optimia's changes:
-#   - no marks in the code: ponytail asks to leave `shortcut: <limit>, <upgrade>` comments; optimia
+# Bundles ponytail's skills (Dietrich Gebert, MIT) with faradia's changes:
+#   - no marks in the code: ponytail asks to leave `shortcut: <limit>, <upgrade>` comments; faradia
 #     keeps the code clean and has the agent say the limit in its reply instead;
 #   - ponytail-debt is left out (it only lists those comments); so are the plugin's hooks (a ledger
 #     and a webhook) and ponytail-help / ponytail-gain (about the plugin itself).
@@ -37,7 +37,7 @@ for (const skill of ['ponytail-review', 'ponytail-audit']) {
 for (const skill of ['ponytail', 'ponytail-review', 'ponytail-audit']) {
   fs.appendFileSync(
     path.join(dest, skill, 'SOURCE.md'),
-    '\nModified by optimia (scripts/vendor-ponytail.sh): it leaves no marker comments in the code; limits of a shortcut go in the reply.\n'
+    '\nModified by faradia (scripts/vendor-ponytail.sh): it leaves no marker comments in the code; limits of a shortcut go in the reply.\n'
   );
   const source = path.join(dest, skill, 'SOURCE.md');
   fs.writeFileSync(source, fs.readFileSync(source, 'utf8').replace('Copied unmodified by scripts/vendor-skill.sh;', 'Copied by scripts/vendor-skill.sh;'));

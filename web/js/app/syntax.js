@@ -61,7 +61,7 @@ async function getHighlighter() {
     highlighterPromise = import(/* webpackIgnore: true */ SHIKI_URL)
       .then((shiki) => shiki.createHighlighter({ themes: Object.values(THEMES), langs: [] }))
       .catch((err) => {
-        console.warn('optimia: resaltado de sintaxis no disponible', err.message);
+        console.warn('faradia: resaltado de sintaxis no disponible', err.message);
         return null;
       });
   }

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   test:
-    # optimia runs on Linux and macOS: every suite runs on both.
+    # faradia runs on Linux and macOS: every suite runs on both.
     strategy:
       fail-fast: false
       matrix:

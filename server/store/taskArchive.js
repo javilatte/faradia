@@ -6,7 +6,7 @@ const path = require('path');
 
 // Finished tasks, kept after they leave the agents board: what was asked, how it ended (pull
 // request, commit, merged or discarded), which agents and models ran it and their report. Stored per
-// repo in .optimia/tasks-archive.json and deleted after the retention chosen in the archive
+// repo in .faradia/tasks-archive.json and deleted after the retention chosen in the archive
 // (30, 15, 7 or 1 days, or never).
 
 const RETENTION_DAYS = [0, 1, 7, 15, 30]; // 0 = never delete
@@ -16,7 +16,7 @@ const MAX_ENTRIES = 1000;
 const cut = (s, n) => (typeof s === 'string' ? (s.length > n ? `${s.slice(0, n)}…` : s) : undefined);
 
 function archivePath(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'tasks-archive.json');
+  return path.join(projectRoot, '.faradia', 'tasks-archive.json');
 }
 
 function read(projectRoot) {

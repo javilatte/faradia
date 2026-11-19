@@ -1,13 +1,13 @@
-# Contributing to optimIA
+# Contributing to Faradia
 
-Thanks for your interest in contributing! optimIA is a developer tool, so clarity and reliability matter.
+Thanks for your interest in contributing! Faradia is a developer tool, so clarity and reliability matter.
 
 ## Quick Start
 
 1. Fork the repository.
 2. Create a branch: `git checkout -b feature/my-feature` or `fix/something-broken`.
 3. Make your changes.
-4. Test locally (run the script, check `bash -n bin/optimia` for syntax errors).
+4. Test locally (run the script, check `bash -n bin/faradia` for syntax errors).
 5. Open a Pull Request against `main`.
 
 ## What We Need Help With
@@ -19,7 +19,7 @@ Thanks for your interest in contributing! optimIA is a developer tool, so clarit
 
 ## Style Guide
 
-- Shell scripts: follow the existing style in `bin/optimia`.
+- Shell scripts: follow the existing style in `bin/faradia`.
 - Keep dependencies minimal — this is a wrapper/orchestrator, not a heavy framework.
 - Document any new config options in `README.md` and the example `AGENTS.md`.
 

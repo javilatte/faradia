@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copies one third-party skill, unmodified, into vendor/skills/<name>, with its LICENSE and a
-# SOURCE.md that keeps the attribution. optimia gives it to every session (server/skills/library.js).
+# SOURCE.md that keeps the attribution. faradia gives it to every session (server/skills/library.js).
 #   scripts/vendor-skill.sh <checkout> <skill folder inside it> <repo URL> "<author>" "<license>"
 # The bundled ones:
 #   scripts/vendor-skill.sh ../unslop skills/unslop https://github.com/heydamir/unslop "Damir Sokolovsky (@heydamir)" "CC BY 4.0"
@@ -24,6 +24,6 @@ cat > "$dest/SOURCE.md" <<MD
 
 The $name skill from $url (folder \`$sub\`, commit \`$commit\`), by $author, under the
 $license license (see LICENSE in this folder). Copied unmodified by scripts/vendor-skill.sh;
-optimia gives it to every chat and agent session as /$name.
+faradia gives it to every chat and agent session as /$name.
 MD
 echo "vendor/skills/$name <- $url $commit"

@@ -7,7 +7,7 @@ const { e2eTmp, trackErrors } = require('./helpers');
 
 const demo = () => path.join(e2eTmp(), 'repos', 'demo');
 
-test('the dashboard reflects live a change made outside optimia', async ({ page }) => {
+test('the dashboard reflects live a change made outside faradia', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?token=e2e-token#/dashboard');
   const card = page.locator('.dash-card', { hasText: 'demo' });

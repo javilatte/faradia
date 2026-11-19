@@ -5,12 +5,19 @@ const globals = require('globals');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'vendor/**', 'test-results/**', 'playwright-report/**', '.optimia/**', '.codegraph/**']
+    ignores: ['node_modules/**', 'vendor/**', 'test-results/**', 'playwright-report/**', '.faradia/**', '.codegraph/**']
   },
   js.configs.recommended,
   {
     // Node: server, launcher, MCP server and tests (CommonJS)
-    files: ['server/**/*.js', 'bin/**', 'test/**/*.js', '*.config.js', 'test/e2e/fixtures/bin/claude'],
+    files: [
+      'server/**/*.js',
+      'bin/**',
+      'packages/*/bin/**',
+      'test/**/*.js',
+      '*.config.js',
+      'test/e2e/fixtures/bin/claude'
+    ],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'commonjs',

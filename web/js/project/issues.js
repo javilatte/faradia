@@ -56,7 +56,7 @@ function issueEl(tag, attrs = {}, ...children) {
 
 function issueWhen(ts) {
   if (!ts) return '';
-  return new Date(ts).toLocaleString(window.optimiaLang?.locale || 'es-ES', {
+  return new Date(ts).toLocaleString(window.faradiaLang?.locale || 'es-ES', {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',

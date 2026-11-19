@@ -2,24 +2,24 @@
 
 const crypto = require('crypto');
 
-// optimia only listens on 127.0.0.1, but that is not enough: any web page open in the browser can
+// Faradia only listens on 127.0.0.1, but that is not enough: any web page open in the browser can
 // try to call http://127.0.0.1:<port> (CSRF) or point a domain of its own at 127.0.0.1 (DNS
 // rebinding). Since the API can read, move and delete files in several repos, every request passes
 // three checks:
 //   1. Host: only 127.0.0.1, localhost or [::1] with the real port.
-//   2. Origin: if the browser sends it, it must be optimia itself.
+//   2. Origin: if the browser sends it, it must be Faradia itself.
 //   3. Token: a per-run secret, in a header (MCP, tests) or in a SameSite=Strict
-//      cookie set when opening the ?token= link optimia prints.
+//      cookie set when opening the ?token= link Faradia prints.
 
-const TOKEN_HEADER = 'x-optimia-token';
+const TOKEN_HEADER = 'x-faradia-token';
 
 function createToken() {
   return crypto.randomBytes(24).toString('base64url');
 }
 
-// Cookies do not tell ports apart: two optimia instances open at once need different names.
+// Cookies do not tell ports apart: two Faradia instances open at once need different names.
 function cookieName(port) {
-  return `optimia_${port}`;
+  return `faradia_${port}`;
 }
 
 function allowedHosts(port) {
@@ -75,7 +75,7 @@ function checkApiRequest(req, { token, port }) {
   if (!hostAllowed(req, port)) return { status: 421, error: 'host no permitido' };
   if (!originAllowed(req, port)) return { status: 403, error: 'origen no permitido' };
   if (!isAuthorized(req, { token, port })) {
-    return { status: 401, error: 'falta el token de optimia: abre el enlace que imprime optimia al arrancar' };
+    return { status: 401, error: 'falta el token de faradia: abre el enlace que imprime Faradia al arrancar' };
   }
   return null;
 }

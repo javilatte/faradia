@@ -4,9 +4,9 @@ const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
 const path = require('path');
 
-// Evidence of a verification: what optimia saw the Verifier run (every Bash command with its result,
+// Evidence of a verification: what Faradia saw the Verifier run (every Bash command with its result,
 // from the session's own stream, not from what the agent says), plus the screenshots or videos it
-// saved in the task's evidence folder. Kept in <repo>/.optimia/evidence/<taskId>/, outside the
+// saved in the task's evidence folder. Kept in <repo>/.faradia/evidence/<taskId>/, outside the
 // worktree so it never ends up in a commit:
 //   verify-<n>.json   one per verification run: {run, startedAt, finishedAt, checks, images}
 //   <name>.png|...    the images and videos of the runs
@@ -16,7 +16,7 @@ const MEDIA = /\.(png|jpe?g|webp|gif|mp4|webm)$/i;
 const TASK_ID = /^[A-Za-z0-9_-]{1,80}$/;
 
 function evidenceRoot(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'evidence');
+  return path.join(projectRoot, '.faradia', 'evidence');
 }
 
 function evidenceDir(projectRoot, taskId) {

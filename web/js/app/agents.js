@@ -9,8 +9,8 @@ import { currentProjectId } from './workbenches.js';
 let data = null;
 let localModels = [];
 // Scope shared with the rest of Settings ("Todos los repos" / "Solo este repo").
-let scope = window.optimiaSettingsScope === 'project' ? 'project' : 'global';
-window.addEventListener('optimia:settings-scope', (e) => {
+let scope = window.faradiaSettingsScope === 'project' ? 'project' : 'global';
+window.addEventListener('faradia:settings-scope', (e) => {
   scope = e.detail === 'project' ? 'project' : 'global';
   render();
 });
@@ -121,7 +121,7 @@ function renderEccLibrary(list) {
     h(
       'p',
       { class: 'muted agents-help' },
-      'De Everything Claude Code (licencia MIT), incluidos en optimia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.'
+      'De Everything Claude Code (licencia MIT), incluidos en faradia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.'
     ),
     h('input', {
       type: 'search',

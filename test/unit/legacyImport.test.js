@@ -10,12 +10,12 @@ const { loadSettings } = require('../../server/store/settingsStore');
 const { claudeSettingsPath } = require('../../server/bridge/claudeSettingsSync');
 
 function writeLegacyProject(dir, { systemPrompt, deny, securityMd } = {}) {
-  fs.mkdirSync(path.join(dir, '.optimia'), { recursive: true });
+  fs.mkdirSync(path.join(dir, '.faradia'), { recursive: true });
   if (systemPrompt !== undefined) {
-    fs.writeFileSync(path.join(dir, '.optimia', 'system-prompt.md'), systemPrompt);
+    fs.writeFileSync(path.join(dir, '.faradia', 'system-prompt.md'), systemPrompt);
   }
   if (securityMd !== undefined) {
-    fs.writeFileSync(path.join(dir, '.optimia', 'security.md'), securityMd);
+    fs.writeFileSync(path.join(dir, '.faradia', 'security.md'), securityMd);
   }
   if (deny !== undefined) {
     fs.mkdirSync(path.join(dir, '.claude'), { recursive: true });
@@ -65,7 +65,7 @@ test('buildMigrationPreview: is read-only and reports changed=true when legacy d
   assert.deepEqual(preview.noGo.proposed, ['Bash(rm -rf *)']);
 
   // read-only: settings.json must not have been created by just building a preview
-  assert.equal(fs.existsSync(path.join(dir, '.optimia', 'settings.json')), false);
+  assert.equal(fs.existsSync(path.join(dir, '.faradia', 'settings.json')), false);
 });
 
 test('applyMigration: writes proposed values into settings.json and resyncs .claude/settings.json deny', (t) => {

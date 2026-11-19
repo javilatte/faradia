@@ -41,6 +41,6 @@ test('warnings and errors of any repo are grouped by kind; free text is left out
   assert.equal(s.groups[0].sample.text, undefined);
   assert.equal(s.signals['suggest.accepted:skill'], 1);
   const exported = issues.exportReport();
-  assert.equal(exported.format, 'optimia-issues');
+  assert.equal(exported.format, 'faradia-issues');
   assert.equal(exported.entries.length, 4);
 });

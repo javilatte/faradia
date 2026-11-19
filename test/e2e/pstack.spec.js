@@ -3,9 +3,9 @@
 const { test, expect } = require('@playwright/test');
 const { claudeCalls, argAfter, trackErrors, openProject } = require('./helpers');
 
-const API = { headers: { 'X-Optimia-Token': 'e2e-token' } };
+const API = { headers: { 'X-Faradia-Token': 'e2e-token' } };
 
-test('the verification shows the evidence optimia saw, and an OK the tests contradict is not trusted', async ({
+test('the verification shows the evidence Faradia saw, and an OK the tests contradict is not trusted', async ({
   page
 }) => {
   const errors = trackErrors(page);
@@ -25,7 +25,7 @@ test('the verification shows the evidence optimia saw, and an OK the tests contr
   await check.locator('summary').click();
   await expect(check.locator('pre')).toHaveText('12 passing');
 
-  // The tests fail but the agent says OK: optimia goes by what ran.
+  // The tests fail but the agent says OK: Faradia goes by what ran.
   await page.locator('#chat-kind-select').selectOption('coding');
   await page.locator('#chat-input').fill('Importar desde CSV [e2e:verifica-mal]');
   await page.locator('#chat-input').press('Enter');
@@ -73,7 +73,7 @@ test('a constraint a comment defended becomes a correction task that ends with i
   await expect(correction.locator('.task-output')).toContainText('probada contra el error real');
 
   const call = claudeCalls()
-    .filter((c) => c.cwd.includes('/optimia/worktrees/'))
+    .filter((c) => c.cwd.includes('/faradia/worktrees/'))
     .find((c) => (argAfter(c.args, '--append-system-prompt') || '').includes('## Tu rol: Corrector'));
   expect(call).toBeTruthy();
   expect(argAfter(call.args, '--append-system-prompt')).toContain('### Encode Lessons in Structure');

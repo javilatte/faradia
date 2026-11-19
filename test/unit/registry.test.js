@@ -44,13 +44,13 @@ test('runtime: created on demand, once, and writes an mcp.json with the project 
   const rt = reg.runtime(id);
   assert.equal(reg.runtime(id), rt);
   assert.equal(reg.list()[0].active, true);
-  const mcp = JSON.parse(fs.readFileSync(path.join(dir, '.optimia', 'mcp.json'), 'utf8'));
-  assert.deepEqual(mcp.mcpServers['optimia-tasks'].env, {
-    OPTIMIA_PORT: '1234',
-    OPTIMIA_PROJECT: id,
-    OPTIMIA_TOKEN: 't',
+  const mcp = JSON.parse(fs.readFileSync(path.join(dir, '.faradia', 'mcp.json'), 'utf8'));
+  assert.deepEqual(mcp.mcpServers['faradia-tasks'].env, {
+    FARADIA_PORT: '1234',
+    FARADIA_PROJECT: id,
+    FARADIA_TOKEN: 't',
     // Expanded by Claude Code: the task of the session, empty in the chat.
-    OPTIMIA_TASK_ID: '${OPTIMIA_TASK_ID:-}'
+    FARADIA_TASK_ID: '${FARADIA_TASK_ID:-}'
   });
   assert.equal(reg.runtime('000000000000'), null);
   reg.dispose();

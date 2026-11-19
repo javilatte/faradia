@@ -45,7 +45,7 @@ function renderSkillSuggest() {
     const source = document.createElement('span');
     source.className = 'skill-suggest-source';
     source.textContent =
-      { claude: 'Claude', ecc: 'ECC', builtin: 'optimia', global: 'tuyo', project: 'este repo' }[skill.source] ||
+      { claude: 'Claude', ecc: 'ECC', builtin: 'faradia', global: 'tuyo', project: 'este repo' }[skill.source] ||
       'proyecto';
     const head = document.createElement('div');
     head.className = 'skill-suggest-head';

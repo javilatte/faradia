@@ -33,7 +33,7 @@ function repoWithRemote(t) {
   git(repo, 'commit', '-q', '-m', 'init');
   git(repo, 'remote', 'add', 'origin', bare);
   git(repo, 'push', '-q', 'origin', 'main');
-  git(repo, 'checkout', '-q', '-b', 'optimia/task-1');
+  git(repo, 'checkout', '-q', '-b', 'faradia/task-1');
   fs.writeFileSync(path.join(repo, 'a.txt'), 'a\n');
   git(repo, 'add', '.');
   git(repo, 'commit', '-q', '-m', 'feat: a');
@@ -106,7 +106,7 @@ test('deliverPullRequest on GitHub with gh: pushes the branch and opens the PR w
   const remote = { name: 'origin', url: bare, webUrl: 'https://github.com/acme/demo', provider: 'github' };
   const result = await deliverPullRequest({
     dir: repo,
-    branch: 'optimia/task-1',
+    branch: 'faradia/task-1',
     base: 'main',
     title: 'feat: a',
     body: '## Cambios\n- a',
@@ -116,16 +116,16 @@ test('deliverPullRequest on GitHub with gh: pushes the branch and opens the PR w
   });
   assert.equal(result.url, 'https://github.com/acme/demo/pull/7');
   assert.equal(result.created, true);
-  assert.equal(git(bare, 'rev-parse', 'optimia/task-1'), git(repo, 'rev-parse', 'HEAD'), 'branch pushed');
+  assert.equal(git(bare, 'rev-parse', 'faradia/task-1'), git(repo, 'rev-parse', 'HEAD'), 'branch pushed');
   const [call] = calls();
-  assert.deepEqual(call.args.slice(0, 6), ['pr', 'create', '--base', 'main', '--head', 'optimia/task-1']);
+  assert.deepEqual(call.args.slice(0, 6), ['pr', 'create', '--base', 'main', '--head', 'faradia/task-1']);
   assert.ok(call.args.includes('--draft'));
   assert.equal(call.input, '## Cambios\n- a', 'the body goes through stdin, not the command line');
 
   // Second time: the PR exists, it is updated.
   const again = await deliverPullRequest({
     dir: repo,
-    branch: 'optimia/task-1',
+    branch: 'faradia/task-1',
     base: 'main',
     title: 'feat: a (v2)',
     body: 'v2',
@@ -141,7 +141,7 @@ test('deliverPullRequest without gh: pushes and returns the link to open the PR 
   const { repo, bare } = repoWithRemote(t);
   const result = await deliverPullRequest({
     dir: repo,
-    branch: 'optimia/task-1',
+    branch: 'faradia/task-1',
     base: 'main',
     title: 't',
     body: '',
@@ -149,7 +149,7 @@ test('deliverPullRequest without gh: pushes and returns the link to open the PR 
     gh: async () => false
   });
   assert.equal(result.manual, true);
-  assert.equal(result.url, 'https://github.com/acme/demo/compare/main...optimia%2Ftask-1?expand=1');
+  assert.equal(result.url, 'https://github.com/acme/demo/compare/main...faradia%2Ftask-1?expand=1');
 });
 
 test('deliverPullRequest: clear errors without a remote or when the base is not on the remote', async (t) => {
@@ -157,7 +157,7 @@ test('deliverPullRequest: clear errors without a remote or when the base is not 
   await assert.rejects(
     deliverPullRequest({
       dir: repo,
-      branch: 'optimia/task-1',
+      branch: 'faradia/task-1',
       base: 'develop',
       title: 't',
       body: '',
@@ -167,7 +167,7 @@ test('deliverPullRequest: clear errors without a remote or when the base is not 
   );
   git(repo, 'remote', 'remove', 'origin');
   await assert.rejects(
-    deliverPullRequest({ dir: repo, branch: 'optimia/task-1', base: 'main', title: 't', body: '' }),
+    deliverPullRequest({ dir: repo, branch: 'faradia/task-1', base: 'main', title: 't', body: '' }),
     /no tiene ningún remoto/
   );
 });

@@ -2,6 +2,32 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.0.0] - 2026-11-20
+
+**optimia is now Faradia.** Same app, new name: there were already other things called Optimia.
+Create quality code by automating your processes; multiply your productivity without losing the
+reins of your work.
+
+### Changed
+- New name, logo and npm package: `npm i -g faradia`, command `faradia`. The `@javilatte/optimia`
+  package keeps getting updates for a few more months: it installs Faradia and runs it as `optimia`,
+  with a notice to switch.
+- On first run, Faradia moves `~/.config/optimia` and `~/.local/share/optimia` to their `faradia`
+  folders, and each repo's `.optimia` to `.faradia` when the repo is opened, pointing its tasks'
+  worktrees at the new place. The `OPTIMIA_*` environment variables and the browser's preferences
+  keep working. The what's new tour tells about the change.
+- Task worktrees are created in Faradia's data folder, outside the repo, so the repo's linters,
+  formatters, test runners and watchers do not see them; the JSON state in `.faradia` is written
+  the way Prettier formats it.
+
+### Fixed
+- Findings of a test run on real repos (koa, click, zustand): a clear message and an automatic
+  resume when Claude runs out of usage without a local model; retries keep the conversation and the
+  user's answers, which every later stage and the Verifier take into account; the verification kit
+  ends up in `.claude/skills/`; the Verifier installs missing dependencies; agent questions are
+  shown whole; file lists show names first; tables, path pickers and the welcome sheet fit and are
+  translated.
+
 ## [2.4.0] - 2026-11-19
 
 Inspired by Lauren Tan's talk "Turn slop into gold" and her plugin [pstack](https://github.com/cursor/plugins/tree/main/pstack) (MIT): trust in agents comes from checks and evidence, not from more prose.

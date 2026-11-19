@@ -3,7 +3,7 @@
 // Agents panel: task cards, stages, permissions, commit and merge.
 
 function dismissedAgentsKey(chatId) {
-  return `optimia:dismissed-agents:${chatId}`;
+  return `faradia:dismissed-agents:${chatId}`;
 }
 function loadDismissedAgents(chatId) {
   try {
@@ -386,7 +386,7 @@ function stripVerdict(text) {
   return text.replace(/^\s*VEREDICTO:.*$/gim, '').trim();
 }
 
-// The verifier's verdict: one short line; the reason when expanded. Below, the evidence optimia
+// The verifier's verdict: one short line; the reason when expanded. Below, the evidence Faradia
 // recorded (the commands it saw run and the captures), so the review is of evidence, not of words.
 function renderVerification(taskId, task) {
   if (!task.verification) return null;
@@ -1436,10 +1436,10 @@ function buildDoneCard(taskId, task) {
   }
   const row = document.createElement('div');
   row.className = 'task-actions';
-  if (task.lastCommit && window.optimiaOpenCommit) {
+  if (task.lastCommit && window.faradiaOpenCommit) {
     row.appendChild(
       actionButton('Ver cambios', {
-        onClick: () => window.optimiaOpenCommit(currentProjectId || defaultProjectId, task.lastCommit)
+        onClick: () => window.faradiaOpenCommit(currentProjectId || defaultProjectId, task.lastCommit)
       })
     );
   }
@@ -1546,8 +1546,8 @@ function renderTasks() {
   if (done.length) {
     const group = document.createElement('details');
     group.className = 'done-group';
-    group.open = localStorage.getItem('optimia:done-open') === '1';
-    group.addEventListener('toggle', () => localStorage.setItem('optimia:done-open', group.open ? '1' : '0'));
+    group.open = localStorage.getItem('faradia:done-open') === '1';
+    group.addEventListener('toggle', () => localStorage.setItem('faradia:done-open', group.open ? '1' : '0'));
     const summary = document.createElement('summary');
     summary.textContent = `Hechas (${done.length})`;
     group.appendChild(summary);

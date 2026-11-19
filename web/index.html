@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>optimia</title>
+    <title>Faradia</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" />
@@ -17,7 +17,7 @@
     <div class="app-window" id="app-window">
       <aside class="sidebar" id="sidebar" aria-label="Barra lateral">
         <div class="sidebar-top">
-          <img class="app-logo" src="logo.svg" alt="Optimia" width="147" height="36" />
+          <img class="app-logo" src="logo.svg" alt="Faradia" width="168" height="31" />
           <div class="wb-switcher" id="wb-switcher"></div>
         </div>
         <div class="sidebar-scroll">
@@ -208,7 +208,7 @@
                     id="task-branch-input"
                     list="task-branch-options"
                     placeholder="nueva automática"
-                    title="Vacío = rama nueva optimia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama)."
+                    title="Vacío = rama nueva faradia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama)."
                     spellcheck="false"
                   />
                   <datalist id="task-branch-options"></datalist>
@@ -277,7 +277,7 @@
     <div class="modal-overlay" id="settings-overlay" hidden>
       <div class="modal">
         <nav class="settings-nav">
-          <div class="settings-nav-group">optimia</div>
+          <div class="settings-nav-group">Faradia</div>
           <button class="settings-nav-item" data-pane="general">General</button>
           <button class="settings-nav-item" data-pane="sync">Sincronización</button>
           <div class="settings-nav-group">IA</div>
@@ -457,7 +457,7 @@
               <div class="settings-field">
                 <label for="setting-memory"
                   >Conocimiento de este repo que el chat y los agentes reciben en cada sesión: comandos, estructura,
-                  convenciones y trampas (se guarda en .optimia/memory.md)</label
+                  convenciones y trampas (se guarda en .faradia/memory.md)</label
                 >
                 <div class="onboard-row">
                   <button type="button" id="onboard-button" class="primary">Conocer este repo…</button>
@@ -521,7 +521,7 @@
             <section class="settings-pane" data-pane="registro" hidden>
               <div id="issues-pane"></div>
               <div class="settings-field">
-                <label for="log-filter">Eventos del proyecto (.optimia/logs/optimia.log)</label>
+                <label for="log-filter">Eventos del proyecto (.faradia/logs/faradia.log)</label>
                 <div class="log-toolbar">
                   <input
                     type="text"

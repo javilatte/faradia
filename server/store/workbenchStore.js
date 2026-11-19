@@ -7,7 +7,7 @@ const { execFileSync } = require('child_process');
 const { configDir } = require('./globalPaths');
 
 // A workbench is a named set of repos looked at together ("Work", "Client X"...). A repo can be in
-// several. Stored in ~/.config/optimia/workbenches.json, outside any repo.
+// several. Stored in ~/.config/faradia/workbenches.json, outside any repo.
 
 const DEFAULT_NAME = 'Mi espacio';
 // Name of the default workbench before 2.1.1, renamed when read.
@@ -16,6 +16,7 @@ const LEGACY_DEFAULT_NAME = 'Por defecto';
 const SKIP_DIRS = new Set([
   'node_modules',
   '.git',
+  '.faradia',
   '.optimia',
   '.cache',
   '.npm',
@@ -133,7 +134,7 @@ function gitRoot(dir) {
 class NotGitError extends Error {
   constructor(dir) {
     super(
-      `${dir} no es un repositorio git. Si contiene varios repos, usa «Buscar repos en una carpeta»; si es un proyecto, optimia puede crear el repo.`
+      `${dir} no es un repositorio git. Si contiene varios repos, usa «Buscar repos en una carpeta»; si es un proyecto, Faradia puede crear el repo.`
     );
     this.code = 'not_git';
     this.path = dir;
@@ -190,7 +191,7 @@ function removeRepo(id, repoPath) {
   return wb;
 }
 
-// The project optimia is launched from is always in some workbench: if it is in none, it goes into
+// The project Faradia is launched from is always in some workbench: if it is in none, it goes into
 // "Mi espacio" (created if needed).
 function ensureLaunchRepo(root) {
   const store = load();

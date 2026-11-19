@@ -98,7 +98,7 @@ function createApp(
     // repo overrides.
     const settingsView = () => {
       const { global, project, effective, overrides } = loadSettingsLayers(projectRoot);
-      // The effective "Prohibido" list is the one optimia's sessions receive.
+      // The effective "Prohibido" list is the one faradia's sessions receive.
       syncClaudeSettings(projectRoot, effective.preferences.noGo);
       return {
         ...effective,
@@ -422,7 +422,7 @@ function createApp(
     }
 
     // "Conocer este repo": the memory the agent proposed becomes the repo's memory (the previous
-    // one stays in .optimia/memory.prev.md in case it is needed).
+    // one stays in .faradia/memory.prev.md in case it is needed).
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/apply-memory') && req.method === 'POST') {
       const taskId = url.pathname.split('/')[3];
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
@@ -432,7 +432,7 @@ function createApp(
       }
       const content = memoryFromOutput(task.output);
       const previous = loadMemory(projectRoot);
-      if (previous.trim()) fs.writeFileSync(path.join(projectRoot, '.optimia', 'memory.prev.md'), previous);
+      if (previous.trim()) fs.writeFileSync(path.join(projectRoot, '.faradia', 'memory.prev.md'), previous);
       saveMemory(projectRoot, content);
       log.info('memory.apply', { taskId, chars: content.length });
       // The study only read the repo: its worktree and branch are no longer needed.

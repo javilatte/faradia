@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 function chatsPath(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'chats.json');
+  return path.join(projectRoot, '.faradia', 'chats.json');
 }
 
 function loadChats(projectRoot) {
@@ -16,7 +16,7 @@ function loadChats(projectRoot) {
 }
 
 function saveChats(projectRoot, chats) {
-  const dir = path.join(projectRoot, '.optimia');
+  const dir = path.join(projectRoot, '.faradia');
   fs.mkdirSync(dir, { recursive: true });
   writeJsonFile(chatsPath(projectRoot), chats);
 }

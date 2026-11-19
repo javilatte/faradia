@@ -141,10 +141,10 @@ test('buildSessionOptions: a task session uses strict MCP config and keeps the r
   assert.deepEqual(withRepoMcp.extraMcpConfigPaths, [require('path').join(worktree, '.mcp.json')]);
 });
 
-test('buildSessionOptions: chat and agents get their own optimia settings file via --settings', (t) => {
+test('buildSessionOptions: chat and agents get their own Faradia settings file via --settings', (t) => {
   const {
     syncClaudeSettings,
-    optimiaClaudeSettingsPath,
+    faradiaClaudeSettingsPath,
     agentClaudeSettingsPath
   } = require('../../server/bridge/claudeSettingsSync');
   const projectRoot = mkTmpDir('sessopts-settings');
@@ -152,7 +152,7 @@ test('buildSessionOptions: chat and agents get their own optimia settings file v
   syncClaudeSettings(projectRoot, []);
   const settings = defaultSettings();
   settings.preferences.noGo = ['Read(**/.env*)']; // the session regenerates the list from the effective settings
-  assert.equal(buildSessionOptions(settings, projectRoot).settingsPath, optimiaClaudeSettingsPath(projectRoot));
+  assert.equal(buildSessionOptions(settings, projectRoot).settingsPath, faradiaClaudeSettingsPath(projectRoot));
   const task = buildSessionOptions(settings, projectRoot, projectRoot, 'task-1');
   assert.equal(task.settingsPath, agentClaudeSettingsPath(projectRoot));
   const agentFile = JSON.parse(require('fs').readFileSync(task.settingsPath, 'utf8'));

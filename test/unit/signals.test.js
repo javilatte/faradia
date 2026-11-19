@@ -131,9 +131,9 @@ test('preferences: a disabled rule does not signal', async (t) => {
 test('Metrics: hourly frequency and agent sessions', (t) => {
   const repoDir = mkTmpDir('met');
   t.after(() => rmTmpDir(repoDir));
-  fs.mkdirSync(path.join(repoDir, '.optimia'));
+  fs.mkdirSync(path.join(repoDir, '.faradia'));
   fs.writeFileSync(
-    path.join(repoDir, '.optimia', 'tasks.json'),
+    path.join(repoDir, '.faradia', 'tasks.json'),
     JSON.stringify([
       {
         id: 't',

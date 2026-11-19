@@ -31,13 +31,14 @@ function relPath(base, p) {
   return path.isAbsolute(p) ? path.relative(base, p) : p;
 }
 const { ensureGitGuardHooks } = require('../bridge/gitGuard');
-const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
+const { syncClaudeSettings, faradiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
 const { sandboxProblem, agentCacheEnv } = require('../bridge/sandbox');
 const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
 const { adoptPendingMemory } = require('../knowledge/bundle');
 const { loadAttachments, attachmentsPrompt } = require('../bridge/attachments');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
 const evidence = require('../bridge/evidence');
+const { migrateRepo } = require('../migrate/rename');
 const { transcriptExists } = require('../bridge/claudeTranscripts');
 const { KIT_STAGING } = require('../bridge/taskStages');
 const {
@@ -58,18 +59,18 @@ const { createApp } = require('./projectApp');
 
 // Written when the project opens: --mcp-config needs this file before any session starts, so
 // create_task and update_task_progress reach the server over HTTP (the MCP server is a child of
-// `claude`, not of optimia; see server/mcp/tasksServer.js).
+// `claude`, not of Faradia; see server/mcp/tasksServer.js).
 function writeMcpConfig(projectRoot, { port, projectId, token }) {
-  const dir = path.join(projectRoot, '.optimia');
+  const dir = path.join(projectRoot, '.faradia');
   fs.mkdirSync(dir, { recursive: true });
-  const env = { OPTIMIA_PORT: String(port), OPTIMIA_PROJECT: projectId };
-  if (token) env.OPTIMIA_TOKEN = token;
+  const env = { FARADIA_PORT: String(port), FARADIA_PROJECT: projectId };
+  if (token) env.FARADIA_TOKEN = token;
   // Expanded by Claude Code from the session's environment: set for task sessions, empty in the chat.
-  env.OPTIMIA_TASK_ID = '${OPTIMIA_TASK_ID:-}';
+  env.FARADIA_TASK_ID = '${FARADIA_TASK_ID:-}';
   const config = {
     mcpServers: {
-      'optimia-tasks': {
-        // The same node that runs optimia: with nvm or other version managers, "node" may not be on
+      'faradia-tasks': {
+        // The same node that runs faradia: with nvm or other version managers, "node" may not be on
         // the claude process's PATH and the MCP server would not start.
         command: process.execPath,
         args: [path.join(__dirname, '..', 'mcp', 'tasksServer.js')],
@@ -80,21 +81,21 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
   writeJsonFile(path.join(dir, 'mcp.json'), config, { mode: 0o600 });
 }
 
-// The .optimia folder of a repo opened from a workbench must not show up as a git change. It is
+// The .faradia folder of a repo opened from a workbench must not show up as a git change. It is
 // excluded in .git/info/exclude (local, not versioned) instead of touching the user's .gitignore.
 // If it is already ignored, nothing is done.
-function ensureOptimiaExcluded(projectRoot) {
+function ensureFaradiaExcluded(projectRoot) {
   const gitDir = path.join(projectRoot, '.git');
   try {
     if (!fs.statSync(gitDir).isDirectory()) return; // worktree or submodule: .git is a file
     const gitignore = path.join(projectRoot, '.gitignore');
-    const ignored = fs.existsSync(gitignore) && /^\/?\.optimia\/?$/m.test(fs.readFileSync(gitignore, 'utf8'));
+    const ignored = fs.existsSync(gitignore) && /^\/?\.faradia\/?$/m.test(fs.readFileSync(gitignore, 'utf8'));
     if (ignored) return;
     const exclude = path.join(gitDir, 'info', 'exclude');
     const current = fs.existsSync(exclude) ? fs.readFileSync(exclude, 'utf8') : '';
-    if (/^\/?\.optimia\/?$/m.test(current)) return;
+    if (/^\/?\.faradia\/?$/m.test(current)) return;
     fs.mkdirSync(path.dirname(exclude), { recursive: true });
-    fs.appendFileSync(exclude, `${current && !current.endsWith('\n') ? '\n' : ''}/.optimia\n`);
+    fs.appendFileSync(exclude, `${current && !current.endsWith('\n') ? '\n' : ''}/.faradia\n`);
   } catch {
     /* not a git repo or not writable: nothing to exclude */
   }
@@ -111,8 +112,10 @@ function closeLastRun(task, stage, status) {
 }
 
 function createProjectRuntime({ projectId, projectRoot, port, token, sendToClients }) {
-  ensureOptimiaExcluded(projectRoot);
-  // Permissions of optimia's sessions, passed with --settings (nothing in the repo).
+  // The repo's .optimia (from before the name change) becomes .faradia.
+  migrateRepo(projectRoot);
+  ensureFaradiaExcluded(projectRoot);
+  // Permissions of faradia's sessions, passed with --settings (nothing in the repo).
   syncClaudeSettings(projectRoot, loadSettings(projectRoot).preferences.noGo);
   // A memory imported from another machine before this repo existed here.
   try {
@@ -305,7 +308,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       transcriptExists(task.sessionId);
     const resuming = (answer !== undefined || Boolean(afterSwitch) || retryingAfterError) && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
-    // Verification: optimia keeps what the Verifier runs as evidence, and gives it a folder outside
+    // Verification: Faradia keeps what the Verifier runs as evidence, and gives it a folder outside
     // the worktree for screenshots (evidence.js).
     let evidenceDir;
     if (stage === 'verify') {
@@ -340,11 +343,11 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     opts.extraEnv = {
       // Package caches in the agents' own folder (see sandbox.js), when they may install packages.
       ...(security.sandbox !== 'off' && security.registries !== false ? agentCacheEnv() : {}),
-      OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
-      // optimia's MCP server (a child of this session) reports progress for this task without
+      FARADIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
+      // faradia's MCP server (a child of this session) reports progress for this task without
       // depending on the model passing its id.
-      OPTIMIA_TASK_ID: task.id,
-      ...(evidenceDir ? { OPTIMIA_EVIDENCE_DIR: evidenceDir } : {})
+      FARADIA_TASK_ID: task.id,
+      ...(evidenceDir ? { FARADIA_EVIDENCE_DIR: evidenceDir } : {})
     };
     const session = new ClaudeSession(opts);
     session.engine = opts.engine;
@@ -646,7 +649,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   }
 
   // Claude out of usage and no local model to go on with: the stage waits and starts again by itself
-  // once the limit resets (while optimia is running; "Reintentar etapa" works any time).
+  // once the limit resets (while Faradia is running; "Reintentar etapa" works any time).
   const resumeTimers = new Map();
   function resumeAfterLimit(taskId, stage, until) {
     clearTimeout(resumeTimers.get(taskId));
@@ -950,8 +953,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // (watchForPermissionHandoff) only notifies in that case, it doesn't call this.
     if (terminalSession) return terminalSession;
 
-    const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
-    const settingsPath = optimiaClaudeSettingsPath(projectRoot);
+    const mcpConfigPath = path.join(projectRoot, '.faradia', 'mcp.json');
+    const settingsPath = faradiaClaudeSettingsPath(projectRoot);
     let session;
     try {
       session = new PtySession({ cwd: projectRoot, mcpConfigPath, settingsPath, resumeSessionId });
@@ -989,11 +992,11 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     return session;
   }
 
-  // An agent still running when optimia closed no longer exists: its tasks become pending
+  // An agent still running when Faradia closed no longer exists: its tasks become pending
   // (retryable) instead of staying in_progress forever.
   for (const task of loadTasks(projectRoot)) {
     if (task.status === 'in_progress') {
-      updateTask(projectRoot, task.id, { status: 'pending', error: 'interrumpida al reiniciar optimia' });
+      updateTask(projectRoot, task.id, { status: 'pending', error: 'interrumpida al reiniciar faradia' });
     }
   }
 
@@ -1141,4 +1144,4 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   return { id: projectId, root: projectRoot, app, log, handleWsMessage, dispose };
 }
 
-module.exports = { createProjectRuntime, writeMcpConfig, ensureOptimiaExcluded };
+module.exports = { createProjectRuntime, writeMcpConfig, ensureFaradiaExcluded };

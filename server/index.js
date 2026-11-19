@@ -1,5 +1,7 @@
 'use strict';
 
+const { adoptLegacyEnv, migrateGlobal, migrateRepo } = require('./migrate/rename');
+
 const http = require('http');
 const path = require('path');
 const { WebSocketServer, WebSocket } = require('ws');
@@ -34,7 +36,12 @@ const { ensureLaunchRepo } = require('./store/workbenchStore');
 const PROJECT_ROUTE = /^\/api\/projects\/([a-f0-9]{12})(\/.*)$/;
 
 function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {}) {
-  const sessionToken = token || process.env.OPTIMIA_TOKEN || security.createToken();
+  // optimia is now Faradia: its folders and environment variables are taken over before anything
+  // reads them.
+  adoptLegacyEnv();
+  for (const [from, to] of migrateGlobal()) console.log(`Faradia: ${from} se ha movido a ${to}`);
+  if (migrateRepo(projectRoot)) console.log(`Faradia: ${projectRoot}/.optimia se ha movido a .faradia`);
+  const sessionToken = token || process.env.FARADIA_TOKEN || security.createToken();
   const server = http.createServer();
   const wss = new WebSocketServer({ noServer: true });
   // Sync of the global configuration between the user's computers (off until they turn it on).
@@ -236,7 +243,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       res.writeHead(421, { 'Content-Type': 'text/plain' });
       return res.end('host no permitido');
     }
-    // The link optimia prints carries ?token=: it is stored in a cookie and removed from the URL.
+    // The link Faradia prints carries ?token=: it is stored in a cookie and removed from the URL.
     const given = url.searchParams.get('token');
     if (given !== null) {
       // The rest of the query (?p=<project>) is kept.
@@ -337,13 +344,13 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     monitor.on('activity', relay('monitor_activity'));
     monitor.on('watch_event', relay('monitor_watch_event'));
     monitor.on('worktree_state', relay('monitor_worktree_state'));
-    monitor.start().catch((err) => console.error(`optimia: no se pudo iniciar la vigilancia: ${err.message}`));
+    monitor.start().catch((err) => console.error(`faradia: no se pudo iniciar la vigilancia: ${err.message}`));
   }
 
   return new Promise((resolve, reject) => {
     server.once('error', (err) => {
       if (err.code === 'EADDRINUSE') {
-        reject(new Error(`el puerto ${port} está ocupado (¿otro optimia abierto?). Usa otro con --port`));
+        reject(new Error(`el puerto ${port} está ocupado (¿otro Faradia abierto?). Usa otro con --port`));
       } else reject(err);
     });
     server.listen(port, '127.0.0.1', () => {
@@ -353,12 +360,12 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       try {
         ensureLaunchRepo(projectRoot);
       } catch (err) {
-        console.error(`optimia: no se pudo guardar el workbench por defecto: ${err.message}`);
+        console.error(`faradia: no se pudo guardar el workbench por defecto: ${err.message}`);
       }
       const rt = registry.runtime(defaultProjectId);
       const url = `http://127.0.0.1:${actualPort}`;
       const openUrl = `${url}/?token=${sessionToken}`;
-      console.log(`optimia running at ${openUrl} (project: ${projectRoot})`);
+      console.log(`faradia running at ${openUrl} (project: ${projectRoot})`);
       // Agents need the OS sandbox: say so on start, not only when a task fails.
       const sandboxNote = sandboxProblem(loadGlobalSettings().security.sandbox);
       if (sandboxNote) console.warn(`\n⚠ ${sandboxNote}\n`);

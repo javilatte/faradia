@@ -37,12 +37,12 @@ const ACTION_TEXT = {
   down: 'se aplicaron los cambios de otro equipo',
   'conflict-down': 'había cambios en los dos lados: se quedó la versión más reciente (la de otro equipo)',
   'conflict-up': 'había cambios en los dos lados: se quedó la versión más reciente (la de este equipo)',
-  unusable: 'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups'
+  unusable: 'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/faradia/backups'
 };
 
 function syncWhen(iso) {
   if (!iso) return 'nunca';
-  return new Date(iso).toLocaleString(window.optimiaLang?.locale || 'es-ES', {
+  return new Date(iso).toLocaleString(window.faradiaLang?.locale || 'es-ES', {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
@@ -87,7 +87,7 @@ function connectedView(st) {
     sEl(
       'p',
       { class: 'group-help' },
-      'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/optimia/backups.'
+      'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/faradia/backups.'
     ),
     sEl(
       'div',

@@ -33,7 +33,7 @@ function ensureSpawnHelperExecutable({ platform = process.platform, ptyDir } = {
       fixed.push(file);
     } catch (err) {
       throw new Error(
-        `node-pty's ${file} is not executable and optimia could not fix it (${err.code}). ` + `Run: chmod +x "${file}"`
+        `node-pty's ${file} is not executable and Faradia could not fix it (${err.code}). ` + `Run: chmod +x "${file}"`
       );
     }
   }

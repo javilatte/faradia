@@ -1,6 +1,6 @@
 PREFIX ?= /usr/local
 BINDIR  = $(PREFIX)/bin
-NAME    = optimia
+NAME    = faradia
 
 .PHONY: install uninstall
 

@@ -39,37 +39,37 @@ const DEFAULT_ALLOW = [
   'WebFetch',
   // Names verified against a real --mcp-config session's stream-json "init"
   // event (mcp__<server-key-in-mcp.json>__<tool-name>), not guessed.
-  'mcp__optimia-tasks__create_task',
-  'mcp__optimia-tasks__update_task_progress'
+  'mcp__faradia-tasks__create_task',
+  'mcp__faradia-tasks__update_task_progress'
 ];
 const DEFAULT_MODE = 'acceptEdits';
 
-// Claude Code settings that optimia applies ONLY to its own processes (chat, agents and terminal),
+// Claude Code settings that Faradia applies ONLY to its own processes (chat, agents and terminal),
 // with `claude --settings <file>`. They used to be written to the repo's .claude/settings.json:
 // that changed the project's shared (and versioned) configuration, affected the user's and their
 // team's normal claude sessions, and replaced whatever deny list the repo already had. With
 // --settings the repo is untouched and the repo's own deny rules still add up (verified against the
-// real binary: deny, defaultMode and enableAllProjectMcpServers apply from --settings and optimia's
+// real binary: deny, defaultMode and enableAllProjectMcpServers apply from --settings and faradia's
 // MCP server connects).
-function optimiaClaudeSettingsPath(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'claude-settings.json');
+function faradiaClaudeSettingsPath(projectRoot) {
+  return path.join(projectRoot, '.faradia', 'claude-settings.json');
 }
 
 // Variant for task agents: only the deny list and the MCP approval. No allow list and no
 // defaultMode: each stage gets its tools through --allowedTools, and a read-only stage must not
 // inherit acceptEdits.
 function agentClaudeSettingsPath(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'claude-settings-agents.json');
+  return path.join(projectRoot, '.faradia', 'claude-settings-agents.json');
 }
 
 // Path of the repo's .claude/settings.json (only to read, import or clean up).
-// The same node that runs optimia (with nvm, "node" may not be on the PATH the hook gets).
+// The same node that runs Faradia (with nvm, "node" may not be on the PATH the hook gets).
 function policyHookCommand() {
   const quote = (p) => `"${p.replace(/(["\\$`])/g, '\\$1')}"`;
   return `${quote(process.execPath)} ${quote(path.join(__dirname, 'policyHook.js'))}`;
 }
 
-// Checked once per process: the hook script and node do not change while optimia runs.
+// Checked once per process: the hook script and node do not change while Faradia runs.
 let hookCheck = null;
 function policyHookWorks() {
   if (hookCheck === null) hookCheck = hookWorks(policyHookCommand());
@@ -94,11 +94,11 @@ function buildClaudeSettings(noGo) {
 }
 
 /**
- * Regenerates .optimia/claude-settings.json from the user's "Prohibido" list
+ * Regenerates .faradia/claude-settings.json from the user's "Prohibido" list
  * (settings.preferences.noGo). Returns the path for --settings.
  */
 function syncClaudeSettings(projectRoot, noGo) {
-  const file = optimiaClaudeSettingsPath(projectRoot);
+  const file = faradiaClaudeSettingsPath(projectRoot);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const settings = buildClaudeSettings(noGo);
   writeJsonFile(file, settings);
@@ -124,9 +124,9 @@ function syncClaudeSettings(projectRoot, noGo) {
   return file;
 }
 
-// Older versions left .claude/settings.json in the repo. It is removed only if optimia generated it
+// Older versions left .claude/settings.json in the repo. It is removed only if Faradia generated it
 // (its keys and its allow list, nothing else), git does not track it and its deny list is already
-// in optimia's (otherwise the import notice in Settings offers it first). If the user changed or
+// in faradia's (otherwise the import notice in Settings offers it first). If the user changed or
 // versioned it, it is left alone.
 function cleanupLegacyClaudeSettings(projectRoot, noGo = []) {
   const file = claudeSettingsPath(projectRoot);
@@ -168,7 +168,7 @@ module.exports = {
   policyHookCommand,
   policyHookWorks,
   claudeSettingsPath,
-  optimiaClaudeSettingsPath,
+  faradiaClaudeSettingsPath,
   agentClaudeSettingsPath,
   buildClaudeSettings,
   syncClaudeSettings,

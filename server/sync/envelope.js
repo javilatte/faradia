@@ -6,7 +6,7 @@ const crypto = require('crypto');
 // scrypt derives the key and AES-256-GCM encrypts and authenticates the content. Whoever stores the
 // file (Google Drive, a Dropbox folder…) sees only when it was written and from which computer.
 
-const FORMAT = 'optimia-sync';
+const FORMAT = 'faradia-sync';
 const VERSION = 1;
 const KDF = { N: 2 ** 15, r: 8, p: 1, keyLen: 32 };
 const MIN_PASSPHRASE = 8;
@@ -53,8 +53,8 @@ function isEnvelope(value) {
 
 /** Decrypts an envelope. Throws PassphraseError when the passphrase is wrong or the file was altered. */
 function open(envelope, passphrase) {
-  if (!isEnvelope(envelope)) throw new Error('no es un fichero de sincronización de optimia');
-  if (envelope.version !== VERSION) throw new Error('fichero de sincronización de otra versión; actualiza optimia');
+  if (!isEnvelope(envelope)) throw new Error('no es un fichero de sincronización de faradia');
+  if (envelope.version !== VERSION) throw new Error('fichero de sincronización de otra versión; actualiza faradia');
   const { format, version, kdf, iv, tag, data, ...meta } = envelope;
   const header = { format, version, ...meta };
   const N = Number(kdf?.N);

@@ -2,7 +2,7 @@
 'use strict';
 
 // Fake `claude` CLI for end-to-end tests. It implements just enough of the
-// real CLI for optimia to run without network access or an account:
+// real CLI for Faradia to run without network access or an account:
 //   claude --help          lists the flags checkClaudeCapabilities() looks for
 //   claude auth status     reports a logged-in test account
 //   claude -p ...          stream-json chat: answers every user message, and in
@@ -140,7 +140,7 @@ rl.on('line', (line) => {
     return;
   }
   const verifying = /Etapa de VERIFICACION/.test(text);
-  // The verifier runs a real command, so optimia has evidence ("[e2e:verifica-mal]": the tests fail
+  // The verifier runs a real command, so Faradia has evidence ("[e2e:verifica-mal]": the tests fail
   // and the agent still says OK).
   if (verifying) {
     const id = `toolu_v${Date.now()}`;

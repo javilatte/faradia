@@ -5,7 +5,7 @@ const path = require('path');
 const { configDir } = require('./globalPaths');
 
 // Global supervision preferences (not tied to a project):
-// ~/.config/optimia/preferences.json
+// ~/.config/faradia/preferences.json
 
 const DEFAULTS = {
   // Uncommitted changes untouched for this long = orphaned changes.

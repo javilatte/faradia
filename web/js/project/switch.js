@@ -40,7 +40,7 @@ async function switchProject(projectId, { push = true } = {}) {
   renderTasks();
 
   window.TerminalView?.reset();
-  window.dispatchEvent(new CustomEvent('optimia:project-changed', { detail: { projectId } }));
+  window.dispatchEvent(new CustomEvent('faradia:project-changed', { detail: { projectId } }));
 
   await Promise.all([
     loadInitialSettings().catch(() => {}),
@@ -50,7 +50,7 @@ async function switchProject(projectId, { push = true } = {}) {
   ]);
   syncTaskControls();
 }
-window.optimiaSwitchProject = switchProject;
+window.faradiaSwitchProject = switchProject;
 
 // Back / forward between repos.
 window.addEventListener('popstate', () => {

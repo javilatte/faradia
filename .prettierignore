@@ -2,7 +2,7 @@ node_modules/
 package-lock.json
 test-results/
 playwright-report/
-.optimia/
+.faradia/
 .codegraph
 *.md
 vendor/

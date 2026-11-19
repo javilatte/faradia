@@ -1,6 +1,7 @@
 *.tgz
-optimia_*_all/
+faradia_*_all/
 node_modules/
+/.faradia
 /.optimia
 /.codegraph
 /.tokensave

@@ -1,15 +1,16 @@
 #!/usr/bin/env bats
 
-# End-to-end integration: run the real `bin/optimia` launcher against a fresh
+# End-to-end integration: run the real `bin/faradia` launcher against a fresh
 # project and exercise its HTTP API for real (no mocked server).
 
-OPTIMIA_BIN="${BATS_TEST_DIRNAME}/../bin/optimia"
+FARADIA_BIN="${BATS_TEST_DIRNAME}/../bin/faradia"
 
 setup() {
-    # optimia's global state (workbenches, timeline) in a temporary folder, never in the real HOME.
+    export FARADIA_TOKEN=bats-token
+    # faradia's global state (workbenches, timeline) in a temporary folder, never in the real HOME.
     export XDG_CONFIG_HOME=$(mktemp -d)
     export XDG_DATA_HOME=$(mktemp -d)
-    export OPTIMIA_NO_UPDATE_CHECK=1
+    export FARADIA_NO_UPDATE_CHECK=1
     TESTDIR=$(mktemp -d)
     cd "$TESTDIR"
     git init -q
@@ -19,7 +20,7 @@ setup() {
     git add README.md
     git commit -q -m init
 
-    OPTIMIA_TOKEN=bats-token OPTIMIA_NO_OPEN=1 node "$OPTIMIA_BIN" < /dev/null > server.log 2>&1 &
+    FARADIA_TOKEN=bats-token FARADIA_NO_OPEN=1 node "$FARADIA_BIN" < /dev/null > server.log 2>&1 &
     SERVER_PID=$!
     PORT=""
     for i in $(seq 1 50); do
@@ -38,7 +39,7 @@ teardown() {
 
 @test "GET /api/health: reports ok and the project root" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/health',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/health',{headers:{'X-Faradia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
     [ "$status" -eq 0 ]
     [[ "$output" == *'"ok":true'* ]]
     [[ "$output" == *"$TESTDIR"* ]]
@@ -46,28 +47,28 @@ teardown() {
 
 @test "GET /: serves the real web UI (index.html)" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/').then(r=>r.text()).then(t=>console.log(t.includes('<title>optimia</title>')))"
+    run node -e "fetch('http://127.0.0.1:$PORT/').then(r=>r.text()).then(t=>console.log(t.includes('<title>Faradia</title>')))"
     [ "$status" -eq 0 ]
     [[ "$output" == "true" ]]
 }
 
 @test "GET /api/settings: returns default settings for a project with no settings.json yet" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/settings',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/settings',{headers:{'X-Faradia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
     [ "$status" -eq 0 ]
     [[ "$output" == *'"mode":"claude"'* ]]
 }
 
 @test "GET /api/tasks: returns an empty list for a fresh project" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/tasks',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/tasks',{headers:{'X-Faradia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))"
     [ "$status" -eq 0 ]
     [[ "$output" == "[]" ]]
 }
 
 @test "GET /api/local-models: returns a real array (Ollama's own models, or empty if not installed)" {
     [ -n "$PORT" ]
-    run node -e "fetch('http://127.0.0.1:$PORT/api/local-models',{headers:{'X-Optimia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(Array.isArray(d))))"
+    run node -e "fetch('http://127.0.0.1:$PORT/api/local-models',{headers:{'X-Faradia-Token':'bats-token'}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(Array.isArray(d))))"
     [ "$status" -eq 0 ]
     [[ "$output" == "true" ]]
 }
@@ -81,7 +82,7 @@ teardown() {
 
 @test "API with a foreign Host (DNS rebinding): answers 421" {
     [ -n "$PORT" ]
-    run curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example:1234' -H 'X-Optimia-Token: bats-token' "http://127.0.0.1:$PORT/api/settings"
+    run curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example:1234' -H "X-Faradia-Token: $FARADIA_TOKEN" "http://127.0.0.1:$PORT/api/settings"
     [ "$status" -eq 0 ]
     [[ "$output" == "421" ]]
 }

@@ -6,15 +6,15 @@ const { recordIssue } = require('../feedback/issues');
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-// One event per line in <project>/.optimia/logs/optimia.log. Never store message text, instructions
+// One event per line in <project>/.faradia/logs/faradia.log. Never store message text, instructions
 // or file contents: only ids, states and sizes. Each open project has its own instance
 // (createLogger); the module API (initLogger/info/warn/error/readRecent) uses a default instance.
 function createLogger(projectRoot) {
   let logFile = null;
   if (projectRoot) {
-    const dir = path.join(projectRoot, '.optimia', 'logs');
+    const dir = path.join(projectRoot, '.faradia', 'logs');
     fs.mkdirSync(dir, { recursive: true });
-    logFile = path.join(dir, 'optimia.log');
+    logFile = path.join(dir, 'faradia.log');
   }
 
   function rotateIfNeeded() {

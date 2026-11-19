@@ -54,8 +54,8 @@ test('knowledge: export on one machine, import on another; newest wins and nothi
   wiki.writePage(pw, 'despliegue.md', '# Despliegue\n\nCon npm.\n');
   wiki.writePage(wiki.ensureWiki(wiki.wikiFor('personal')), 'atajos.md', '# Atajos\n\n⌘K.\n');
   const bundle = knowledge.exportKnowledge();
-  assert.equal(bundle.format, 'optimia-knowledge');
-  assert.ok(bundle.config.format === 'optimia-config');
+  assert.equal(bundle.format, 'faradia-knowledge');
+  assert.ok(bundle.config.format === 'faradia-config');
   assert.ok(bundle.memories.some((m) => m.key === 'github.com-acme-api'));
 
   // Home machine: the same project cloned somewhere else, with an older page of its own.
@@ -81,7 +81,7 @@ test('knowledge: export on one machine, import on another; newest wins and nothi
   assert.match(wiki.readPage(hw, 'despliegue.md').content, /Con npm/);
   assert.ok(wiki.readPage(hw, 'solo-en-casa.md'), 'pages only at home stay');
   assert.equal(loadMemory(homeRepo), '## Qué es\nLa API.\n');
-  const backups = path.join(home.data, 'optimia', 'knowledge-backups');
+  const backups = path.join(home.data, 'faradia', 'knowledge-backups');
   assert.ok(fs.readdirSync(backups).length === 1, 'the replaced page was backed up');
 
   // Importing again changes nothing.
@@ -97,7 +97,7 @@ test('knowledge: a memory for a repo this machine does not have yet waits for it
   });
   use(machine(t));
   const bundle = {
-    format: 'optimia-knowledge',
+    format: 'faradia-knowledge',
     formatVersion: 1,
     wikis: [],
     memories: [{ key: 'github.com-acme-web', content: '## Web\n', updatedAt: new Date().toISOString() }]
@@ -110,7 +110,7 @@ test('knowledge: a memory for a repo this machine does not have yet waits for it
   assert.throws(
     () =>
       knowledge.previewKnowledge({
-        format: 'optimia-knowledge',
+        format: 'faradia-knowledge',
         formatVersion: 1,
         wikis: [{ scope: 'project', key: '../x' }]
       }),

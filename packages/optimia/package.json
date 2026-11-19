@@ -1,0 +1,24 @@
+{
+  "name": "@javilatte/optimia",
+  "version": "3.0.0",
+  "description": "optimia is now Faradia. This package installs and runs Faradia under the old command, and will keep getting updates for a few more months: switch with `npm i -g faradia`.",
+  "license": "MIT",
+  "homepage": "https://github.com/javilatte/optimia",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/javilatte/optimia.git",
+    "directory": "packages/optimia"
+  },
+  "bin": {
+    "optimia": "bin/optimia.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "faradia": "^3.0.0"
+  }
+}

@@ -7,12 +7,16 @@ const readline = require('readline');
 const { execFileSync, spawnSync } = require('child_process');
 
 const pkg = require('../package.json');
+const { adoptLegacyEnv, migrateGlobal, migrateRepo } = require('../server/migrate/rename');
+
+// optimia is now Faradia: OPTIMIA_PORT and the rest still work.
+adoptLegacyEnv();
 
 function printHelp() {
-  console.log(`optimia v${pkg.version}
+  console.log(`faradia v${pkg.version}
 
 Uso:
-  optimia                Arranca el servidor web en el directorio actual y abre el navegador.
+  faradia                Arranca el servidor web en el directorio actual y abre el navegador.
 
 Opciones:
   -p, --port <n>          Puerto fijo (por defecto, uno libre al azar).
@@ -20,8 +24,8 @@ Opciones:
   -h, --help              Muestra esta ayuda.
 
 Variables de entorno:
-  OPTIMIA_PORT=<n>        Igual que --port.
-  OPTIMIA_NO_OPEN=1       No abre el navegador (p. ej. por SSH): usa el enlace que se imprime.
+  FARADIA_PORT=<n>        Igual que --port.
+  FARADIA_NO_OPEN=1       No abre el navegador (p. ej. por SSH): usa el enlace que se imprime.
 
 Toda la configuracion (workbenches, agentes y sus modelos, IA local, instrucciones,
 memoria, no-go, skills, avisos y lista de vigilancia) se gestiona desde la
@@ -38,7 +42,7 @@ function isGitRepo(dir) {
   }
 }
 
-// Excludes paths from git in .git/info/exclude (local, unversioned): optimia never touches the
+// Excludes paths from git in .git/info/exclude (local, unversioned): faradia never touches the
 // repo's .gitignore, which belongs to the project and the team.
 function excludeFromGit(dir, entries) {
   let gitDir;
@@ -62,19 +66,30 @@ function excludeFromGit(dir, entries) {
   fs.writeFileSync(exclude, content);
 }
 
-// Creates .optimia/ (optimia's local state, excluded from git).
+// Creates .faradia/ (faradia's local state, excluded from git).
 function ensureProjectDir(dir) {
-  fs.mkdirSync(path.join(dir, '.optimia'), { recursive: true });
-  if (isGitRepo(dir)) excludeFromGit(dir, ['/.optimia']);
+  fs.mkdirSync(path.join(dir, '.faradia'), { recursive: true });
+  if (isGitRepo(dir)) excludeFromGit(dir, ['/.faradia']);
 }
 
-// CodeGraph expects its database in <repo>/.codegraph: it is linked to .optimia/.codegraph only
+// CodeGraph expects its database in <repo>/.codegraph: it is linked to .faradia/.codegraph only
 // when the user enables CodeGraph.
 function ensureCodegraphLink(dir) {
   const codegraphLink = path.join(dir, '.codegraph');
-  const codegraphReal = path.join(dir, '.optimia', '.codegraph');
+  const codegraphReal = path.join(dir, '.faradia', '.codegraph');
   fs.mkdirSync(codegraphReal, { recursive: true });
-  if (!fs.existsSync(codegraphLink)) fs.symlinkSync(codegraphReal, codegraphLink);
+  // A link left pointing elsewhere (the old .optimia/.codegraph) is made again.
+  let current = null;
+  try {
+    current = fs.lstatSync(codegraphLink).isSymbolicLink() ? fs.readlinkSync(codegraphLink) : 'not a link';
+  } catch {
+    /* no link yet */
+  }
+  if (current !== null && current !== 'not a link' && path.resolve(dir, current) !== codegraphReal) {
+    fs.unlinkSync(codegraphLink);
+    current = null;
+  }
+  if (current === null) fs.symlinkSync(codegraphReal, codegraphLink);
   excludeFromGit(dir, ['/.codegraph']);
 }
 
@@ -93,7 +108,7 @@ function askYesNo(question, defaultYes) {
 }
 
 function codegraphStatePath(dir) {
-  return path.join(dir, '.optimia', 'codegraph.json');
+  return path.join(dir, '.faradia', 'codegraph.json');
 }
 
 function loadCodegraphState(dir) {
@@ -112,8 +127,8 @@ function saveCodegraphState(dir, state) {
 
 // Trimmed-down version of the old handle_codegraph: ask once whether to enable
 // CodeGraph for this repo, then offer to init/sync on each launch. State lives
-// in .optimia/codegraph.json instead of the old ~/.config/optimia/repos/*.conf
-// registry, since all per-project state now lives under .optimia/.
+// in .faradia/codegraph.json instead of the old ~/.config/faradia/repos/*.conf
+// registry, since all per-project state now lives under .faradia/.
 async function setupCodegraph(dir) {
   if (!isGitRepo(dir)) return;
 
@@ -159,7 +174,7 @@ async function main() {
   const args = process.argv.slice(2);
   const arg = args[0];
   if (arg === '--version' || arg === '-V') {
-    console.log(`optimia ${pkg.version}`);
+    console.log(`faradia ${pkg.version}`);
     return;
   }
   if (arg === '--help' || arg === '-h') {
@@ -170,21 +185,24 @@ async function main() {
   const portFlag = args.findIndex((a) => a === '--port' || a === '-p');
   const inline = args.find((a) => a.startsWith('--port='));
   const port = parsePort(
-    inline ? inline.slice('--port='.length) : portFlag >= 0 ? args[portFlag + 1] : process.env.OPTIMIA_PORT
+    inline ? inline.slice('--port='.length) : portFlag >= 0 ? args[portFlag + 1] : process.env.FARADIA_PORT
   );
   const known = new Set(['--port', '-p']);
   const unknown = args.find(
     (a, i) => !known.has(a) && !a.startsWith('--port=') && !(portFlag >= 0 && i === portFlag + 1)
   );
-  if (unknown) throw new Error(`opción desconocida: ${unknown} (optimia --help)`);
+  if (unknown) throw new Error(`opción desconocida: ${unknown} (faradia --help)`);
 
   const projectRoot = process.cwd();
+  // optimia is now Faradia: its folders are moved before anything creates the new ones.
+  for (const [from, to] of migrateGlobal()) console.log(`Faradia: ${from} se ha movido a ${to}`);
+  if (migrateRepo(projectRoot)) console.log(`Faradia: ${projectRoot}/.optimia se ha movido a .faradia`);
   ensureProjectDir(projectRoot);
   await setupCodegraph(projectRoot);
 
   const { start } = require('../server/index.js');
-  // OPTIMIA_NO_OPEN=1: do not open the browser (tests, remote servers over SSH).
-  await start({ projectRoot, port, open: !process.env.OPTIMIA_NO_OPEN });
+  // FARADIA_NO_OPEN=1: do not open the browser (tests, remote servers over SSH).
+  await start({ projectRoot, port, open: !process.env.FARADIA_NO_OPEN });
 }
 
 main().catch((err) => {

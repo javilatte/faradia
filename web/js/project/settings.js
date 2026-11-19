@@ -203,7 +203,7 @@ async function renderSkillsList() {
   if (skills.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'muted';
-    empty.textContent = 'Este repo no tiene skills propias. Las de optimia y las de ECC están arriba.';
+    empty.textContent = 'Este repo no tiene skills propias. Las de Faradia y las de ECC están arriba.';
     skillsList.appendChild(empty);
   }
 }
@@ -351,7 +351,7 @@ async function openSettings() {
     settingsOverlay.dataset.opened = '1';
     let last = null;
     try {
-      last = localStorage.getItem('optimia:settings-pane');
+      last = localStorage.getItem('faradia:settings-pane');
     } catch {
       /* no persistence */
     }
@@ -451,7 +451,7 @@ settingsNavItems.forEach((item) => {
     settingsPaneTitle.textContent = item.textContent;
     renderScope();
     try {
-      localStorage.setItem('optimia:settings-pane', pane);
+      localStorage.setItem('faradia:settings-pane', pane);
     } catch {
       /* no persistence */
     }
@@ -499,7 +499,7 @@ function renderLogPane() {
     row.className = `log-row ${e.level || 'info'}`;
     const time = document.createElement('span');
     time.className = 'log-time';
-    time.textContent = new Date(e.ts).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES');
+    time.textContent = new Date(e.ts).toLocaleTimeString(window.faradiaLang?.locale || 'es-ES');
     const event = document.createElement('span');
     event.className = 'log-event';
     event.textContent = e.event;
@@ -676,11 +676,11 @@ const SCOPED_PANES = new Set(['claude', 'local-ai', 'instructions', 'nogo', 'age
 const GLOBAL_PANES = new Set(['general', 'sync', 'appearance', 'monitor']);
 let settingsScope = 'global';
 try {
-  settingsScope = localStorage.getItem('optimia:settings-scope') === 'project' ? 'project' : 'global';
+  settingsScope = localStorage.getItem('faradia:settings-scope') === 'project' ? 'project' : 'global';
 } catch {
   /* no persistence */
 }
-window.optimiaSettingsScope = settingsScope;
+window.faradiaSettingsScope = settingsScope;
 const scopeControl = document.getElementById('settings-scope');
 const scopeNote = document.getElementById('settings-scope-note');
 
@@ -699,7 +699,7 @@ function renderScope() {
     b.setAttribute('aria-pressed', String(on));
   }
   if (pane === 'skills')
-    scopeNote.textContent = `Las skills de optimia y de ECC valen para todos los repos; las propias, solo para ${repo}.`;
+    scopeNote.textContent = `Las skills de Faradia y de ECC valen para todos los repos; las propias, solo para ${repo}.`;
   else if (pane === 'sync') scopeNote.textContent = 'Igual en todos los repos y en todos tus equipos.';
   else if (GLOBAL_PANES.has(pane)) scopeNote.textContent = 'Igual en todos los repos.';
   else if (!SCOPED_PANES.has(pane)) scopeNote.textContent = `Solo de este repo (${repo}).`;
@@ -711,15 +711,15 @@ function renderScope() {
 function setSettingsScope(scope) {
   flushSettingsSave();
   settingsScope = scope;
-  window.optimiaSettingsScope = scope;
+  window.faradiaSettingsScope = scope;
   try {
-    localStorage.setItem('optimia:settings-scope', scope);
+    localStorage.setItem('faradia:settings-scope', scope);
   } catch {
     /* no persistence */
   }
   renderScope();
   if (currentSettings) populateSettingsForm();
-  window.dispatchEvent(new CustomEvent('optimia:settings-scope', { detail: scope }));
+  window.dispatchEvent(new CustomEvent('faradia:settings-scope', { detail: scope }));
 }
 
 for (const b of scopeControl.querySelectorAll('button')) {
@@ -763,7 +763,7 @@ onboardButton.addEventListener('click', startOnboarding);
 
 // Interface language (see web/js/i18n.js): the browser's by default; changing it reloads the page.
 const languageSelect = document.getElementById('setting-ui-language');
-if (languageSelect && window.optimiaLang) {
-  languageSelect.value = window.optimiaLang.choice;
-  languageSelect.addEventListener('change', () => window.optimiaLang.set(languageSelect.value));
+if (languageSelect && window.faradiaLang) {
+  languageSelect.value = window.faradiaLang.choice;
+  languageSelect.addEventListener('change', () => window.faradiaLang.set(languageSelect.value));
 }

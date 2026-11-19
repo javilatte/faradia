@@ -7,7 +7,7 @@ const { execFile, execFileSync, spawnSync } = require('child_process');
 // Not shown as "generated files": tool folders, always, and the output of builds, tests and installs
 // that a verification leaves behind, when git ignores it (dist/, coverage/…). A folder with one of
 // those names that git does not ignore (src/build/) holds real files of the task and is listed.
-const TOOL_DIRS = new Set(['.git', 'node_modules', '.optimia', '.claude', '.codegraph']);
+const TOOL_DIRS = new Set(['.git', 'node_modules', '.faradia', '.optimia', '.claude', '.codegraph']);
 const BUILD_DIRS = new Set([
   'build',
   'dist',

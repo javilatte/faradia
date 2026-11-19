@@ -85,7 +85,7 @@ test('raw files are served with Range and cannot run scripts', async ({ page, re
     path.join(demo(), 'x.svg'),
     '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
   );
-  const headers = { 'X-Optimia-Token': 'e2e-token' };
+  const headers = { 'X-Faradia-Token': 'e2e-token' };
   const svg = await request.get(`/api/fs/raw?projectId=${defaultProjectId}&path=x.svg`, { headers });
   expect(svg.headers()['content-security-policy']).toContain('sandbox');
   const partial = await request.get(`/api/fs/raw?projectId=${defaultProjectId}&path=docs/logo.png`, {

@@ -46,7 +46,7 @@ function commitSummary(dir, sha) {
 function buildPrompt({ project, projectRel, task, change }) {
   const plan = task.stageOutputs?.plan || task.stageOutputs?.diagnose || task.stageOutputs?.research;
   return [
-    'Etapa de MANTENIMIENTO DE LA WIKI. Trabajas en la carpeta de wikis de optimia (tu directorio actual).',
+    'Etapa de MANTENIMIENTO DE LA WIKI. Trabajas en la carpeta de wikis de Faradia (tu directorio actual).',
     `- Wiki del proyecto «${project}»: ${projectRel}/ (index.md es la portada; log.md el registro).`,
     '- Wiki personal del usuario: personal/ (lo que le sirve en todos sus proyectos).',
     'Acaba de terminar una tarea de los agentes. Actualiza la wiki del proyecto con lo que aporte conocimiento duradero: cómo funciona algo, decisiones y su porqué, guías de uso, convenciones, problemas resueltos y cómo se resolvieron.',
@@ -200,7 +200,7 @@ function enqueueWikiUpdate({ projectRoot, task, change, settings, agent, log, on
 
 function buildFromRepoPrompt({ project, projectRel, projectRoot, lang }) {
   return [
-    'Etapa de CREACIÓN DE LA WIKI. Trabajas en la carpeta de wikis de optimia (tu directorio actual).',
+    'Etapa de CREACIÓN DE LA WIKI. Trabajas en la carpeta de wikis de Faradia (tu directorio actual).',
     `- Wiki del proyecto «${project}»: ${projectRel}/ (index.md es la portada; log.md el registro).`,
     `- El código del proyecto está en ${projectRoot} (solo lectura: no lo cambies).`,
     'Explora el repositorio y escribe la wiki que necesitaría alguien que llega nuevo al proyecto: qué es, cómo está organizado, cómo funciona por dentro y cómo se trabaja en él.',

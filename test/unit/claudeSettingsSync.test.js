@@ -9,7 +9,7 @@ const { mkTmpDir, rmTmpDir } = require('./helpers');
 const {
   syncClaudeSettings,
   claudeSettingsPath,
-  optimiaClaudeSettingsPath,
+  faradiaClaudeSettingsPath,
   buildClaudeSettings,
   DEFAULT_ALLOW,
   DEFAULT_MODE
@@ -17,14 +17,14 @@ const {
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 
-test('syncClaudeSettings: writes .optimia/claude-settings.json and never touches the repo .claude/', (t) => {
+test('syncClaudeSettings: writes .faradia/claude-settings.json and never touches the repo .claude/', (t) => {
   const dir = mkTmpDir('claudesync');
   t.after(() => rmTmpDir(dir));
 
   const noGo = ['Read(**/.env*)', 'Bash(rm -rf *)'];
   const file = syncClaudeSettings(dir, noGo);
 
-  assert.equal(file, optimiaClaudeSettingsPath(dir));
+  assert.equal(file, faradiaClaudeSettingsPath(dir));
   const onDisk = readJson(file);
   assert.deepEqual(onDisk.permissions.deny, noGo);
   assert.deepEqual(onDisk.permissions.allow, DEFAULT_ALLOW);
@@ -57,7 +57,7 @@ test('syncClaudeSettings: a repo .claude/settings.json of its own is left untouc
   assert.deepEqual(readJson(claudeSettingsPath(dir)), own);
 });
 
-test('syncClaudeSettings: removes the untracked .claude/settings.json an older optimia generated', (t) => {
+test('syncClaudeSettings: removes the untracked .claude/settings.json an older Faradia generated', (t) => {
   const dir = mkTmpDir('claudesync');
   t.after(() => rmTmpDir(dir));
   execFileSync('git', ['init', '-q'], { cwd: dir });
@@ -65,7 +65,7 @@ test('syncClaudeSettings: removes the untracked .claude/settings.json an older o
   fs.mkdirSync(path.join(dir, '.claude'));
   fs.writeFileSync(claudeSettingsPath(dir), JSON.stringify(buildClaudeSettings(['Read(**/.env*)'])));
 
-  // Its deny list is not in optimia's yet: it is kept so it can be imported.
+  // Its deny list is not in faradia's yet: it is kept so it can be imported.
   syncClaudeSettings(dir, []);
   assert.equal(fs.existsSync(claudeSettingsPath(dir)), true);
 

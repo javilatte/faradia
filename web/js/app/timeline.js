@@ -87,7 +87,7 @@ function dayLabel(iso) {
   const yesterday = new Date(Date.now() - 86400000);
   if (d.toDateString() === today.toDateString()) return 'Hoy';
   if (d.toDateString() === yesterday.toDateString()) return 'Ayer';
-  return d.toLocaleDateString(window.optimiaLang?.locale || 'es-ES', {
+  return d.toLocaleDateString(window.faradiaLang?.locale || 'es-ES', {
     weekday: 'long',
     day: 'numeric',
     month: 'long'
@@ -178,7 +178,7 @@ function renderFeed() {
       h(
         'li',
         { class: 'empty-state' },
-        'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que optimia vigila tus repos; el historial anterior está en Commits.'
+        'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que Faradia vigila tus repos; el historial anterior está en Commits.'
       )
     );
     return feed;
@@ -197,7 +197,7 @@ function renderFeed() {
         h(
           'time',
           { datetime: e.at },
-          new Date(e.at).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', {
+          new Date(e.at).toLocaleTimeString(window.faradiaLang?.locale || 'es-ES', {
             hour: '2-digit',
             minute: '2-digit'
           })
@@ -343,7 +343,7 @@ function renderHistory() {
               'span',
               { class: 'muted tl-commit-meta' },
               h('code', {}, c.short),
-              ` · ${c.author} · ${new Date(c.date).toLocaleDateString(window.optimiaLang?.locale || 'es-ES')} · `,
+              ` · ${c.author} · ${new Date(c.date).toLocaleDateString(window.faradiaLang?.locale || 'es-ES')} · `,
               h('span', { class: 'add' }, `+${c.added}`),
               ' ',
               h('span', { class: 'del' }, `−${c.removed}`)

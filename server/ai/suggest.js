@@ -11,7 +11,7 @@ const { TASK_TYPES } = require('../bridge/taskStages');
 const { claudeBlockedUntil } = require('./fallback');
 
 // While the user types in the chat, a cheap model reads the message and proposes at most two
-// things from what optimia offers: a skill (/name), an agent (@id) or a task type. It may only pick
+// things from what Faradia offers: a skill (/name), an agent (@id) or a task type. It may only pick
 // ids from the catalog it is given; anything else is dropped.
 //
 // Engines, in order (the first configured one that answers wins):
@@ -149,7 +149,7 @@ const tokens = (text) =>
     .filter((w) => w.length > 2);
 
 /**
- * The entries worth showing the model: optimia's own (task types and built-in skills) always, plus
+ * The entries worth showing the model: faradia's own (task types and built-in skills) always, plus
  * the 12 others that share most words with the request. A short catalog makes small models faster
  * and more accurate.
  */

@@ -76,7 +76,7 @@ test('catalog: create a custom agent with the local engine and a prompt', (t) =>
   assert.equal(agent.builtin, false);
   assert.equal(agent.engine, 'local');
   assert.equal(agent.prompt, 'Traduce: "sin perder" el tono.\nLinea 2');
-  assert.ok(fs.existsSync(path.join(project, '.optimia', 'agents', 'traductor-es-en.md')));
+  assert.ok(fs.existsSync(path.join(project, '.faradia', 'agents', 'traductor-es-en.md')));
   // Same name again: a different id
   assert.equal(catalog.createAgent(project, 'project', { name: 'Traductor ES-EN' }).id, 'traductor-es-en-2');
 });

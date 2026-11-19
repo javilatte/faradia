@@ -7,10 +7,10 @@ const { configDir } = require('./globalPaths');
 
 // Settings in two layers, so every repo works the same way and each one can still have its own:
 //
-//   global  ~/.config/optimia/settings.json   appearance, model/effort, local AI,
+//   global  ~/.config/faradia/settings.json   appearance, model/effort, local AI,
 //                                              workflow instructions and the
 //                                              "Prohibido" list shared by all repos
-//   repo    <repo>/.optimia/settings.json      only what that repo changes (ai.*),
+//   repo    <repo>/.faradia/settings.json      only what that repo changes (ai.*),
 //                                              its own instructions and no-go rules
 //                                              (ADDED to the global ones) and the
 //                                              permissions approved in its tasks
@@ -41,7 +41,7 @@ function defaultSettings() {
     principles: { enabled: true },
     preferences: {
       instructions: '',
-      // Claude Code "deny" patterns, e.g. "Read(**/.env*)" or "Bash(rm -rf *)". Passed to optimia's
+      // Claude Code "deny" patterns, e.g. "Read(**/.env*)" or "Bash(rm -rf *)". Passed to faradia's
       // sessions with --settings (claudeSettingsSync.js).
       noGo: [],
       // Permissions the user approved from a task card (see approvalRule in taskStages.js). Always
@@ -145,9 +145,9 @@ function sanitizeGlobal(raw) {
     },
     // Wikis: an agent updates them after each task, with the local model when there is one.
     wiki: { autoUpdate: g.wiki?.autoUpdate !== false, preferLocal: g.wiki?.preferLocal !== false },
-    // OPTIMIA_AGENT_SANDBOX=off forces it off (test runs with a fake claude).
+    // FARADIA_AGENT_SANDBOX=off forces it off (test runs with a fake claude).
     security: {
-      sandbox: g.security?.sandbox === 'off' || process.env.OPTIMIA_AGENT_SANDBOX === 'off' ? 'off' : 'required',
+      sandbox: g.security?.sandbox === 'off' || process.env.FARADIA_AGENT_SANDBOX === 'off' ? 'off' : 'required',
       // Agents may reach package registries (npm, PyPI…) to install dependencies.
       registries: g.security?.registries !== false
     }
@@ -195,7 +195,7 @@ function saveGlobalSettings(patch = {}) {
 // ---------- repo layer ----------
 
 function settingsPath(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'settings.json');
+  return path.join(projectRoot, '.faradia', 'settings.json');
 }
 
 function sanitizeProject(raw) {

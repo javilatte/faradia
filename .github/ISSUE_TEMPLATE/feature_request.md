@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for optimIA
+about: Suggest an idea for Faradia
 title: '[FEAT] '
 labels: enhancement
 assignees: ''

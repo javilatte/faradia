@@ -104,7 +104,7 @@ test('sync: changes travel both ways, and on a conflict the newest wins with a b
   on(a);
   assert.equal(await syncA.syncOnce(), 'conflict-down');
   assert.equal(store.loadGlobalSettings().preferences.instructions, 'desde B otra vez');
-  const backups = fs.readdirSync(path.join(a, 'optimia', 'backups'));
+  const backups = fs.readdirSync(path.join(a, 'faradia', 'backups'));
   assert.ok(backups.length >= 1);
 
   // Both change again, A's is newer → A wins and B's copy is kept.
@@ -116,7 +116,7 @@ test('sync: changes travel both ways, and on a conflict the newest wins with a b
   const future = new Date(Date.now() + 60_000);
   fs.utimesSync(store.globalSettingsPath(), future, future);
   assert.equal(await syncA.syncOnce(), 'conflict-up');
-  assert.ok(fs.readdirSync(path.join(a, 'optimia', 'backups')).some((n) => n.endsWith('sync-remote')));
+  assert.ok(fs.readdirSync(path.join(a, 'faradia', 'backups')).some((n) => n.endsWith('sync-remote')));
   on(b);
   assert.equal(await syncB.syncOnce(), 'down');
   assert.equal(store.loadGlobalSettings().preferences.instructions, 'A más tarde');
@@ -156,8 +156,8 @@ test('sync: a copy this version cannot apply is kept aside and does not block up
   const sync = createSync();
   await sync.connect({ kind: 'folder', path: shared }, PASS);
   sync.stop();
-  // Another computer (another optimia version) writes a configuration this one rejects.
-  const foreign = envelope.seal({ format: 'optimia-config', formatVersion: 99 }, PASS, {
+  // Another computer (another Faradia version) writes a configuration this one rejects.
+  const foreign = envelope.seal({ format: 'faradia-config', formatVersion: 99 }, PASS, {
     updatedAt: new Date().toISOString(),
     machine: 'portatil',
     machineId: 'other'
@@ -165,7 +165,7 @@ test('sync: a copy this version cannot apply is kept aside and does not block up
   fs.writeFileSync(path.join(shared, targets.FILE_NAME), JSON.stringify(foreign));
   assert.equal(await sync.syncOnce(), 'unusable');
   assert.match(sync.status().lastError, /portatil/);
-  assert.ok(fs.readdirSync(path.join(a, 'optimia', 'backups')).some((n) => n.endsWith('-sync-unreadable')));
+  assert.ok(fs.readdirSync(path.join(a, 'faradia', 'backups')).some((n) => n.endsWith('-sync-unreadable')));
   store.saveGlobalSettings({ preferences: { instructions: 'sigue subiendo' } });
   assert.equal(await sync.syncOnce(), 'up');
 });
@@ -185,7 +185,7 @@ test('sync: conflict copies survive the rotation of import backups', async (t) =
   const { a, on } = setup(t);
   on(a);
   const portable = require('../../server/config/portable');
-  const root = path.join(a, 'optimia', 'backups');
+  const root = path.join(a, 'faradia', 'backups');
   fs.mkdirSync(path.join(root, '2026-01-01T00-00-00-000Z-sync-remote'), { recursive: true });
   for (let i = 0; i < 12; i++) portable.importConfig(portable.exportConfig({ includeSecrets: true }));
   assert.ok(fs.existsSync(path.join(root, '2026-01-01T00-00-00-000Z-sync-remote')));

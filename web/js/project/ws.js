@@ -60,7 +60,7 @@ function connect() {
     } else if (msg.type === 'provider_switch') {
       const names = { claude: 'Claude', local: 'el modelo local' };
       const until = msg.until
-        ? new Date(msg.until).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', {
+        ? new Date(msg.until).toLocaleTimeString(window.faradiaLang?.locale || 'es-ES', {
             hour: '2-digit',
             minute: '2-digit'
           })
@@ -79,7 +79,7 @@ function connect() {
       }
       refreshProviderLabel();
     } else if (msg.type === 'client_error') {
-      console.warn('[optimia] client_error', msg.error);
+      console.warn('[faradia] client_error', msg.error);
       appendMessage('error', msg.error);
       setWaiting(false);
     } else if (msg.type === 'permission_needed') {

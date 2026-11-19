@@ -1,27 +1,27 @@
 'use strict';
 
 // Stdio MCP server, launched as a child process of `claude` itself (via
-// --mcp-config), not of the optimia HTTP server. It has no direct access to
+// --mcp-config), not of the Faradia HTTP server. It has no direct access to
 // the running server's in-memory state, so every tool call round-trips back
 // into it over plain HTTP, using the port the parent process passed through
-// OPTIMIA_PORT (the real listening port is only known after server.listen()
-// resolves, since optimia uses an ephemeral port — see server/index.js).
+// FARADIA_PORT (the real listening port is only known after server.listen()
+// resolves, since Faradia uses an ephemeral port — see server/index.js).
 
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const { z } = require('zod');
 
-const port = process.env.OPTIMIA_PORT;
+const port = process.env.FARADIA_PORT;
 if (!port) {
-  console.error('tasksServer: OPTIMIA_PORT env var is required');
+  console.error('tasksServer: FARADIA_PORT env var is required');
   process.exit(1);
 }
-// Each project has its own mcp.json with its id and the token of this optimia run (see
+// Each project has its own mcp.json with its id and the token of this Faradia run (see
 // server/runtime/projectRuntime.js#writeMcpConfig).
-const projectId = process.env.OPTIMIA_PROJECT;
+const projectId = process.env.FARADIA_PROJECT;
 const base = projectId ? `http://127.0.0.1:${port}/api/projects/${projectId}` : `http://127.0.0.1:${port}/api`;
-const authHeaders = process.env.OPTIMIA_TOKEN ? { 'X-Optimia-Token': process.env.OPTIMIA_TOKEN } : {};
-const fixedTaskId = process.env.OPTIMIA_TASK_ID || null;
+const authHeaders = process.env.FARADIA_TOKEN ? { 'X-Faradia-Token': process.env.FARADIA_TOKEN } : {};
+const fixedTaskId = process.env.FARADIA_TASK_ID || null;
 
 // Without an id (the model left it out and the session has none fixed): the task whose worktree is
 // the folder this session runs in.
@@ -39,13 +39,13 @@ async function taskOfThisFolder() {
   }
 }
 
-const server = new McpServer({ name: 'optimia-tasks', version: '1.0.0' });
+const server = new McpServer({ name: 'faradia-tasks', version: '1.0.0' });
 
 server.registerTool(
   'create_task',
   {
     description:
-      'Crea una tarea nueva para un agente de optimia a partir de un plan acordado con el usuario en el chat. ' +
+      'Crea una tarea nueva para un agente de Faradia a partir de un plan acordado con el usuario en el chat. ' +
       'Usar solo después de cerrar un plan concreto con el usuario (p. ej. con la skill plan-optimizer), no para pedidos vagos.',
     inputSchema: {
       title: z.string().describe('Short task title, shown in the agents panel'),
@@ -79,7 +79,7 @@ server.registerTool(
   {
     description:
       'Reporta el progreso real de una tarea en una de sus 3 fases (plan, implement, test) para que el panel de ' +
-      'agentes de optimia lo refleje. Llamar al empezar y al terminar cada fase, no solo al final.',
+      'agentes de Faradia lo refleje. Llamar al empezar y al terminar cada fase, no solo al final.',
     inputSchema: {
       taskId: z
         .string()

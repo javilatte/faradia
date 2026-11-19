@@ -15,13 +15,13 @@ const CHAT_KIND_LABEL = {
   'verification-kit': 'de kit de verificación'
 };
 const chatKindSelect = document.getElementById('chat-kind-select');
-chatKindSelect.value = localStorage.getItem('optimia:chat-kind') || 'chat';
+chatKindSelect.value = localStorage.getItem('faradia:chat-kind') || 'chat';
 
 // Fills the mode selector with the task types and the enabled custom agents.
 async function loadTaskKinds() {
   const data = await fetch(apiPath('/api/agents')).then((r) => r.json());
   setAgentCatalog(data);
-  const saved = localStorage.getItem('optimia:chat-kind') || 'chat';
+  const saved = localStorage.getItem('faradia:chat-kind') || 'chat';
   chatKindSelect.innerHTML = '';
   const add = (parent, value, label) => {
     const opt = document.createElement('option');
@@ -140,11 +140,11 @@ function syncTaskControls() {
 
 // The base branch chosen last, per repo: "develop" in one repo says nothing about another.
 function taskBaseKey() {
-  return `optimia:task-base:${currentProjectId || defaultProjectId || 'default'}`;
+  return `faradia:task-base:${currentProjectId || defaultProjectId || 'default'}`;
 }
 taskBaseSelect.addEventListener('change', () => localStorage.setItem(taskBaseKey(), taskBaseSelect.value));
 chatKindSelect.addEventListener('change', () => {
-  localStorage.setItem('optimia:chat-kind', chatKindSelect.value);
+  localStorage.setItem('faradia:chat-kind', chatKindSelect.value);
   syncTaskControls();
 });
 syncTaskControls();
@@ -168,7 +168,7 @@ function prefillTask(kind, text) {
   const values = [...chatKindSelect.querySelectorAll('option')].map((o) => o.value);
   if (!values.includes(kind)) return;
   chatKindSelect.value = kind;
-  localStorage.setItem('optimia:chat-kind', kind);
+  localStorage.setItem('faradia:chat-kind', kind);
   syncTaskControls();
   input.value = text;
   input.style.height = 'auto';

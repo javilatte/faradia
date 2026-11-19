@@ -5,10 +5,10 @@ const path = require('path');
 const { readPreview } = require('../bridge/taskFiles');
 
 // File explorer of a repo. Every path arrives relative to the repo and is resolved inside it: no
-// absolute paths, ".." or symlinks leading out of the repo. The .git and .optimia folders
-// (optimia's internal state: tasks, chats, agent worktrees) are never listed or touched.
+// absolute paths, ".." or symlinks leading out of the repo. The .git and .faradia folders
+// (faradia's internal state: tasks, chats, agent worktrees) are never listed or touched.
 
-const HIDDEN = new Set(['.git', '.optimia']);
+const HIDDEN = new Set(['.git', '.faradia', '.optimia']);
 const MAX_ENTRIES = 2000;
 const MAX_TEXT_BYTES = 1024 * 1024;
 
@@ -55,7 +55,7 @@ function resolveRepoPath(root, rel, { mustExist = true, allowRoot = true } = {})
   const abs = path.resolve(root, clean);
   if (!isInside(root, abs)) throw new FsError(400, 'la ruta sale del repo');
   if (clean.split('/').some((part) => HIDDEN.has(part)))
-    throw new FsError(403, 'las carpetas .git y .optimia no se pueden tocar desde el explorador');
+    throw new FsError(403, 'las carpetas .git y .faradia no se pueden tocar desde el explorador');
   if (mustExist) {
     if (!fs.existsSync(abs)) throw new FsError(404, 'no existe');
     // A symlink cannot lead out of the repo.

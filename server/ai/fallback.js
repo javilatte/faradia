@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { dataDir } = require('../store/globalPaths');
 
-// When Claude runs out of usage, optimia goes on with the local model and comes back by itself
+// When Claude runs out of usage, Faradia goes on with the local model and comes back by itself
 // when the limit resets.
 //
 // The claude CLI reports its limits in the stream: {type: "rate_limit_event", rate_limit_info:

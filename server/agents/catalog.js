@@ -13,8 +13,8 @@ const { configDir } = require('../store/globalPaths');
 //   role prompt (the body of the .md).
 // Three sources, from lowest to highest priority:
 //   builtin  default agents, defined in this file (restorable)
-//   global   ~/.config/optimia/agents/<id>.md       (every project)
-//   project  <project>/.optimia/agents/<id>.md       (that project only)
+//   global   ~/.config/faradia/agents/<id>.md       (every project)
+//   project  <project>/.faradia/agents/<id>.md       (that project only)
 // A global or project file with a default agent's id overrides it field by field; a new id creates
 // a custom agent.
 
@@ -210,7 +210,7 @@ const BUILTIN_AGENTS = [
   }
 ];
 
-// optimia's agents follow the method of their best ECC counterpart (MIT, vendor/ecc): the agent
+// faradia's agents follow the method of their best ECC counterpart (MIT, vendor/ecc): the agent
 // keeps its id, name, stage and access, and its prompt is its own role plus that method. Without the
 // bundle, the short prompt alone.
 const ECC_METHOD = {
@@ -224,7 +224,7 @@ const ECC_METHOD = {
   auditor: ['ecc-security-reviewer', 'ecc-performance-optimizer']
 };
 const methodCache = new Map();
-// pstack's Comment Sicko (MIT, vendor/pstack/agents) is the method of optimia's comment stage.
+// pstack's Comment Sicko (MIT, vendor/pstack/agents) is the method of faradia's comment stage.
 const PSTACK_METHOD = { 'comment-sicko': 'comment-sicko' };
 function withEccMethod(id, own) {
   if (methodCache.has(id)) return methodCache.get(id);
@@ -232,7 +232,7 @@ function withEccMethod(id, own) {
   if (pstack) {
     const prompt = [
       own,
-      'Responde en el idioma del usuario. Las instrucciones de la etapa de optimia mandan sobre este método (alcance, qué hacer con las restricciones y cómo terminar).',
+      'Responde en el idioma del usuario. Las instrucciones de la etapa de Faradia mandan sobre este método (alcance, qué hacer con las restricciones y cómo terminar).',
       `## Método: Comment Sicko (de pstack, Lauren Tan, licencia MIT)\n\n${pstack}`
     ].join('\n\n');
     methodCache.set(id, prompt);
@@ -242,7 +242,7 @@ function withEccMethod(id, own) {
   const prompt = methods.length
     ? [
         own,
-        'Responde en el idioma del usuario. Las instrucciones de la etapa de optimia mandan sobre este método (por ejemplo, no hagas commit ni push, y respeta el acceso de tu etapa).',
+        'Responde en el idioma del usuario. Las instrucciones de la etapa de Faradia mandan sobre este método (por ejemplo, no hagas commit ni push, y respeta el acceso de tu etapa).',
         ...methods.map((m) => `## Método: ${m.name.replace(' (ECC)', '')} (de ECC, licencia MIT)\n\n${m.prompt}`)
       ].join('\n\n')
     : own;
@@ -250,7 +250,7 @@ function withEccMethod(id, own) {
   return prompt;
 }
 
-// Base definition of an agent: optimia's own (with its ECC method) or one from the ECC library.
+// Base definition of an agent: faradia's own (with its ECC method) or one from the ECC library.
 function baseAgent(id) {
   const own = BUILTIN_AGENTS.find((a) => a.id === id);
   if (own) return { ...own, prompt: withEccMethod(id, own.prompt) };
@@ -262,7 +262,7 @@ function globalAgentsDir() {
 }
 
 function projectAgentsDir(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'agents');
+  return path.join(projectRoot, '.faradia', 'agents');
 }
 
 function dirFor(scope, projectRoot) {

@@ -12,22 +12,22 @@ while [[ $# -gt 0 ]]; do
 done
 
 BINDIR="$PREFIX/bin"
-SCRIPT="$(dirname "$0")/bin/optimia"
+SCRIPT="$(dirname "$0")/bin/faradia"
 
 if [[ ! -f "$SCRIPT" ]]; then
-    echo "Error: bin/optimia not found. Run from the optimia project directory."
+    echo "Error: bin/faradia not found. Run from the faradia project directory."
     exit 1
 fi
 
 # install -d + install -m: portable across GNU and BSD/macOS install
 # (BSD install has no -D flag).
 if install -d "$BINDIR" 2>/dev/null && [[ -w "$BINDIR" ]]; then
-    install -m 755 "$SCRIPT" "$BINDIR/optimia"
+    install -m 755 "$SCRIPT" "$BINDIR/faradia"
 else
     echo "Note: $BINDIR is not writable — trying with sudo."
     sudo install -d "$BINDIR"
-    sudo install -m 755 "$SCRIPT" "$BINDIR/optimia"
+    sudo install -m 755 "$SCRIPT" "$BINDIR/faradia"
 fi
 
-echo "Installed → $BINDIR/optimia"
-echo "Run: optimia --help"
+echo "Installed → $BINDIR/faradia"
+echo "Run: faradia --help"

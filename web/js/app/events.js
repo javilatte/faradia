@@ -18,7 +18,7 @@ function emit(msg) {
       try {
         fn(msg);
       } catch (err) {
-        console.error('optimia: error en un suscriptor de eventos', err);
+        console.error('faradia: error en un suscriptor de eventos', err);
       }
     }
   }

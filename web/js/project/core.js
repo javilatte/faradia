@@ -1,6 +1,6 @@
 'use strict';
 
-// Active project: the one in ?p=<id> in the URL or, without it, the project optimia was launched
+// Active project: the one in ?p=<id> in the URL or, without it, the project Faradia was launched
 // from. The whole project view (chat, agents, settings, terminal) talks to that project's API;
 // switching projects swaps it in place (see switch.js) and updates ?p=.
 let currentProjectId = new URLSearchParams(location.search).get('p') || null;
@@ -211,11 +211,11 @@ const chatAgents = new Map();
 const pendingMarkdown = new Set();
 function paintMarkdown(el, text) {
   el._raw = text;
-  if (window.optimiaMarkdown) return window.optimiaMarkdown(el, text);
+  if (window.faradiaMarkdown) return window.faradiaMarkdown(el, text);
   el.textContent = text;
   pendingMarkdown.add(el);
 }
-window.addEventListener('optimia:markdown-ready', () => {
-  for (const el of pendingMarkdown) if (el.isConnected) window.optimiaMarkdown(el, el._raw);
+window.addEventListener('faradia:markdown-ready', () => {
+  for (const el of pendingMarkdown) if (el.isConnected) window.faradiaMarkdown(el, el._raw);
   pendingMarkdown.clear();
 });

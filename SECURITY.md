@@ -11,7 +11,7 @@ Only the latest minor version is actively supported with security updates.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in optimIA, please report it responsibly.
+If you discover a security vulnerability in Faradia, please report it responsibly.
 
 **Please do not open a public issue for security bugs.**
 
@@ -35,5 +35,5 @@ You can expect an initial response within 72 hours. We will work with you to val
 ## Best Practices for Users
 
 - Keep your AI CLI tools (claude, opencode, etc.) updated independently.
-- Review tool definitions in `~/.config/optimia/tools.conf` before enabling them.
-- Do not paste untrusted repo configs into `~/.config/optimia/repos/`.
+- Review tool definitions in `~/.config/faradia/tools.conf` before enabling them.
+- Do not paste untrusted repo configs into `~/.config/faradia/repos/`.

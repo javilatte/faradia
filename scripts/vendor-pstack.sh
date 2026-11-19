@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Bundles part of pstack (Lauren Tan, MIT), unmodified, from the Claude Code copy in cursor/plugins:
-#   - skills that work outside Cursor and fit optimia's sessions -> vendor/skills/<name>;
-#   - the 24 principles -> vendor/pstack/principles/<name>: optimia puts the ones that fit each agent
+#   - skills that work outside Cursor and fit faradia's sessions -> vendor/skills/<name>;
+#   - the 24 principles -> vendor/pstack/principles/<name>: faradia puts the ones that fit each agent
 #     in its prompt (server/agents/catalog.js), so they stay out of the / menu;
 #   - the Comment Sicko agent and the Claude Code adapter the skills link to -> vendor/pstack.
-# Left out: poteto-mode and its router (optimia's pipelines do that job), statechart (needs TLA+ and
+# Left out: poteto-mode and its router (faradia's pipelines do that job), statechart (needs TLA+ and
 # ships 4 MB of test corpus), and the Cursor-only or personal ones.
 #   scripts/vendor-pstack.sh <path to a cursor/plugins checkout>
 set -euo pipefail
@@ -31,7 +31,7 @@ cat > "$root/vendor/pstack/SOURCE.md" <<MD
 
 The principles, the Comment Sicko agent and the Claude Code adapter of pstack, from $url (folder
 \`$harness\`, commit \`$commit\`), by Lauren Tan (poteto), under the MIT license (see LICENSE in this
-folder). Copied unmodified by scripts/vendor-pstack.sh. optimia adds the principles that fit each of
+folder). Copied unmodified by scripts/vendor-pstack.sh. faradia adds the principles that fit each of
 its agents to that agent's prompt, and the Comment Sicko text to the comments stage. The pstack
 skills it bundles are in vendor/skills, each with its own SOURCE.md.
 MD

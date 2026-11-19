@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-// Skills optimia always gives to the chat and to every agent, on top of the ECC ones the user picks:
-//   - optimia's own, in server/skills/<name> (frontend-craft).
+// Skills Faradia always gives to the chat and to every agent, on top of the ECC ones the user picks:
+//   - faradia's own, in server/skills/<name> (frontend-craft).
 //   - third-party ones bundled unmodified in vendor/skills/<name> by scripts/vendor-skill.sh (unslop,
 //     security-audit, plan-optimizer, ponytail with its review and audit, which scripts/vendor-ponytail.sh
 //     changes so it leaves no marks in the code). Each folder carries its LICENSE and a SOURCE.md
@@ -34,7 +34,7 @@ const PSTACK_SKILLS = [
 ];
 
 const CREDITS = {
-  'frontend-craft': 'optimia',
+  'frontend-craft': 'faradia',
   unslop: 'Damir Sokolovsky · CC BY 4.0',
   'security-audit': 'Cloudflare · MIT',
   'plan-optimizer': 'Sean Geng · MIT',
@@ -72,7 +72,7 @@ function skillDirs(root, skip = []) {
   }
 }
 
-/** [{name, description, credit, dir, mtimeMs}] of the built-in skills, optimia's first. */
+/** [{name, description, credit, dir, mtimeMs}] of the built-in skills, faradia's first. */
 function builtinSkills() {
   return [...skillDirs(OWN), ...skillDirs(VENDORED)].map(({ name, dir }) => {
     const file = path.join(dir, 'SKILL.md');
@@ -80,7 +80,7 @@ function builtinSkills() {
       name,
       dir,
       description: frontmatterDescription(file),
-      credit: CREDITS[name] || 'optimia',
+      credit: CREDITS[name] || 'faradia',
       mtimeMs: fs.statSync(file).mtimeMs
     };
   });

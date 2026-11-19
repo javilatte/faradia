@@ -6,13 +6,13 @@ let clockFormat = 'datetime';
 
 function tickClock() {
   const now = new Date();
-  const time = now.toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', { hour: '2-digit', minute: '2-digit' });
+  const time = now.toLocaleTimeString(window.faradiaLang?.locale || 'es-ES', { hour: '2-digit', minute: '2-digit' });
   if (clockFormat === 'time') {
     clockEl.textContent = time;
     return;
   }
-  const weekday = now.toLocaleDateString(window.optimiaLang?.locale || 'es-ES', { weekday: 'long' });
-  const day = now.toLocaleDateString(window.optimiaLang?.locale || 'es-ES', { day: '2-digit', month: 'short' });
+  const weekday = now.toLocaleDateString(window.faradiaLang?.locale || 'es-ES', { weekday: 'long' });
+  const day = now.toLocaleDateString(window.faradiaLang?.locale || 'es-ES', { day: '2-digit', month: 'short' });
   clockEl.textContent = `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${day}\u00A0\u00A0${time}`;
 }
 
@@ -67,7 +67,7 @@ function setChatWidth(px) {
 }
 
 try {
-  const saved = Number(localStorage.getItem('optimia:chat-width'));
+  const saved = Number(localStorage.getItem('faradia:chat-width'));
   if (saved >= CHAT_MIN) setChatWidth(saved);
 } catch {
   /* no localStorage: default width */
@@ -86,7 +86,7 @@ layoutSplitter.addEventListener('pointerdown', (e) => {
     layoutSplitter.removeEventListener('pointermove', onMove);
     layoutSplitter.removeEventListener('pointerup', onUp);
     try {
-      localStorage.setItem('optimia:chat-width', String(Math.round(chatPanelEl.getBoundingClientRect().width)));
+      localStorage.setItem('faradia:chat-width', String(Math.round(chatPanelEl.getBoundingClientRect().width)));
     } catch {
       /* no persistence */
     }
@@ -98,7 +98,7 @@ layoutSplitter.addEventListener('pointerdown', (e) => {
 layoutSplitter.addEventListener('dblclick', () => {
   layoutEl.style.removeProperty('--chat-w');
   try {
-    localStorage.removeItem('optimia:chat-width');
+    localStorage.removeItem('faradia:chat-width');
   } catch {
     /* no persistence */
   }
@@ -142,7 +142,7 @@ function appendMessage(role, text, images = [], files = []) {
     const textEl = document.createElement(role === 'assistant' ? 'div' : 'span');
     textEl.className = 'msg-text';
     if (role === 'assistant') paintMarkdown(textEl, text);
-    // optimia's own notices are interface text: they follow the interface's language.
+    // faradia's own notices are interface text: they follow the interface's language.
     else if (role === 'system' || role === 'error') textEl.textContent = window.t ? window.t(text) : text;
     else textEl.textContent = text;
     el.appendChild(textEl);
@@ -490,6 +490,6 @@ function handleClaudeEvent(event) {
   // hook_started, thinking_tokens...) are diagnostic only — kept out of the
   // chat log to avoid clutter, visible in devtools.
   else {
-    console.debug('[optimia] claude_event', event.type, event);
+    console.debug('[faradia] claude_event', event.type, event);
   }
 }

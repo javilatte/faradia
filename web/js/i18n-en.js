@@ -1,10 +1,16 @@
 'use strict';
 /* global window */
 
-// English for optimia's interface. The Spanish text is the key: the interface is written in
+// English for faradia's interface. The Spanish text is the key: the interface is written in
 // Spanish and i18n.js swaps the visible text when the language is English.
-window.OPTIMIA_I18N_EN = {
+window.FARADIA_I18N_EN = {
   exact: {
+    'optimia ahora es Faradia': 'optimia is now Faradia',
+    'Crea código de calidad automatizando tus procesos y multiplica tu productividad sin perder las riendas de tu trabajo. Es la misma app con otro nombre (ya había otras cosas llamadas Optimia): tus ajustes, agentes y repos se han movido solos.':
+      'Create quality code by automating your processes and multiply your productivity without losing the reins of your work. It is the same app with a new name (there were already other things called Optimia): your settings, agents and repos moved over by themselves.',
+    'Instala el paquete faradia': 'Install the Faradia package',
+    'A partir de ahora: npm i -g faradia, y arráncalo con faradia. El paquete optimia seguirá actualizándose unos meses más y abre Faradia, pero dejará de hacerlo.':
+      'From now on: npm i -g faradia, and start it with faradia. The optimia package will keep updating for a few more months and opens Faradia, but it will stop.',
     'Mostrar menos': 'Show less',
     '! Sin verificar: lo que se ejecutó no respalda el «OK» del agente':
       "! Not verified: what ran does not back the agent's “OK”",
@@ -46,8 +52,8 @@ window.OPTIMIA_I18N_EN = {
     'Solo documentación: nada falla si un agente la ignora.':
       'Documentation only: nothing fails if an agent ignores it.',
     'Siguió con otro modelo (Claude se quedó sin uso)': 'Went on with another model (Claude ran out of usage)',
-    'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups':
-      "another computer's copy could not be applied; it was kept in ~/.config/optimia/backups",
+    'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/faradia/backups':
+      "another computer's copy could not be applied; it was kept in ~/.config/faradia/backups",
     'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing… En los demás equipos elige la misma.':
       'A folder you already sync between your computers: Google Drive for desktop, Dropbox, iCloud, Syncthing… Pick the same one on your other computers.',
     'Cifra la copia en este equipo antes de guardarla en la carpeta. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).':
@@ -63,8 +69,8 @@ window.OPTIMIA_I18N_EN = {
     'Configurar la IA local…': 'Set up local AI…',
     'Configura un modelo local en Ajustes › IA local para seguir sin esperar.':
       'Set up a local model in Settings › Local AI to go on without waiting.',
-    'Con una basta. Si Claude se queda sin uso, optimia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
-      'One is enough. If Claude runs out of usage, optimia goes on with your local model without losing the conversation, and goes back to Claude when it resets.',
+    'Con una basta. Si Claude se queda sin uso, Faradia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
+      'One is enough. If Claude runs out of usage, Faradia goes on with your local model without losing the conversation, and goes back to Claude when it resets.',
     'Se abrió una terminal con «claude auth login». Completa el inicio de sesión ahí y pulsa Actualizar.':
       'A terminal opened with “claude auth login”. Finish signing in there and click Refresh.',
     'Tu configuración en todos tus equipos': 'Your configuration on all your computers',
@@ -85,8 +91,8 @@ window.OPTIMIA_I18N_EN = {
     'Última comprobación': 'Last check',
     'Último cambio': 'Last change',
     nunca: 'never',
-    'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/optimia/backups.':
-      'It checks every few minutes and right after each change. If two computers change at once the newest wins, and the other is kept in ~/.config/optimia/backups.',
+    'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/faradia/backups.':
+      'It checks every few minutes and right after each change. If two computers change at once the newest wins, and the other is kept in ~/.config/faradia/backups.',
     'Sincronizar ahora': 'Sync now',
     'Sincronizando…': 'Syncing…',
     Desactivar: 'Turn off',
@@ -202,9 +208,9 @@ window.OPTIMIA_I18N_EN = {
     'Añadir un repo…': 'Add a repo…',
     Bajo: 'Low',
     'Barra lateral': 'Sidebar',
-    'Bienvenido a optimia': 'Welcome to optimia',
-    'optimia-config-….json, exportado desde Ajustes › General':
-      'optimia-config-….json, exported from Settings › General',
+    'Bienvenido a faradia': 'Welcome to faradia',
+    'faradia-config-….json, exportado desde Ajustes › General':
+      'faradia-config-….json, exported from Settings › General',
     'Puedes importarla o exportarla cuando quieras desde Ajustes › General.':
       'You can import or export it whenever you want from Settings › General.',
     'Borrados grandes': 'Large deletes',
@@ -262,8 +268,8 @@ window.OPTIMIA_I18N_EN = {
     Cuenta: 'Account',
     Código: 'Code',
     'Cómo actualizar…': 'How to update…',
-    'De Everything Claude Code (licencia MIT), incluidos en optimia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.':
-      'From Everything Claude Code (MIT licence), bundled with optimia. Turn them on to have them in the mode selector, or type @ in the chat to call any of them. Your agents already follow the method of their ECC counterpart.',
+    'De Everything Claude Code (licencia MIT), incluidos en faradia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.':
+      'From Everything Claude Code (MIT licence), bundled with faradia. Turn them on to have them in the mode selector, or type @ in the chat to call any of them. Your agents already follow the method of their ECC counterpart.',
     'Deja que un agente lo estudie (comandos, estructura, convenciones) para que el chat y los agentes trabajen aquí sin redescubrirlo.':
       'Let an agent study it (commands, structure, conventions) so the chat and the agents work here without rediscovering it.',
     'Desactivado: los agentes trabajan sin sandbox (riesgo)': 'Off: agents work without a sandbox (risky)',
@@ -358,7 +364,7 @@ window.OPTIMIA_I18N_EN = {
     Siguiente: 'Next',
     Empezar: 'Get started',
     Saltar: 'Skip',
-    'Así funciona optimia': 'How optimia works',
+    'Así funciona faradia': 'How Faradia works',
     'Sin sesión': 'Signed out',
     'Iniciar sesión…': 'Sign in…',
     'Conectar…': 'Connect…',
@@ -367,8 +373,8 @@ window.OPTIMIA_I18N_EN = {
     'Ollama o LM Studio': 'Ollama or LM Studio',
     'Conecta una IA y listo': 'Connect an AI and you are set',
     'Pide en el chat': 'Ask in the chat',
-    'Mientras escribes, optimia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.':
-      'As you type, optimia suggests the skill, agent or task type that fits. Tab to use it. @ calls an agent and / a skill.',
+    'Mientras escribes, Faradia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.':
+      'As you type, Faradia suggests the skill, agent or task type that fits. Tab to use it. @ calls an agent and / a skill.',
     'Los agentes trabajan aparte': 'Agents work on the side',
     'Cada tarea va en su propio worktree: un agente planifica, otro implementa y otro verifica. Tu rama no se toca hasta que tú haces el commit o la PR.':
       'Each task runs in its own worktree: one agent plans, another implements and another verifies. Your branch is untouched until you make the commit or the PR.',
@@ -379,8 +385,8 @@ window.OPTIMIA_I18N_EN = {
     'En Wiki, «Generar desde el repo» documenta el proyecto, y tras cada tarea los agentes apuntan lo que aprendieron. Todo se ajusta en Ajustes cuando quieras.':
       'In Wiki, "Generate from the repo" documents the project, and after each task the agents write down what they learned. Everything can be adjusted in Settings whenever you want.',
     'Sugerencias mientras escribes': 'Suggestions while you type',
-    'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.':
-      'optimia proposes the skill, agent or task type that fits your message. Tab to accept it, Esc to dismiss it.',
+    'faradia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.':
+      'faradia proposes the skill, agent or task type that fits your message. Tab to accept it, Esc to dismiss it.',
     'Permisos en el chat, no en la terminal': 'Permissions in the chat, not in the terminal',
     'Cuando el agente necesita permiso, lo pide con una tarjeta en la conversación. En modo automático solo pregunta lo arriesgado.':
       'When the agent needs permission, it asks with a card in the conversation. In automatic mode it only asks what is risky.',
@@ -406,7 +412,7 @@ window.OPTIMIA_I18N_EN = {
     'El agente quiere editar un notebook': 'The agent wants to edit a notebook',
     'El agente quiere abrir una página web': 'The agent wants to open a web page',
     'El agente quiere buscar en la web': 'The agent wants to search the web',
-    'De optimia': 'From optimia',
+    'De faradia': 'From faradia',
     'De ECC': 'From ECC',
     Siempre: 'Always',
     Todas: 'All',
@@ -419,17 +425,17 @@ window.OPTIMIA_I18N_EN = {
     'Restaurar la selección recomendada': 'Restore the recommended selection',
     'Desactivar todas': 'Turn all off',
     '¿En qué trabajamos hoy?': 'What are we working on today?',
-    'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que optimia vigila tus repos; el historial anterior está en Commits.':
-      'No activity with these filters yet. Changes, commits and agents show up here from the moment optimia watches your repos; earlier history is under Commits.',
+    'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que Faradia vigila tus repos; el historial anterior está en Commits.':
+      'No activity with these filters yet. Changes, commits and agents show up here from the moment Faradia watches your repos; earlier history is under Commits.',
     '¿Cómo está organizado este repo y por dónde empiezo?': 'How is this repo organized and where do I start?',
     'Busca bugs probables en el código que más cambia': 'Look for likely bugs in the code that changes the most',
     'Revisa la seguridad de la autenticación': 'Review the security of the authentication',
     'Pregunta lo que quieras o encarga una tarea a los agentes. Escribe @ para llamar a un agente y / para usar una skill.':
       'Ask anything or give the agents a task. Type @ to call an agent and / to use a skill.',
-    'Skills de optimia y de ECC': 'optimia and ECC skills',
+    'Skills de Faradia y de ECC': 'faradia and ECC skills',
     'Skills propias de este repo (.claude/skills/)': "This repo's own skills (.claude/skills/)",
-    'Este repo no tiene skills propias. Las de optimia y las de ECC están arriba.':
-      "This repo has no skills of its own. optimia's and ECC's are above.",
+    'Este repo no tiene skills propias. Las de Faradia y las de ECC están arriba.':
+      "This repo has no skills of its own. faradia's and ECC's are above.",
     'Problemas detectados': 'Problems found',
     'Ningún problema registrado. Si algo falla, aparecerá aquí agrupado por tipo.':
       'No problems recorded. If something fails, it shows up here grouped by kind.',
@@ -451,7 +457,7 @@ window.OPTIMIA_I18N_EN = {
       'This repo has no remote: the task is merged locally or stays on its branch.',
     'Estudiando el repo. Cuando termine, revisa la memoria propuesta en su tarjeta y guárdala.':
       'Studying the repo. When it finishes, review the proposed memory on its card and save it.',
-    'Eventos del proyecto (.optimia/logs/optimia.log)': 'Project events (.optimia/logs/optimia.log)',
+    'Eventos del proyecto (.faradia/logs/faradia.log)': 'Project events (.faradia/logs/faradia.log)',
     'Exportar configuración…': 'Export configuration…',
     'Exportar conocimiento…': 'Export knowledge…',
     Falló: 'Failed',
@@ -523,8 +529,8 @@ window.OPTIMIA_I18N_EN = {
       'Tasks do not take images yet. Remove them or switch the mode to Chat.',
     'Lista de vigilancia guardada': 'Watchlist saved',
     'Listas para revisar': 'Ready for review',
-    'Lo borrado desde optimia se guarda aquí hasta que vacías la papelera.':
-      'What you delete from optimia stays here until you empty the trash.',
+    'Lo borrado desde Faradia se guarda aquí hasta que vacías la papelera.':
+      'What you delete from Faradia stays here until you empty the trash.',
     'Los agentes ejecutan sus comandos en el sandbox del sistema de Claude Code: solo pueden escribir dentro del worktree de su tarea. ':
       "Agents run their commands in Claude Code's OS sandbox: they can only write inside their task's worktree. ",
     'Los cambios se aplican a todos los repos, salvo a los que tengan su propio valor.':
@@ -657,14 +663,14 @@ window.OPTIMIA_I18N_EN = {
     'Se conserva tu versión (es más reciente)': 'Your version is kept (it is newer)',
     'Seguridad de los agentes': "Agents' security",
     'Sesión activa.': 'Signed in.',
-    'Si ya usas optimia en otro equipo, importa tu configuración: instrucciones, agentes, modelos y avisos para todos tus repos.':
-      'If you already use optimia on another machine, import your configuration: instructions, agents, models and signals for all your repos.',
+    'Si ya usas Faradia en otro equipo, importa tu configuración: instrucciones, agentes, modelos y avisos para todos tus repos.':
+      'If you already use Faradia on another machine, import your configuration: instructions, agents, models and signals for all your repos.',
     'Sin cambios': 'No changes',
     'Sin gh (o sin sesión): se sube la rama y se abre GitHub para crear la PR. Con «gh auth login» se crea desde aquí.':
       'Without gh (or signed out): the branch is pushed and GitHub opens to create the PR. With «gh auth login» it is created from here.',
     'Sin previsualización. Usa "Abrir con el sistema".': 'No preview. Use "Open with the system".',
-    'Sin sandbox, solo las reglas de optimia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).':
-      "Without the sandbox, only optimia's rules stop an agent, and a determined agent can get around them (with a script, for example).",
+    'Sin sandbox, solo las reglas de Faradia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).':
+      "Without the sandbox, only faradia's rules stop an agent, and a determined agent can get around them (with a script, for example).",
     'Sin stage': 'Not staged',
     'Sin tareas': 'No tasks',
     Sistema: 'System',
@@ -677,7 +683,7 @@ window.OPTIMIA_I18N_EN = {
     'Subir cambios': 'Push changes',
     'Subir cambios y actualizar PR': 'Push changes and update PR',
     'Subir rama y abrir PR': 'Push branch and open PR',
-    'Suelta tu configuración de optimia para importarla': 'Drop your optimia configuration to import it',
+    'Suelta tu configuración de Faradia para importarla': 'Drop your Faradia configuration to import it',
     Supervisión: 'Supervision',
     'También se aplican las instrucciones de todos los repos': 'The instructions for every repo apply too',
     'También se aplican las prohibiciones de todos los repos': 'The prohibitions for every repo apply too',
@@ -707,8 +713,8 @@ window.OPTIMIA_I18N_EN = {
     'Usar en todos los repos': 'Use in every repo',
     'Vacia la conversación actual': 'Clears the current conversation',
     'Vaciar papelera': 'Empty trash',
-    'Vacío = rama nueva optimia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama).':
-      'Empty = new branch optimia/task-xxxx. A new name creates that branch; an existing branch adds the task to it (several tasks on one branch).',
+    'Vacío = rama nueva faradia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama).':
+      'Empty = new branch faradia/task-xxxx. A new name creates that branch; an existing branch adds the task to it (several tasks on one branch).',
     'Ver PR': 'View PR',
     'Ver cambios': 'View changes',
     'Ver en vivo': 'Watch live',
@@ -815,7 +821,7 @@ window.OPTIMIA_I18N_EN = {
     ['^(\\d+) tareas$', '$1 tasks'],
     ['^Verificación: (.+)$', 'Verification: $1'],
     ['^(\\d+) pasos$', '$1 steps'],
-    ['^Novedades de optimia (.+)$', "What's new in optimia $1"],
+    ['^Novedades de Faradia (.+)$', "What's new in Faradia $1"],
     ['^Una tarea: (.+)$', 'A task: $1'],
     ['^El agente quiere usar (.+)$', 'The agent wants to use $1'],
     ['^Activas \\((\\d+)\\)$', 'On ($1)'],
@@ -830,8 +836,8 @@ window.OPTIMIA_I18N_EN = {
       "ECC's $1 agents are in Settings › Agents and are called with @ in the chat."
     ],
     [
-      '^Las skills de optimia y de ECC valen para todos los repos; las propias, solo para (.+)\\.$',
-      "optimia's and ECC's skills apply to every repo; the repo's own, only to $1."
+      '^Las skills de Faradia y de ECC valen para todos los repos; las propias, solo para (.+)\\.$',
+      "faradia's and ECC's skills apply to every repo; the repo's own, only to $1."
     ],
     [
       '^(\\d+) incidencias de (\\d+) tipos, en todos los repos\\. Se guardan solo en este equipo, sin claves ni el texto de tus mensajes\\.$',
@@ -933,8 +939,8 @@ window.OPTIMIA_I18N_EN = {
     ],
     ['^No se pudo sincronizar: (.+)$', 'Could not sync: $1'],
     [
-      '^la copia de (.+) no se pudo aplicar \\((.+)\\); quedó guardada en ~/\\.config/optimia/backups$',
-      'the copy from $1 could not be applied ($2); it was kept in ~/.config/optimia/backups'
+      '^la copia de (.+) no se pudo aplicar \\((.+)\\); quedó guardada en ~/\\.config/faradia/backups$',
+      'the copy from $1 could not be applied ($2); it was kept in ~/.config/faradia/backups'
     ],
     ['^No se pudo (.+): (.+)$', 'Could not $1: $2'],
     ['^(.+) \\(ECC\\)$', '$1 (ECC)'],
@@ -942,7 +948,7 @@ window.OPTIMIA_I18N_EN = {
     ['^y (\\d+) más: búscalos\\.$', 'and $1 more: search for them.'],
     ['^y (\\d+) más$', 'and $1 more'],
     ['^Hay una versión nueva: (.+)\\.$', 'A new version is out: $1.'],
-    ['^optimia (.+) está disponible$', 'optimia $1 is available'],
+    ['^Faradia (.+) está disponible$', 'faradia $1 is available'],
     ['^(.+) \\(no está en este workbench\\)$', '$1 (not in this workbench)'],
     ['^(\\d+) ficheros sin commitear y sin tocar desde hace (\\d+) min$', '$1 uncommitted files untouched for $2 min'],
     ['^Modelo de (.+)$', 'Model of $1'],

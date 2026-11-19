@@ -86,7 +86,7 @@ test('the repo\'s instructions and "Prohibido" rules are added to the global one
 
 test('an old settings.json (full copy) is migrated: only what differs from the defaults stays', (t) => {
   const repo = isolated(t);
-  fs.mkdirSync(path.join(repo, '.optimia'), { recursive: true });
+  fs.mkdirSync(path.join(repo, '.faradia'), { recursive: true });
   const legacy = store.defaultSettings();
   legacy.ui.theme = 'dark';
   legacy.ai.claude.model = 'opus';

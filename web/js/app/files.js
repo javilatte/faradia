@@ -1,6 +1,6 @@
 // Files: explorer of the workbench's repos, with a tree (that remembers what is collapsed), preview
 // (markdown, code, image, audio, video, pdf), copy path, a file clipboard and operations with Undo.
-// Deleting sends to optimia's trash, where it can be restored from.
+// Deleting sends to faradia's trash, where it can be restored from.
 
 import { api } from './api.js';
 import { h, clear, toast, formatBytes, timeAgo } from './dom.js';
@@ -21,7 +21,7 @@ let clipboard = null; // { projectId, path, mode: 'copy' | 'cut' }
 let refreshTimer = null;
 
 const raw = (p) => `/api/fs/raw?${new URLSearchParams({ projectId, path: p })}`;
-const storageKey = () => `optimia:tree:${projectId}`;
+const storageKey = () => `faradia:tree:${projectId}`;
 
 function saveExpanded() {
   try {
@@ -361,7 +361,7 @@ async function openTrash() {
           h(
             'p',
             { class: 'muted agents-help' },
-            'Lo borrado desde optimia se guarda aquí hasta que vacías la papelera.'
+            'Lo borrado desde Faradia se guarda aquí hasta que vacías la papelera.'
           ),
           list,
           items.length
@@ -471,7 +471,7 @@ registerView('files', {
 });
 
 // The repo opened in the sidebar is the one shown here as well.
-window.addEventListener('optimia:project-changed', (e) => {
+window.addEventListener('faradia:project-changed', (e) => {
   if (root && !root.hidden) setProject(e.detail.projectId).catch(() => {});
   else projectId = null;
 });

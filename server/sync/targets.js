@@ -7,7 +7,7 @@ const path = require('path');
 // between computers (Google Drive for desktop, Dropbox, iCloud, Syncthing…). read() returns the
 // parsed file or null when there is none yet.
 
-const FILE_NAME = 'optimia-sync.json';
+const FILE_NAME = 'faradia-sync.json';
 
 function folderTarget(dir) {
   const file = path.join(dir, FILE_NAME);
@@ -45,7 +45,7 @@ function checkFolder(dir) {
   try {
     fs.accessSync(dir, fs.constants.W_OK);
   } catch {
-    throw new Error('optimia no puede escribir en esa carpeta');
+    throw new Error('faradia no puede escribir en esa carpeta');
   }
   return path.resolve(dir);
 }

@@ -10,7 +10,7 @@ const catalog = require('../../server/agents/catalog');
 const { buildSessionOptions } = require('../../server/bridge/sessionOptions');
 const { defaultSettings } = require('../../server/store/settingsStore');
 
-// optimia's own skill first, then the bundled ones in alphabetical order (pstack's among them).
+// faradia's own skill first, then the bundled ones in alphabetical order (pstack's among them).
 const BUILTIN_NAMES = [
   'frontend-craft',
   'architect',
@@ -50,7 +50,7 @@ test('ECC agents join the catalog, off until needed, with their model and access
   assert.ok(agents.filter((a) => a.source === 'ecc').length >= 70);
 });
 
-test("optimia's own agents keep their id and stage, and follow their ECC counterpart's method", () => {
+test("faradia's own agents keep their id and stage, and follow their ECC counterpart's method", () => {
   const agents = catalog.loadAgents(null);
   const own = (id) => agents.find((a) => a.id === id);
   assert.equal(own('reviewer').name, 'Revisor');
@@ -91,7 +91,7 @@ test('enabled ECC skills reach every session through --add-dir; none, no folder'
   assert.ok(!fs.existsSync(path.join(dir, '.claude', 'commands')), 'rebuilt when the selection changes');
 });
 
-test("optimia's built-in skills always reach the sessions, unslop with its license", (t) => {
+test("faradia's built-in skills always reach the sessions, unslop with its license", (t) => {
   const data = mkTmpDir('builtin-data');
   const prev = process.env.XDG_DATA_HOME;
   process.env.XDG_DATA_HOME = data;
@@ -149,6 +149,9 @@ test('ponytail is bundled without its code markers', () => {
   const text = fs2.readFileSync(require('path').join(ponytail.dir, 'SKILL.md'), 'utf8');
   assert.match(text, /Leave no marks in the code/);
   assert.doesNotMatch(text, /gets a code comment in this form/);
-  assert.match(fs2.readFileSync(require('path').join(ponytail.dir, 'SOURCE.md'), 'utf8'), /Modified by optimia/);
+  assert.match(
+    fs2.readFileSync(require('path').join(ponytail.dir, 'SOURCE.md'), 'utf8'),
+    /Modified by (optimia|Faradia)/
+  );
   assert.ok(!builtinSkills().some((s) => s.name === 'ponytail-debt'));
 });

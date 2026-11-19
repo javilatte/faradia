@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { execFileSync, spawnSync } = require('child_process');
 const { dataDir } = require('../store/globalPaths');
 
-// Task worktrees live in optimia's data folder, not inside the repo: a worktree in the repo is a
+// Task worktrees live in faradia's data folder, not inside the repo: a worktree in the repo is a
 // second copy of the code that the repo's own tools find (`eslint .`, `prettier --check .`, test
 // runners, watchers, editors' search). Older tasks keep the path they were created with.
 function repoKey(projectRoot) {
@@ -75,7 +75,7 @@ function linkDependencies(projectRoot, dir) {
  */
 function createTaskWorktree(projectRoot, taskId, { baseRef, branchName, existingBranch = false } = {}) {
   const dir = worktreeDir(projectRoot, taskId);
-  const branch = branchName || `optimia/task-${taskId.slice(0, 8)}`;
+  const branch = branchName || `faradia/task-${taskId.slice(0, 8)}`;
   if (existingBranch) {
     // A branch shared by several tasks: the task continues where the previous one left it.
     fs.mkdirSync(path.dirname(dir), { recursive: true });
@@ -87,7 +87,7 @@ function createTaskWorktree(projectRoot, taskId, { baseRef, branchName, existing
   fs.mkdirSync(path.dirname(dir), { recursive: true });
   git(projectRoot, ['worktree', 'add', '-b', branch, dir, base]);
   linkDependencies(projectRoot, dir);
-  // The session's permissions come with --settings (.optimia/claude-settings-agents.json): nothing
+  // The session's permissions come with --settings (.faradia/claude-settings-agents.json): nothing
   // is copied into the worktree, where it would end up in the task's commit.
   return { dir, branch };
 }
@@ -216,6 +216,7 @@ function mergeTaskBranch(projectRoot, branch, targetBranch) {
   }
   const tmp = path.join(
     projectRoot,
+    '.faradia',
     '.optimia',
     'merge-tmp',
     `${targetBranch.replace(/[^A-Za-z0-9]/g, '-')}-${Date.now()}`
