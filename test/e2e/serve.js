@@ -47,9 +47,13 @@ for (const who of ['AUTHOR', 'COMMITTER']) {
 }
 // No network in tests: never ask the npm registry for updates.
 process.env.OPTIMIA_NO_UPDATE_CHECK = '1';
-// Skip the first-run welcome sheet (test/e2e/config.spec.js brings it back on purpose).
+// Skip the first-run welcome sheet (test/e2e/config.spec.js brings it back on purpose) and the
+// what's new tour of this version (test/e2e/tour.spec.js shows it on purpose).
 fs.mkdirSync(path.join(home, '.config', 'optimia'), { recursive: true });
-fs.writeFileSync(path.join(home, '.config', 'optimia', 'state.json'), JSON.stringify({ welcomed: 'e2e' }));
+fs.writeFileSync(
+  path.join(home, '.config', 'optimia', 'state.json'),
+  JSON.stringify({ welcomed: 'e2e', tourSeen: require('../../package.json').version })
+);
 // The fake claude has no sandbox to run in: agents run without it in the e2e tests (the sandbox
 // requirement itself is covered by unit tests).
 process.env.OPTIMIA_AGENT_SANDBOX = 'off';

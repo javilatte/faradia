@@ -6,7 +6,7 @@
 // the user approved from the task cards. It is fixed when the stage starts: an agent cannot grant
 // itself an exception by editing a file.
 
-const { checkCommand, denialMessage } = require('./policy');
+const { checkCommand, denialMessage, ownFilesOnly } = require('./policy');
 
 let input = '';
 process.stdin.on('data', (chunk) => (input += chunk));
@@ -25,7 +25,9 @@ process.stdin.on('end', () => {
     approved = [];
   }
   if (!Array.isArray(approved)) approved = [];
-  const rule = checkCommand(call.tool_input?.command, approved);
+  // The agent may delete what it created itself in its worktree (never what git tracks).
+  const cwd = call.cwd || process.cwd();
+  const rule = checkCommand(call.tool_input?.command, approved, { canDelete: (seg) => ownFilesOnly(seg, cwd) });
   if (!rule) return;
   process.stdout.write(
     JSON.stringify({

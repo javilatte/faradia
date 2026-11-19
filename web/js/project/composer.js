@@ -148,6 +148,18 @@ chatKindSelect.addEventListener('change', () => {
 syncTaskControls();
 loadTaskKinds().catch(() => {});
 
+// A card title from the request: its first sentence, cut at a word (never mid-word) with "…".
+function shortTaskTitle(text, max = 70) {
+  const first = text.trim().split('\n')[0];
+  // The first sentence when it says enough; never cut at ":" ("Bug: el login falla…", "fix: …").
+  const end = first.match(/^.+?[.!?](\s|$)/)?.[0].trim();
+  const sentence = (end && end.split(/\s+/).length >= 3 ? end : first).trim().replace(/[.:;]$/, '');
+  if (sentence.length <= max) return sentence;
+  const cut = sentence.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[,\s]+$/, '')}…`;
+}
+
 async function createTaskFromChat(kind, text) {
   if (!currentChatId) return;
   if (!text) return;
@@ -155,7 +167,7 @@ async function createTaskFromChat(kind, text) {
     appendMessage('system', 'Las tareas todavía no admiten imágenes. Quítalas o cambia el modo a Chat.');
     return;
   }
-  const title = text.split('\n')[0].slice(0, 80);
+  const title = shortTaskTitle(text);
   input.value = '';
   input.style.height = 'auto';
   const res = await fetch(apiPath('/api/tasks'), {
@@ -200,7 +212,7 @@ function notifyTaskInChat(task, prevStatus) {
       appendMessage('system', `"${task.title}" necesita tu respuesta. Contéstala en su tarjeta del panel de agentes.`);
     }
   } else if (task.status === 'ready_to_test') {
-    appendMessage('system', `"${task.title}" está lista para revisar y ship en el panel de agentes.`);
+    appendMessage('system', `"${task.title}" está lista para revisar en el panel de agentes.`);
   } else if (task.status === 'pending' && task.error) {
     appendMessage('system', `"${task.title}" se detuvo: ${task.error}`);
   }
@@ -277,6 +289,7 @@ async function deleteChat(chatId) {
 // like" — recovering from a refresh is just feeding history through it.
 function replayChat(chat) {
   chatLog.innerHTML = '';
+  clearPermissionCards();
   currentAssistantBubble = null;
   for (const m of chat.messages) {
     if (m.role === 'user') {
@@ -286,6 +299,39 @@ function replayChat(chat) {
       handleClaudeEvent(m.event);
     }
   }
+  if (!chat.messages.length) renderChatEmpty();
+}
+
+// A new chat: what can be asked here, with examples that fill the message box.
+const CHAT_EXAMPLES = [
+  '¿Cómo está organizado este repo y por dónde empiezo?',
+  'Busca bugs probables en el código que más cambia',
+  'Revisa la seguridad de la autenticación'
+];
+function renderChatEmpty() {
+  const box = document.createElement('div');
+  box.className = 'chat-empty';
+  const title = document.createElement('h2');
+  title.textContent = '¿En qué trabajamos hoy?';
+  const hint = document.createElement('p');
+  hint.textContent =
+    'Pregunta lo que quieras o encarga una tarea a los agentes. Escribe @ para llamar a un agente y / para usar una skill.';
+  const list = document.createElement('div');
+  list.className = 'chat-examples';
+  for (const text of CHAT_EXAMPLES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chat-example';
+    b.textContent = text;
+    b.addEventListener('click', () => {
+      input.value = text;
+      input.dispatchEvent(new Event('input'));
+      input.focus();
+    });
+    list.appendChild(b);
+  }
+  box.append(title, hint, list);
+  chatLog.appendChild(box);
 }
 
 async function selectChat(chatId) {

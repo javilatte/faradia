@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { recordIssue } = require('../feedback/issues');
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -35,7 +36,11 @@ function createLogger(projectRoot) {
         /* disk full or permissions: the log never brings the server down */
       }
     }
-    if (level === 'warn' || level === 'error') process.stderr.write(line + '\n');
+    if (level === 'warn' || level === 'error') {
+      process.stderr.write(line + '\n');
+      // Also to the problem report shared by all repos (feedback/issues.js).
+      recordIssue({ level, event, data, project: projectRoot ? path.basename(projectRoot) : '' });
+    }
   }
 
   // Newest entries first, reading the current file and, if needed, the rotated one.

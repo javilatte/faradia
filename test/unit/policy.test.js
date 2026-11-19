@@ -61,8 +61,9 @@ test('the policy hook denies, and only lets through approved commands from the e
       encoding: 'utf8',
       env: { ...process.env, OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approved || []) }
     }).stdout;
-  assert.equal(JSON.parse(run('rm -rf build')).hookSpecificOutput.permissionDecision, 'deny');
-  assert.equal(run('rm -rf build', ['rm -rf build']), '');
+  // `server` is tracked by git in this repo: deleting it is blocked unless approved.
+  assert.equal(JSON.parse(run('rm -rf server')).hookSpecificOutput.permissionDecision, 'deny');
+  assert.equal(run('rm -rf server', ['rm -rf server']), '');
   assert.equal(run('npm test'), '');
   assert.equal(hookWorks(policyHookCommand()), true);
   assert.equal(hookWorks('"/nonexistent/node" "/nonexistent/hook.js"'), false, 'a broken hook is detected');
@@ -82,4 +83,63 @@ test('sandbox: required by default, explained when its tools are missing', () =>
   assert.equal(sandboxProblem('off', missing), null);
   assert.equal(sandboxSettings('off'), undefined);
   assert.equal(sandboxSettings('required').failIfUnavailable, true);
+  // Package registries, so agents can install dependencies;
+  // nothing else on the network.
+  assert.ok(sandboxSettings('required').network.allowedDomains.includes('registry.npmjs.org'));
+  assert.ok(sandboxSettings('required').network.allowedDomains.includes('pypi.org'));
+  assert.ok(!sandboxSettings('required').network.allowedDomains.includes('github.com'));
+  // Caches go to the agents' own folder, never to the user's (~/.npm, ~/.cache…), which the user's
+  // tools run code from outside the sandbox.
+  const { agentCacheDir, agentCacheEnv } = require('../../server/bridge/sandbox');
+  assert.deepEqual(sandboxSettings('required').filesystem.allowWrite, [agentCacheDir()]);
+  const env = agentCacheEnv();
+  for (const k of ['XDG_CACHE_HOME', 'npm_config_cache', 'CARGO_HOME', 'GOMODCACHE', 'YARN_CACHE_FOLDER']) {
+    assert.ok(env[k].startsWith(agentCacheDir()), k);
+  }
+  assert.equal(sandboxSettings('required', { registries: false }).network, undefined);
+});
+
+test('an agent may delete what it created in its worktree, never tracked files or through links', (t) => {
+  const fs = require('fs');
+  const path = require('path');
+  const { execFileSync } = require('child_process');
+  const { ownFilesOnly } = require('../../server/bridge/policy');
+  const { mkTmpDir, rmTmpDir } = require('./helpers');
+  const repo = mkTmpDir('policy-own');
+  const outside = mkTmpDir('policy-outside');
+  t.after(() => {
+    rmTmpDir(repo);
+    rmTmpDir(outside);
+  });
+  const git = (...a) => execFileSync('git', a, { cwd: repo, stdio: 'ignore' });
+  git('init', '-q');
+  fs.writeFileSync(path.join(repo, 'package.json'), '{}');
+  git('add', '.');
+  git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init');
+  fs.writeFileSync(path.join(repo, 'package-lock.json'), '{}');
+  fs.mkdirSync(path.join(repo, 'build'));
+  fs.writeFileSync(path.join(repo, 'build', 'a.js'), '');
+  fs.mkdirSync(path.join(outside, 'deps'));
+  fs.symlinkSync(path.join(outside, 'deps'), path.join(repo, 'node_modules'));
+
+  assert.ok(ownFilesOnly('rm package-lock.json', repo), 'a file the agent created');
+  assert.ok(ownFilesOnly('rm -rf build', repo), 'a folder the agent created');
+  assert.ok(ownFilesOnly('rm -f gone.txt', repo), 'already gone');
+  assert.ok(!ownFilesOnly('rm package.json', repo), 'tracked by git');
+  assert.ok(!ownFilesOnly('rm package-lock.json package.json', repo), 'one tracked target is enough');
+  assert.ok(!ownFilesOnly('rm -rf node_modules', repo), 'a symbolic link');
+  assert.ok(!ownFilesOnly('rm -rf node_modules/', repo), 'through a link');
+  assert.ok(!ownFilesOnly('rm -rf ../x', repo), 'outside the worktree');
+  assert.ok(!ownFilesOnly('rm -rf .', repo), 'the worktree itself');
+  assert.ok(!ownFilesOnly('rm *.json', repo), 'globs cannot be checked');
+  assert.ok(!ownFilesOnly('rm "$X"', repo), 'variables cannot be checked');
+
+  const { checkCommand } = require('../../server/bridge/policy');
+  const canDelete = (seg) => ownFilesOnly(seg, repo);
+  assert.equal(checkCommand('rm package-lock.json && git status', [], { canDelete }), null);
+  assert.equal(checkCommand('rm package.json', [], { canDelete }).id, 'delete');
+  // Paths are checked from the worktree: a command that moves first is not checked, it is blocked.
+  assert.equal(checkCommand('cd .. && rm -rf other-repo', [], { canDelete }).id, 'delete');
+  assert.equal(checkCommand('cd build && rm package-lock.json', [], { canDelete }).id, 'delete');
+  assert.ok(!ownFilesOnly('xargs rm package-lock.json', repo), 'only a plain rm');
 });

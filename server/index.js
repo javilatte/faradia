@@ -17,6 +17,8 @@ const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRout
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
 const { handleFsRoutes } = require('./http/fsRoutes');
 const { handleConfigRoutes } = require('./http/configRoutes');
+const { handleSyncRoutes, isConfigWrite } = require('./http/syncRoutes');
+const { createSync } = require('./sync/engine');
 const { MonitorService } = require('./monitor/monitorService');
 const { Timeline } = require('./monitor/timeline');
 const { SignalEngine } = require('./monitor/signals');
@@ -35,6 +37,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
   const sessionToken = token || process.env.OPTIMIA_TOKEN || security.createToken();
   const server = http.createServer();
   const wss = new WebSocketServer({ noServer: true });
+  // Sync of the global configuration between the user's computers (off until they turn it on).
+  const sync = createSync({
+    log: (event, data) => registry?.runtime(defaultProjectId)?.log.info(event, data),
+    onChange: (status) => sendToClients({ type: 'sync_status', status })
+  });
   let registry = null;
   let monitor = null;
   let timeline = null;
@@ -183,9 +190,16 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       url.pathname.startsWith('/api/config/') ||
       url.pathname.startsWith('/api/knowledge/') ||
       url.pathname === '/api/ecc' ||
+      url.pathname === '/api/issues' ||
+      url.pathname === '/api/issues/export' ||
       url.pathname === '/api/update'
     ) {
       const handled = await handleConfigRoutes(req, res, url);
+      if (handled !== null) return handled;
+    }
+
+    if (url.pathname === '/api/sync' || url.pathname.startsWith('/api/sync/')) {
+      const handled = await handleSyncRoutes(req, res, url, { sync });
       if (handled !== null) return handled;
     }
 
@@ -211,6 +225,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     if (url.pathname.startsWith('/api/')) {
       const problem = security.checkApiRequest(req, { token: sessionToken, port: actualPort });
       if (problem) return sendJson(res, problem.status, { error: problem.error });
+      if (isConfigWrite(req, url.pathname)) res.once('finish', () => res.statusCode < 400 && sync.changed());
       return handleApi(req, res, url).catch((err) => {
         registry.runtime(defaultProjectId)?.log.error('http.unhandled', { path: url.pathname, error: err.message });
         if (!res.headersSent) sendJson(res, 500, { error: err.message });
@@ -350,7 +365,9 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       rt.log.info('server.start', { url, port: actualPort, projectRoot });
       if (open) openInBrowser(openUrl);
       startMonitor();
+      sync.start();
       server.on('close', () => {
+        sync.stop();
         clearInterval(orphanTimer);
         timeline?.stop();
         monitor?.stop();

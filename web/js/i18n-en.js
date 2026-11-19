@@ -5,6 +5,59 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'Siguió con otro modelo (Claude se quedó sin uso)': 'Went on with another model (Claude ran out of usage)',
+    'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups':
+      "another computer's copy could not be applied; it was kept in ~/.config/optimia/backups",
+    'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing… En los demás equipos elige la misma.':
+      'A folder you already sync between your computers: Google Drive for desktop, Dropbox, iCloud, Syncthing… Pick the same one on your other computers.',
+    'Cifra la copia en este equipo antes de guardarla en la carpeta. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).':
+      'It encrypts the copy on this computer before it is written to the folder. Use the same one on all your computers. If you forget it, the copy cannot be recovered (your local configuration is not lost).',
+    'Claude Code decide qué es seguro (leer, buscar, cambios dentro del repo) y lo hace sin preguntar; lo demás te lo pide con una tarjeta en el chat. Con un modelo local siempre se pregunta.':
+      'Claude Code decides what is safe (reading, searching, changes inside the repo) and does it without asking; anything else is asked with a card in the chat. With a local model it always asks.',
+    Activadas: 'On',
+    'Tras una pausa al escribir se propone una skill, un agente o un tipo de tarea; nunca se aplica solo. Las responde tu modelo local si contesta rápido y, si no, Claude Haiku con poco esfuerzo.':
+      'When you pause typing, a skill, an agent or a task type is proposed; it is never applied on its own. Your local model answers when it is fast, otherwise Claude Haiku with low effort.',
+    'Sin cortes si Claude se agota': 'No stops when Claude runs out',
+    'Si Claude se queda sin uso, el chat y las tareas siguen con tu modelo local en la misma sesión, con todo su contexto, y vuelven a Claude cuando se renueva.':
+      'If Claude runs out of usage, the chat and the tasks go on with your local model in the same session, with all their context, and go back to Claude when it resets.',
+    'Configurar la IA local…': 'Set up local AI…',
+    'Configura un modelo local en Ajustes › IA local para seguir sin esperar.':
+      'Set up a local model in Settings › Local AI to go on without waiting.',
+    'Con una basta. Si Claude se queda sin uso, optimia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
+      'One is enough. If Claude runs out of usage, optimia goes on with your local model without losing the conversation, and goes back to Claude when it resets.',
+    'Se abrió una terminal con «claude auth login». Completa el inicio de sesión ahí y pulsa Actualizar.':
+      'A terminal opened with “claude auth login”. Finish signing in there and click Refresh.',
+    'Tu configuración en todos tus equipos': 'Your configuration on all your computers',
+    'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de guardarla.':
+      'Turn it on in Settings › Sync with a folder you already sync. It is encrypted on your computer with a passphrase only you know before it is saved.',
+    'Las tareas terminadas quedan en el Archivo del tablero, con su resultado, sus agentes y su informe. Tú decides cuánto se guardan.':
+      'Finished tasks stay in the board’s Archive, with how they ended, their agents and their report. You choose how long they are kept.',
+    'Activar sincronización…': 'Turn on sync…',
+    'Igual en todos los repos y en todos tus equipos.': 'The same in every repo and on all your computers.',
+    Sincronización: 'Sync',
+    'Tu configuración igual en todos tus equipos: ajustes, claves de IA, agentes, etapas, instrucciones y avisos. Los repos y las tareas se quedan en cada equipo.':
+      'Your configuration, the same on all your computers: settings, AI keys, agents, stages, instructions and notices. Repos and tasks stay on each computer.',
+    'Elegir…': 'Choose…',
+    'Frase de paso': 'Passphrase',
+    'Al menos 8 caracteres': 'At least 8 characters',
+    'Activando…': 'Turning on…',
+    'Este equipo': 'This computer',
+    'Última comprobación': 'Last check',
+    'Último cambio': 'Last change',
+    nunca: 'never',
+    'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/optimia/backups.':
+      'It checks every few minutes and right after each change. If two computers change at once the newest wins, and the other is kept in ~/.config/optimia/backups.',
+    'Sincronizar ahora': 'Sync now',
+    'Sincronizando…': 'Syncing…',
+    Desactivar: 'Turn off',
+    'Desactivar y borrar la copia…': 'Turn off and delete the copy…',
+    '¿Borrar la copia? Pulsa otra vez': 'Delete the copy? Click again',
+    'se subieron los cambios de este equipo': "this computer's changes were uploaded",
+    'se aplicaron los cambios de otro equipo': "another computer's changes were applied",
+    'había cambios en los dos lados: se quedó la versión más reciente (la de otro equipo)':
+      "both sides had changes: the newest was kept (another computer's)",
+    'había cambios en los dos lados: se quedó la versión más reciente (la de este equipo)':
+      "both sides had changes: the newest was kept (this computer's)",
     ver: 'view',
     ahora: 'now',
     Abrir: 'Open',
@@ -81,7 +134,6 @@ window.OPTIMIA_I18N_EN = {
     'Agente desactivado: la etapa se salta': 'Agent off: the stage is skipped',
     'Agente duplicado': 'Agent duplicated',
     'Agente propio': 'Custom agent',
-    Agentes: 'Agents',
     'Agentes de ECC': 'ECC agents',
     'Agentes nuevos': 'New agents',
     'Agentes propios': 'Your agents',
@@ -220,6 +272,134 @@ window.OPTIMIA_I18N_EN = {
     'Espera a que terminen de subirse los adjuntos.': 'Wait for the attachments to finish uploading.',
     'Esperando tu respuesta': 'Waiting for your answer',
     'Esta instalación no incluye ECC.': 'This install does not include ECC.',
+    'Siempre activas:': 'Always on:',
+    '! Sin verificar: no se pudieron ejecutar las comprobaciones en este equipo':
+      '! Not verified: the checks could not run on this computer',
+    'Sin verificar': 'Not verified',
+    'Con fallos': 'With failures',
+    'Puedes ir redactando la PR; se crea después del commit.':
+      'You can draft the PR now; it is created after the commit.',
+    'Conectarse a internet fuera de los registros de paquetes': 'Connect to the internet outside package registries',
+    'Dejar que instalen dependencias: acceso solo a los registros de paquetes (npm, PyPI, crates.io, Go, RubyGems, Maven)':
+      'Let them install dependencies: access only to package registries (npm, PyPI, crates.io, Go, RubyGems, Maven)',
+    Archivo: 'Archive',
+    'Tareas terminadas': 'Finished tasks',
+    'Archivo de tareas': 'Task archive',
+    'Buscar en el archivo': 'Search the archive',
+    'Borrar tras': 'Delete after',
+    'Borrar del archivo tras': 'Delete from the archive after',
+    'Vaciar archivo': 'Empty archive',
+    '¿Vaciar? Pulsa otra vez': 'Empty it? Click again',
+    'Borrar del archivo': 'Delete from the archive',
+    Listo: 'Done',
+    '1 mes': '1 month',
+    '15 días': '15 days',
+    '7 días': '7 days',
+    '1 día': '1 day',
+    Nunca: 'Never',
+    '1 tarea': '1 task',
+    'Pull request': 'Pull request',
+    Fusionada: 'Merged',
+    Informe: 'Report',
+    Descartada: 'Discarded',
+    Creada: 'Created',
+    Terminada: 'Finished',
+    Agentes: 'Agents',
+    'Ninguna tarea coincide con la búsqueda.': 'No task matches the search.',
+    'Aún no hay tareas archivadas. Aparecen aquí al archivarlas desde el tablero, con su resultado y su informe.':
+      'No archived tasks yet. They show up here when archived from the board, with their outcome and report.',
+    '1 paso': '1 step',
+    'Novedades…': "What's new…",
+    Anterior: 'Back',
+    Siguiente: 'Next',
+    Empezar: 'Get started',
+    Saltar: 'Skip',
+    'Así funciona optimia': 'How optimia works',
+    'Sin sesión': 'Signed out',
+    'Iniciar sesión…': 'Sign in…',
+    'Conectar…': 'Connect…',
+    'Detectar…': 'Detect…',
+    'Modelo local': 'Local model',
+    'Ollama o LM Studio': 'Ollama or LM Studio',
+    'Conecta una IA y listo': 'Connect an AI and you are set',
+    'Pide en el chat': 'Ask in the chat',
+    'Mientras escribes, optimia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.':
+      'As you type, optimia suggests the skill, agent or task type that fits. Tab to use it. @ calls an agent and / a skill.',
+    'Los agentes trabajan aparte': 'Agents work on the side',
+    'Cada tarea va en su propio worktree: un agente planifica, otro implementa y otro verifica. Tu rama no se toca hasta que tú haces el commit o la PR.':
+      'Each task runs in its own worktree: one agent plans, another implements and another verifies. Your branch is untouched until you make the commit or the PR.',
+    'Lo arriesgado lo decides tú': 'You decide what is risky',
+    'Lo seguro se hace sin preguntar. Lo demás aparece como una tarjeta en el chat: Permitir, Permitir siempre o Denegar.':
+      'Safe things happen without asking. Anything else shows up as a card in the chat: Allow, Always allow or Deny.',
+    'Una wiki que se escribe sola': 'A wiki that writes itself',
+    'En Wiki, «Generar desde el repo» documenta el proyecto, y tras cada tarea los agentes apuntan lo que aprendieron. Todo se ajusta en Ajustes cuando quieras.':
+      'In Wiki, "Generate from the repo" documents the project, and after each task the agents write down what they learned. Everything can be adjusted in Settings whenever you want.',
+    'Sugerencias mientras escribes': 'Suggestions while you type',
+    'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.':
+      'optimia proposes the skill, agent or task type that fits your message. Tab to accept it, Esc to dismiss it.',
+    'Permisos en el chat, no en la terminal': 'Permissions in the chat, not in the terminal',
+    'Cuando el agente necesita permiso, lo pide con una tarjeta en la conversación. En modo automático solo pregunta lo arriesgado.':
+      'When the agent needs permission, it asks with a card in the conversation. In automatic mode it only asks what is risky.',
+    'Skills de serie': 'Skills built in',
+    'ponytail (la solución más simple que funcione), frontend-craft, unslop, security-audit y plan-optimizer vienen activadas para el chat y los agentes. Las encontrarás en Ajustes › Skills.':
+      'ponytail (the simplest solution that works), frontend-craft, unslop, security-audit and plan-optimizer come on for the chat and the agents. You will find them in Settings › Skills.',
+    'Permisos en el chat': 'Permissions in the chat',
+    'Automático: pregunta solo lo arriesgado': 'Automatic: asks only what is risky',
+    'Preguntar todo salvo lo de solo lectura': 'Ask everything except read-only',
+    'Se aplica desde el siguiente mensaje': 'Applies from the next message',
+    'Cada acción que necesite permiso aparece como una tarjeta en el chat, salvo los comandos que solo leen (git log, ls, grep…).':
+      'Every action that needs permission shows up as a card in the chat, except commands that only read (git log, ls, grep…).',
+    'Permiso pendiente': 'Pending permission',
+    Denegar: 'Deny',
+    'Permitir siempre en este repo': 'Always allow in this repo',
+    Permitido: 'Allowed',
+    'Permitido siempre en este repo': 'Always allowed in this repo',
+    Denegado: 'Denied',
+    'Ya no está pendiente': 'No longer pending',
+    'El agente quiere ejecutar un comando': 'The agent wants to run a command',
+    'El agente quiere editar un fichero': 'The agent wants to edit a file',
+    'El agente quiere crear o reescribir un fichero': 'The agent wants to create or rewrite a file',
+    'El agente quiere editar un notebook': 'The agent wants to edit a notebook',
+    'El agente quiere abrir una página web': 'The agent wants to open a web page',
+    'El agente quiere buscar en la web': 'The agent wants to search the web',
+    'De optimia': 'From optimia',
+    'De ECC': 'From ECC',
+    Siempre: 'Always',
+    Todas: 'All',
+    'Siempre disponibles en el chat y para los agentes. Claude las usa cuando encajan con lo que pides, o las llamas con /nombre.':
+      'Always available in the chat and to the agents. Claude uses them when they fit what you ask, or you call them with /name.',
+    'Buscar (react, docker, security…)': 'Search (react, docker, security…)',
+    'Ninguna skill coincide con la búsqueda.': 'No skill matches the search.',
+    '/code-review, /tdd, /plan… en el chat y para los agentes.':
+      '/code-review, /tdd, /plan… in the chat and for the agents.',
+    'Restaurar la selección recomendada': 'Restore the recommended selection',
+    'Desactivar todas': 'Turn all off',
+    '¿En qué trabajamos hoy?': 'What are we working on today?',
+    'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que optimia vigila tus repos; el historial anterior está en Commits.':
+      'No activity with these filters yet. Changes, commits and agents show up here from the moment optimia watches your repos; earlier history is under Commits.',
+    '¿Cómo está organizado este repo y por dónde empiezo?': 'How is this repo organized and where do I start?',
+    'Busca bugs probables en el código que más cambia': 'Look for likely bugs in the code that changes the most',
+    'Revisa la seguridad de la autenticación': 'Review the security of the authentication',
+    'Pregunta lo que quieras o encarga una tarea a los agentes. Escribe @ para llamar a un agente y / para usar una skill.':
+      'Ask anything or give the agents a task. Type @ to call an agent and / to use a skill.',
+    'Skills de optimia y de ECC': 'optimia and ECC skills',
+    'Skills propias de este repo (.claude/skills/)': "This repo's own skills (.claude/skills/)",
+    'Este repo no tiene skills propias. Las de optimia y las de ECC están arriba.':
+      "This repo has no skills of its own. optimia's and ECC's are above.",
+    'Problemas detectados': 'Problems found',
+    'Ningún problema registrado. Si algo falla, aparecerá aquí agrupado por tipo.':
+      'No problems recorded. If something fails, it shows up here grouped by kind.',
+    'Exportar informe…': 'Export report…',
+    Vaciar: 'Clear',
+    Comprobar: 'Check',
+    'Elige el modelo': 'Pick the model',
+    'Quitar la clave': 'Remove the key',
+    Desactivadas: 'Off',
+    'Tras una pausa al escribir, un modelo rápido propone una skill, un agente o un tipo de tarea. Nunca se aplica solo.':
+      'When you pause typing, a fast model proposes a skill, an agent or a task type. It is never applied on its own.',
+    'Sugerencias para este mensaje': 'Suggestions for this message',
+    'Descartar sugerencias': 'Dismiss suggestions',
+    'Descartar (Esc)': 'Dismiss (Esc)',
     'Estado de la cuenta y la configuración': 'Account and configuration status',
     'Este navegador no admite notificaciones.': 'This browser does not support notifications.',
     'Este repo aún no tiene memoria': 'This repo has no memory yet',
@@ -447,7 +627,7 @@ window.OPTIMIA_I18N_EN = {
     'Skills de ECC': 'ECC skills',
     'Skills instaladas (.claude/skills/)': 'Installed skills (.claude/skills/)',
     Solo: 'Only',
-    'Solo commit': 'Commit only',
+    'Dejar en su rama': 'Leave on its branch',
     'Solo hora': 'Time only',
     'Solo lectura': 'Read only',
     'Subir cambios': 'Push changes',
@@ -562,6 +742,53 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^Usar /(.+)$', 'Use /$1'],
+    ['^Encargar a @(.+)$', 'Hand to @$1'],
+    ['^Tarea: (.+)$', 'Task: $1'],
+    [
+      '^Quería conectarse a internet fuera de los registros de paquetes \\(etapa (.+)\\)\\.$',
+      'Wanted to connect to the internet outside package registries (stage $1).'
+    ],
+    [
+      '^Tarea terminada: su commit queda en la rama (.+), lista para fusionarla cuando quieras\\.$',
+      'Task finished: its commit stays on branch $1, ready to merge whenever you want.'
+    ],
+    [
+      '^Lleva el commit a (.+) en este equipo y termina la tarea\\. Sin PR ni push\\.$',
+      'Brings the commit into $1 on this computer and finishes the task. No PR, no push.'
+    ],
+    ['^(\\d+) tareas$', '$1 tasks'],
+    ['^Verificación: (.+)$', 'Verification: $1'],
+    ['^(\\d+) pasos$', '$1 steps'],
+    ['^Novedades de optimia (.+)$', "What's new in optimia $1"],
+    ['^Una tarea: (.+)$', 'A task: $1'],
+    ['^El agente quiere usar (.+)$', 'The agent wants to use $1'],
+    ['^Activas \\((\\d+)\\)$', 'On ($1)'],
+    ['^Comandos de ECC \\((\\d+)\\)$', 'ECC commands ($1)'],
+    ['^Activar /(.+)$', 'Turn on /$1'],
+    [
+      '^(\\d+) skills de Everything Claude Code \\(licencia MIT\\)\\. Cada skill activa añade su descripción a cada sesión: ahora unos (\\d+) tokens\\.$',
+      '$1 skills from Everything Claude Code (MIT licence). Each skill that is on adds its description to every session: about $2 tokens now.'
+    ],
+    [
+      '^Los (\\d+) agentes de ECC están en Ajustes › Agentes y se llaman con @ en el chat\\.$',
+      "ECC's $1 agents are in Settings › Agents and are called with @ in the chat."
+    ],
+    [
+      '^Las skills de optimia y de ECC valen para todos los repos; las propias, solo para (.+)\\.$',
+      "optimia's and ECC's skills apply to every repo; the repo's own, only to $1."
+    ],
+    [
+      '^(\\d+) incidencias de (\\d+) tipos, en todos los repos\\. Se guardan solo en este equipo, sin claves ni el texto de tus mensajes\\.$',
+      '$1 issues of $2 kinds, across all repos. Kept only on this computer, without keys or the text of your messages.'
+    ],
+    [
+      '^Sugerencias del chat: (\\d+) aceptadas y (\\d+) descartadas\\.$',
+      'Chat suggestions: $1 accepted and $2 dismissed.'
+    ],
+    ['^Solo de este repo \\((.+)\\)\\.$', 'Only this repo ($1).'],
+    ['^(.+) · recomendado$', '$1 · recommended'],
+    ['^(\\d+) modelos disponibles con tu clave\\.$', '$1 models available with your key.'],
     ['^(\\d+) ficheros?$', '$1 files'],
     ['^(\\d+) ficheros? · (.+)$', '$1 files · $2'],
     ['^Un agente ha cambiado (\\d+) ficheros? de test$', 'An agent changed $1 test files'],
@@ -576,10 +803,7 @@ window.OPTIMIA_I18N_EN = {
     ['^→ lanzando agente: (.+)$', '→ launching agent: $1'],
     ['^→ usando herramienta: (.+)$', '→ using tool: $1'],
     ['^No se pudo ([^:]+): (.+)$', 'Could not $1: $2'],
-    [
-      '^"(.+)" está lista para revisar y ship en el panel de agentes\\.$',
-      '"$1" is ready to review and ship in the agents panel.'
-    ],
+    ['^"(.+)" está lista para revisar en el panel de agentes\\.$', '"$1" is ready to review in the agents panel.'],
     ['^(.+) · usando (.+)$', '$1 · using $2'],
     ['^(.+) · iniciando\\.\\.\\.$', '$1 · starting…'],
     ['^(.+) · escribiendo respuesta\\.\\.\\.$', '$1 · writing the answer…'],
@@ -651,6 +875,11 @@ window.OPTIMIA_I18N_EN = {
     [
       '^Effort "(.+)" (en todos los repos|solo en este repo), desde la próxima sesión\\.$',
       'Effort "$1" $2, from the next session.'
+    ],
+    ['^No se pudo sincronizar: (.+)$', 'Could not sync: $1'],
+    [
+      '^la copia de (.+) no se pudo aplicar \\((.+)\\); quedó guardada en ~/\\.config/optimia/backups$',
+      'the copy from $1 could not be applied ($2); it was kept in ~/.config/optimia/backups'
     ],
     ['^No se pudo (.+): (.+)$', 'Could not $1: $2'],
     ['^(.+) \\(ECC\\)$', '$1 (ECC)'],

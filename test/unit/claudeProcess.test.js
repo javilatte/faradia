@@ -229,3 +229,43 @@ test('constructor: strictMcpConfig adds --strict-mcp-config and loads the extra 
   const idx = args.indexOf('--mcp-config');
   assert.deepEqual(args.slice(idx + 1, idx + 3), ['/tmp/optimia-mcp.json', '/tmp/repo/.mcp.json']);
 });
+
+test('permission requests from the CLI are emitted and answered on stdin (allow, always, deny)', () => {
+  const session = makeBareSession();
+  session.pendingPermissions = new Map();
+  const written = [];
+  session.proc = { stdin: { write: (line) => written.push(JSON.parse(line)) } };
+  const asked = [];
+  session.on('permission_request', (r) => asked.push(r));
+  const events = [];
+  session.on('event', (e) => events.push(e));
+  const request = (id, command) =>
+    JSON.stringify({
+      type: 'control_request',
+      request_id: id,
+      request: {
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
+        input: { command },
+        permission_suggestions: [
+          { type: 'addRules', behavior: 'allow', rules: [{ toolName: 'Bash' }], destination: 'localSettings' }
+        ]
+      }
+    }) + '\n';
+  session._onStdout(
+    Buffer.from(request('r1', 'npm test') + request('r2', 'npm run build') + request('r3', 'rm -rf x'))
+  );
+  assert.equal(events.length, 0, 'control messages are not chat events');
+  assert.deepEqual(
+    asked.map((r) => r.input.command),
+    ['npm test', 'npm run build', 'rm -rf x']
+  );
+  assert.ok(session.respondPermission('r1', 'allow'));
+  assert.ok(session.respondPermission('r2', 'always'));
+  assert.ok(session.respondPermission('r3', 'deny'));
+  assert.equal(session.respondPermission('r3', 'deny'), false, 'answered once');
+  assert.deepEqual(written[0].response.response, { behavior: 'allow', updatedInput: { command: 'npm test' } });
+  assert.equal(written[1].response.response.updatedPermissions[0].destination, 'session');
+  assert.equal(written[2].response.response.behavior, 'deny');
+  assert.equal(written[2].response.request_id, 'r3');
+});

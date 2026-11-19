@@ -12,6 +12,7 @@ const {
   promoteToGlobal
 } = require('../store/settingsStore');
 const { loadTasks, addTask, updateTask, updateTaskPhase, deleteTask } = require('../store/taskStore');
+const { archiveTask, listArchive, removeArchived, clearArchive } = require('../store/taskArchive');
 const { listChats, loadChat, createChat, updateChatMeta, deleteChat } = require('../store/chatStore');
 const { checkClaudeCapabilities } = require('../bridge/claudeVersion');
 const { syncClaudeSettings } = require('../bridge/claudeSettingsSync');
@@ -36,6 +37,9 @@ const { listSkills, createSkill } = require('../bridge/skills');
 const { getClaudeAuthStatus, openAuthLoginInTerminal } = require('../bridge/claudeAuth');
 const { listModelsAt, detectLocalServers } = require('../bridge/localAi');
 const { getAiAssistSuggestion } = require('../bridge/aiAssist');
+const { suggest } = require('../ai/suggest');
+const { engineFor } = require('../bridge/sessionOptions');
+const { claudeBlockedUntil } = require('../ai/fallback');
 const { sendJson, readJsonBody } = require('../http/util');
 const { handleAgentRoutes } = require('../http/agentRoutes');
 const { getAgent } = require('../agents/catalog');
@@ -94,7 +98,12 @@ function createApp(
       const { global, project, effective, overrides } = loadSettingsLayers(projectRoot);
       // The effective "Prohibido" list is the one optimia's sessions receive.
       syncClaudeSettings(projectRoot, effective.preferences.noGo);
-      return { ...effective, layers: { global, project, overrides } };
+      return {
+        ...effective,
+        activeEngine: engineFor(effective),
+        claudeBlockedUntil: claudeBlockedUntil(),
+        layers: { global, project, overrides }
+      };
     };
 
     if (url.pathname === '/api/settings' && req.method === 'GET') {
@@ -126,7 +135,10 @@ function createApp(
           preferences: body.preferences,
           updates: body.updates,
           security: body.security,
-          wiki: body.wiki
+          wiki: body.wiki,
+          suggestions: body.suggestions,
+          chat: body.chat,
+          tasks: body.tasks
         });
       } else {
         if (list(body.promote).length) promoteToGlobal(projectRoot, list(body.promote));
@@ -190,6 +202,18 @@ function createApp(
         return sendJson(res, 400, { error: 'content (string) is required' });
       saveMemory(projectRoot, body.content);
       return sendJson(res, 200, { content: body.content });
+    }
+
+    // What could help with the message being typed: {suggestions: [{kind, id, reason}], engine}.
+    if (url.pathname === '/api/suggest' && req.method === 'POST') {
+      const body = await readJsonBody(req).catch(() => ({}));
+      const result = await suggest({
+        text: body.text,
+        projectRoot,
+        settings: loadSettingsLayers(projectRoot).effective
+      });
+      if (result.errors?.length) log.warn('suggest.failed', { errors: result.errors });
+      return sendJson(res, 200, { suggestions: result.suggestions, engine: result.engine, off: Boolean(result.off) });
     }
 
     if (url.pathname === '/api/skills' && req.method === 'GET') {
@@ -305,6 +329,23 @@ function createApp(
       return sendJson(res, 200, updated);
     }
 
+    // Archive of finished tasks (store/taskArchive.js).
+    //   GET    /api/tasks-archive       {retentionDays, tasks}
+    //   DELETE /api/tasks-archive/:id   one
+    //   DELETE /api/tasks-archive       all
+    if (url.pathname === '/api/tasks-archive' && req.method === 'GET') {
+      const days = loadSettingsLayers(projectRoot).effective.tasks.archiveDays;
+      return sendJson(res, 200, { retentionDays: days, tasks: listArchive(projectRoot, days) });
+    }
+    if (url.pathname === '/api/tasks-archive' && req.method === 'DELETE') {
+      clearArchive(projectRoot);
+      return sendJson(res, 200, { ok: true });
+    }
+    if (url.pathname.startsWith('/api/tasks-archive/') && req.method === 'DELETE') {
+      const ok = removeArchived(projectRoot, url.pathname.split('/')[3]);
+      return sendJson(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'no está en el archivo' });
+    }
+
     if (url.pathname.startsWith('/api/tasks/') && req.method === 'DELETE') {
       const taskId = url.pathname.split('/')[3];
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
@@ -315,6 +356,13 @@ function createApp(
       } catch (err) {
         log.error('task.delete_failed', { taskId, error: err.message });
         return sendJson(res, 500, { error: `no se pudo limpiar el worktree: ${err.message}` });
+      }
+      // Kept in the archive (with its outcome) before it leaves the board.
+      try {
+        archiveTask(projectRoot, task);
+        listArchive(projectRoot, loadSettingsLayers(projectRoot).effective.tasks.archiveDays);
+      } catch (err) {
+        log.warn('task.archive_failed', { taskId, error: err.message });
       }
       deleteTask(projectRoot, taskId);
       log.info('task.delete', { taskId, branch: task.branch });

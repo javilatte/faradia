@@ -104,7 +104,8 @@ function syncClaudeSettings(projectRoot, noGo) {
   // hook cannot run, plain deny rules take its place (fail closed). Commit, push, merge and rebase
   // are always denied. The OS sandbox keeps Bash writes inside the worktree.
   const hookOk = policyHookWorks();
-  const sandbox = sandboxSettings(loadGlobalSettings().security.sandbox);
+  const security = loadGlobalSettings().security;
+  const sandbox = sandboxSettings(security.sandbox, { registries: security.registries !== false });
   const agents = {
     enableAllProjectMcpServers: true,
     permissions: { deny: [...settings.permissions.deny, ...HARD_DENY, ...(hookOk ? [] : FALLBACK_DENY)] },

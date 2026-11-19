@@ -5,6 +5,7 @@
 // broadcast over the shared WebSocket.
 
 const fs = require('fs');
+const { limitHit, markClaudeBlocked, fallbackEngine, claudeBlockedUntil } = require('../ai/fallback');
 const path = require('path');
 const crypto = require('crypto');
 const { parseDenial, approvedCommands } = require('../bridge/policy');
@@ -13,7 +14,7 @@ const { loadTasks, updateTask, updateTaskPhase } = require('../store/taskStore')
 const { loadChat, updateChatMeta, appendMessage } = require('../store/chatStore');
 const { ClaudeSession } = require('../bridge/claudeProcess');
 const { PtySession } = require('../bridge/ptySession');
-const { buildSessionOptions } = require('../bridge/sessionOptions');
+const { buildSessionOptions, engineFor } = require('../bridge/sessionOptions');
 const { resolveStageAgent, skippedStages } = require('../agents/stageMap');
 const { loadAgents } = require('../agents/catalog');
 const { createTaskWorktree, stageForReview, changedFiles, ignoredAmong } = require('../bridge/worktree');
@@ -30,7 +31,7 @@ function relPath(base, p) {
 }
 const { ensureGitGuardHooks } = require('../bridge/gitGuard');
 const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
-const { sandboxProblem } = require('../bridge/sandbox');
+const { sandboxProblem, agentCacheEnv } = require('../bridge/sandbox');
 const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
 const { adoptPendingMemory } = require('../knowledge/bundle');
 const { loadAttachments, attachmentsPrompt } = require('../bridge/attachments');
@@ -59,6 +60,8 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
   fs.mkdirSync(dir, { recursive: true });
   const env = { OPTIMIA_PORT: String(port), OPTIMIA_PROJECT: projectId };
   if (token) env.OPTIMIA_TOKEN = token;
+  // Expanded by Claude Code from the session's environment: set for task sessions, empty in the chat.
+  env.OPTIMIA_TASK_ID = '${OPTIMIA_TASK_ID:-}';
   const config = {
     mcpServers: {
       'optimia-tasks': {
@@ -137,6 +140,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // "no dual-driving one session" rule from before still holds.
   function watchForPermissionHandoff(scope, id, session, sessionsMap, event) {
     if (event.type !== 'system' || event.subtype !== 'permission_denied') return;
+    // Sessions that ask in the chat only get here for rules ("Prohibido"): those stay denied.
+    if (session.approvals) return;
     broadcast({ type: 'permission_needed', scope, id, toolName: event.tool_name, message: event.message });
     // Flagged so the session's own 'exit' handler (below) knows this kill is
     // an intentional handoff, not a real/unexpected end — without this, the
@@ -211,7 +216,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // Starts a stage of the task's pipeline (see bridge/taskStages.js) in its worktree. One Claude
   // session per stage; when it ends, the stage decides the next state and, if needed, starts the
   // next stage automatically. Returns { task } or { error, code } for the HTTP route to answer.
-  function runTaskStage(taskId, { stage, answer, docOptions, describe } = {}) {
+  function runTaskStage(taskId, { stage, answer, docOptions, describe, afterSwitch } = {}) {
     const task = loadTasks(projectRoot).find((t) => t.id === taskId);
     if (!task) return { error: 'task not found', code: 404 };
     if (taskSessions.has(taskId)) return { error: 'la tarea ya tiene un agente en marcha', code: 409 };
@@ -224,7 +229,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     }
 
     const effectiveDocOptions = stage === 'write' ? docOptions || task.docOptions : undefined;
-    const problem = canRun(task, stage, { answer, docOptions: effectiveDocOptions });
+    // afterSwitch: the same stage goes on with another provider (Claude ran out of usage).
+    const problem = afterSwitch ? null : canRun(task, stage, { answer, docOptions: effectiveDocOptions });
     if (problem) return { error: problem, code: 409 };
     // describe: PR description or Jira comment, with optional notes from the user.
     let describeOptions;
@@ -267,10 +273,13 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     // Answering an implementation question resumes the same conversation (the previous stage's
     // session) so the agent keeps its context.
-    const resuming = answer !== undefined && Boolean(task.sessionId);
+    const resuming = (answer !== undefined || Boolean(afterSwitch)) && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
     let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent, describeOptions });
-    if (answer !== undefined)
+    if (afterSwitch && resuming)
+      prompt =
+        'Sigue exactamente donde lo dejaste en esta etapa: el modelo anterior se quedó sin uso y ahora continúas tú con todo el historial de arriba. No repitas lo que ya está hecho.';
+    else if (answer !== undefined)
       prompt = resuming
         ? answerPrompt(answer, stage)
         : `${prompt}\n\nRespuesta del usuario a tus preguntas:\n${answer.trim()}`;
@@ -280,8 +289,17 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     opts.disallowedTools = stageDisallowed(stage, agent);
     opts.gitHooksPath = ensureGitGuardHooks(projectRoot);
     // Exceptions to the safety policy approved from the cards, fixed for the whole stage.
-    opts.extraEnv = { OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)) };
+    const security = settings.security;
+    opts.extraEnv = {
+      // Package caches in the agents' own folder (see sandbox.js), when they may install packages.
+      ...(security.sandbox !== 'off' && security.registries !== false ? agentCacheEnv() : {}),
+      OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
+      // optimia's MCP server (a child of this session) reports progress for this task without
+      // depending on the model passing its id.
+      OPTIMIA_TASK_ID: task.id
+    };
     const session = new ClaudeSession(opts);
+    session.engine = opts.engine;
     taskSessions.set(taskId, session);
     updateTaskPhase(projectRoot, taskId, STAGE_PHASE[stage], 'active');
     log.info('task.stage.start', {
@@ -309,8 +327,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
           stage,
           agentId: agent.id,
           agentName: agent.name,
-          engine: agent.engine,
-          model: agent.model || 'default',
+          engine: opts.engine || agent.engine,
+          model: opts.model || agent.model || 'default',
           startedAt: new Date().toISOString()
         }
       ],
@@ -323,6 +341,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // block with the same id.
     const toolUses = new Map();
     session.on('event', (event) => {
+      if (session._switching) return;
+      if (switchOnLimit('task', taskId, session, event)) return;
       broadcast({ type: 'task_claude_event', taskId, event });
       if (event.type === 'assistant') {
         for (const block of event.message?.content || []) {
@@ -390,6 +410,14 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     });
     session.on('exit', () => {
       if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
+      if (session._switching) {
+        // The run that was cut off ends here; the same stage starts a new one with the other model.
+        const before = loadTasks(projectRoot).find((t) => t.id === taskId);
+        updateTask(projectRoot, taskId, { stageRuns: closeLastRun(before, stage, 'switched') });
+        const result = runTaskStage(taskId, { stage, afterSwitch: true });
+        if (result.error) broadcast({ type: 'task_error', taskId, error: result.error });
+        return;
+      }
       if (session._stageDone) return;
       // Exit without a `result` (failure, kill or handoff to the terminal): the task cannot stay
       // in_progress forever.
@@ -537,6 +565,135 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // is what makes "refresh the tab" stop killing the conversation: the
   // browser is just a viewer that replays the persisted transcript and,
   // if it's still running, re-attaches to the same live process.
+  /**
+   * Claude ran out of usage in this session: Claude is marked unavailable until the reset, the
+   * session is stopped and the same conversation goes on with the local model (same
+   * session id, so the new provider gets the whole history). Returns true when it took over.
+   */
+  function switchOnLimit(scope, id, session, event) {
+    if (session.engine !== 'claude') return false;
+    const until = limitHit(event);
+    if (!until) return false;
+    markClaudeBlocked(until, event.rate_limit_info?.rateLimitType || '');
+    const to = fallbackEngine(loadSettings(projectRoot));
+    log.warn('provider.limit', { scope, id, until: new Date(until).toISOString(), to });
+    broadcast({ type: 'provider_switch', scope, id, from: 'claude', to, until });
+    if (!to) return false; // nothing to switch to: the error reaches the user as it is
+    session._switching = true;
+    if (scope === 'chat') {
+      chatSessions.delete(id);
+      session.kill();
+      setTimeout(() => {
+        try {
+          const next = startOrGetChatSession(id);
+          if (next && session._lastSend) {
+            next._busy = true;
+            next.send(
+              `(Mensaje reenviado: el modelo anterior se quedó sin uso antes de responder. Si ya aparece arriba, respóndelo una sola vez.)\n\n${session._lastSend.text}`,
+              session._lastSend.images
+            );
+          }
+        } catch (err) {
+          broadcast({ type: 'bridge_error', chatId: id, error: err.message });
+        }
+      }, 300).unref?.();
+    } else {
+      session._stageDone = true;
+      session.kill();
+    }
+    return true;
+  }
+
+  /**
+   * Before a new message: a chat left on the fallback provider goes back to its own engine once
+   * Claude is available again (and the other way round), between turns, keeping the session.
+   */
+  // Returns a promise when it stopped the chat's process: the next one resumes the same session, so
+  // it must wait for this one to be gone (two processes on one transcript would mix it up).
+  function realignChatEngine(chatId) {
+    const existing = chatSessions.get(chatId);
+    if (!existing || existing._busy) return null;
+    const settings = loadSettings(projectRoot);
+    const wanted = engineFor(settings);
+    // A change of the chat permissions setting also starts a new process (same conversation).
+    if (existing.engine === wanted && existing.chatPermissions === (settings.chat?.permissions || 'auto')) return null;
+    if (existing.engine === wanted) {
+      existing._switching = true;
+      chatSessions.delete(chatId);
+      existing.kill();
+      return existing.exited();
+    }
+    existing._switching = true;
+    chatSessions.delete(chatId);
+    existing.kill();
+    log.info('provider.realign', { chatId, from: existing.engine, to: wanted });
+    broadcast({
+      type: 'provider_switch',
+      scope: 'chat',
+      id: chatId,
+      from: existing.engine,
+      to: wanted,
+      until: claudeBlockedUntil()
+    });
+    return existing.exited();
+  }
+
+  // Commands that only read: allowed in the chat without asking (each part of a pipeline must match).
+  const READ_ONLY_COMMANDS = [
+    'git status',
+    'git log',
+    'git diff',
+    'git show',
+    'git ls-files',
+    'git branch',
+    'git blame',
+    'ls',
+    'cat',
+    'head',
+    'tail',
+    'wc',
+    'grep',
+    'rg',
+    'pwd',
+    'tree',
+    'sort',
+    'uniq',
+    'cut'
+  ].map((c) => `Bash(${c}:*)`);
+
+  // What the page needs to show a permission request (the full input can be large).
+  function permissionView(request) {
+    const input = request.input || {};
+    return {
+      requestId: request.requestId,
+      toolName: request.toolName,
+      description: request.description,
+      command: typeof input.command === 'string' ? input.command.slice(0, 2000) : undefined,
+      path: input.file_path || input.notebook_path || input.path || undefined,
+      url: input.url || undefined,
+      canAlways: Boolean(approvalRule(request.toolName, input.command))
+    };
+  }
+
+  /** The user answered a permission card: allow once, always (stored for this repo) or deny. */
+  function answerPermission(chatId, requestId, decision) {
+    const session = chatSessions.get(chatId);
+    const request = session?.pendingPermissions.get(requestId);
+    if (!request) return false;
+    if (decision === 'always') {
+      const rule = approvalRule(request.toolName, request.input?.command);
+      if (rule) {
+        const approved = loadProjectLayer(projectRoot).preferences.approvedTools;
+        if (!approved.includes(rule))
+          saveProjectSettings(projectRoot, { preferences: { approvedTools: [...approved, rule] } });
+      }
+    }
+    log.info('chat.permission_answer', { chatId, tool: request.toolName, decision });
+    session.respondPermission(requestId, decision);
+    broadcast({ type: 'permission_resolved', chatId, requestId, decision });
+    return true;
+  }
+
   function startOrGetChatSession(chatId) {
     const existing = chatSessions.get(chatId);
     if (existing) return existing;
@@ -547,8 +704,19 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     const settings = loadSettings(projectRoot);
     const opts = buildSessionOptions(settings, projectRoot);
     opts.resumeSessionId = chat.claudeSessionId || undefined;
+    // The chat asks the user (a card in the conversation) instead of denying and jumping to the
+    // terminal; what was allowed "always" for this repo is allowed from the start.
+    opts.approvals = true;
+    const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
+    // Auto: Claude Code's classifier approves what is safe (only with Claude: it is Anthropic's).
+    // Ask: read-only commands go through without a card.
+    const auto = settings.chat?.permissions !== 'ask' && opts.engine === 'claude';
+    if (auto) opts.permissionMode = 'auto';
+    opts.extraAllowedTools = [...(opts.extraAllowedTools || []), ...approved, ...(auto ? [] : READ_ONLY_COMMANDS)];
 
     const session = new ClaudeSession(opts);
+    session.engine = opts.engine;
+    session.chatPermissions = settings.chat?.permissions || 'auto';
     chatSessions.set(chatId, session);
     log.info('claude.session.spawn', {
       scope: 'chat',
@@ -561,6 +729,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     }
 
     session.on('event', (event) => {
+      if (session._switching) return;
+      if (switchOnLimit('chat', chatId, session, event)) return;
+      if (event.type === 'result') session._busy = false;
       for (const block of event.message?.content || []) {
         if (event.type === 'assistant' && block.type === 'text' && block.text?.trim()) {
           log.info('chat.reply', { chatId, text: cut(block.text) });
@@ -578,10 +749,18 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       broadcast({ type: 'claude_event', chatId, event });
       watchForPermissionHandoff('chat', chatId, session, chatSessions, event);
     });
+    session.on('permission_request', (request) => {
+      log.info('chat.permission_request', { chatId, tool: request.toolName, command: cut(request.input?.command) });
+      broadcast({ type: 'permission_request', chatId, request: permissionView(request) });
+    });
+    session.on('permission_cancelled', (requestId) => broadcast({ type: 'permission_resolved', chatId, requestId }));
     session.on('error', (err) => broadcast({ type: 'bridge_error', chatId, error: err.message }));
     session.on('stderr', (text) => broadcast({ type: 'claude_stderr', chatId, text }));
     session.on('exit', (info) => {
       if (chatSessions.get(chatId) === session) chatSessions.delete(chatId);
+      for (const requestId of session.pendingPermissions?.keys() || []) {
+        broadcast({ type: 'permission_resolved', chatId, requestId });
+      }
       log.info('claude.session.exit', {
         scope: 'chat',
         chatId,
@@ -593,7 +772,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       // watchForPermissionHandoff) — terminal_handoff already told the chat
       // what's happening, so skip the generic "session ended" broadcast. The
       // same goes for a stop the user asked for (stopChatSession).
-      if (!session._handoffInProgress && !session._stopRequested) broadcast({ type: 'claude_exit', chatId, info });
+      if (!session._handoffInProgress && !session._stopRequested && !session._switching)
+        broadcast({ type: 'claude_exit', chatId, info });
     });
 
     return session;
@@ -710,7 +890,31 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   function handleWsMessage(msg, ws) {
     // Chat sessions are server-side and chatId-tagged on every broadcast;
     // a tab doesn't need to register interest before sending a message.
-    if (msg.type === 'subscribe') return;
+    if (msg.type === 'subscribe') {
+      // A page that opens (or reloads) while the chat waits for a permission sees the card again.
+      const session = msg.chatId && chatSessions.get(msg.chatId);
+      for (const request of session?.pendingPermissions?.values() || []) {
+        ws.send(
+          JSON.stringify({
+            type: 'permission_request',
+            chatId: msg.chatId,
+            projectId,
+            request: permissionView(request)
+          })
+        );
+      }
+      return;
+    }
+
+    if (msg.type === 'permission_response') {
+      if (!['allow', 'always', 'deny'].includes(msg.decision)) return;
+      if (!answerPermission(msg.chatId, msg.requestId, msg.decision)) {
+        ws.send(
+          JSON.stringify({ type: 'permission_resolved', chatId: msg.chatId, projectId, requestId: msg.requestId })
+        );
+      }
+      return;
+    }
 
     if (msg.type === 'terminal_subscribe') {
       const session = startOrGetTerminalSession();
@@ -755,6 +959,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
       let session;
       try {
+        const previous = realignChatEngine(msg.chatId);
+        // The message goes on once the previous process is gone (it is handled again from the top).
+        if (previous) return void previous.then(() => handleWsMessage(msg, ws));
         session = startOrGetChatSession(msg.chatId);
       } catch (err) {
         return ws.send(JSON.stringify({ type: 'bridge_error', chatId: msg.chatId, error: err.message }));
@@ -785,7 +992,9 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         broadcast({ type: 'chat_renamed', chatId: msg.chatId, title });
       }
       try {
-        session.send(`${msg.text || ''}${attachmentsPrompt(attachments)}`, msg.images || []);
+        session._lastSend = { text: `${msg.text || ''}${attachmentsPrompt(attachments)}`, images: msg.images || [] };
+        session._busy = true;
+        session.send(session._lastSend.text, session._lastSend.images);
       } catch (err) {
         ws.send(JSON.stringify({ type: 'bridge_error', chatId: msg.chatId, error: err.message }));
       }

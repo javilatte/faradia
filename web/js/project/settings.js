@@ -16,7 +16,7 @@ async function loadInitialSettings() {
   const settings = await fetch(apiPath('/api/settings')).then((r) => r.json());
   if (pid !== currentProjectId) return;
   applyUi(settings.ui || {});
-  modeLabel.textContent = settings.ai.mode === 'local' ? 'IA local' : 'Claude Code';
+  modeLabel.textContent = ENGINE_LABEL[settings.ai.mode] || 'Claude Code';
   effortSelect.value = settings.ai.claude.effort || 'default';
   await populateChatModelSelect(settings);
 
@@ -203,7 +203,7 @@ async function renderSkillsList() {
   if (skills.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'muted';
-    empty.textContent = 'No hay skills todavía.';
+    empty.textContent = 'Este repo no tiene skills propias. Las de optimia y las de ECC están arriba.';
     skillsList.appendChild(empty);
   }
 }
@@ -431,6 +431,14 @@ settingsClose.addEventListener('click', closeSettings);
 settingsOverlay.addEventListener('click', (e) => {
   if (e.target === settingsOverlay) closeSettings();
 });
+// Esc closes Settings, as any sheet, unless something inside it (a menu, a sheet on top) uses it.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || settingsOverlay.hidden || e.defaultPrevented) return;
+  if (document.querySelector('.sheet-overlay')) return;
+  e.preventDefault();
+  closeSettings();
+  settingsButton.focus();
+});
 
 settingsNavItems.forEach((item) => {
   item.addEventListener('click', () => {
@@ -539,7 +547,7 @@ async function patchSettings(body, rerender = false) {
     currentSettings = data;
     applyUi(data.ui);
     effortSelect.value = data.ai.claude.effort || 'default';
-    modeLabel.textContent = data.ai.mode === 'local' ? 'IA local' : 'Claude Code';
+    modeLabel.textContent = ENGINE_LABEL[data.ai.mode] || 'Claude Code';
     await populateChatModelSelect(data);
     if (rerender) populateSettingsForm();
     else for (const [el, dotted] of AI_INPUTS) renderFieldOrigin(el, dotted);
@@ -665,7 +673,7 @@ localDetectButton.addEventListener('click', detectLocalAi);
 
 // Which panes support both scopes and which only one.
 const SCOPED_PANES = new Set(['claude', 'local-ai', 'instructions', 'nogo', 'agents']);
-const GLOBAL_PANES = new Set(['general', 'appearance', 'monitor']);
+const GLOBAL_PANES = new Set(['general', 'sync', 'appearance', 'monitor']);
 let settingsScope = 'global';
 try {
   settingsScope = localStorage.getItem('optimia:settings-scope') === 'project' ? 'project' : 'global';
@@ -690,7 +698,10 @@ function renderScope() {
     b.classList.toggle('active', on);
     b.setAttribute('aria-pressed', String(on));
   }
-  if (GLOBAL_PANES.has(pane)) scopeNote.textContent = 'Igual en todos los repos.';
+  if (pane === 'skills')
+    scopeNote.textContent = `Las skills de optimia y de ECC valen para todos los repos; las propias, solo para ${repo}.`;
+  else if (pane === 'sync') scopeNote.textContent = 'Igual en todos los repos y en todos tus equipos.';
+  else if (GLOBAL_PANES.has(pane)) scopeNote.textContent = 'Igual en todos los repos.';
   else if (!SCOPED_PANES.has(pane)) scopeNote.textContent = `Solo de este repo (${repo}).`;
   else if (settingsScope === 'global')
     scopeNote.textContent = 'Los cambios se aplican a todos los repos, salvo a los que tengan su propio valor.';

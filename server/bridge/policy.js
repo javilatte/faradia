@@ -50,15 +50,61 @@ function segments(command) {
 
 /**
  * The rule a Bash command breaks, or null. `approved` holds exact commands the user allowed.
+ * `canDelete(segment)`: an `rm` the agent may run anyway (see ownFilesOnly).
  */
-function checkCommand(command, approved = []) {
+function checkCommand(command, approved = [], { canDelete } = {}) {
   const exact = String(command || '').trim();
   if (approved.includes(exact)) return null;
-  for (const seg of segments(command)) {
+  const parts = segments(command);
+  // ownFilesOnly resolves paths from the session's folder: not valid once the command moves.
+  const movesDir = parts.some((seg) => /^(cd|pushd|popd)(\s|$)/.test(seg));
+  for (const seg of parts) {
     const rule = RULES.find((r) => r.re.test(seg));
+    if (rule?.id === 'delete' && !movesDir && canDelete?.(seg)) continue;
     if (rule) return rule;
   }
   return null;
+}
+
+/**
+ * Whether `rm …` only removes what the agent itself created in its worktree: every target is inside
+ * `cwd`, is not a symbolic link nor reached through one (dependencies linked from the main repo),
+ * and git does not track anything in it. A fresh worktree only has the repo's tracked files, so an
+ * untracked path there was made during the task (an install's package-lock.json, a build folder).
+ * Anything that cannot be checked (globs, variables, quotes, ~) stays blocked.
+ */
+function ownFilesOnly(segment, cwd, { tracked } = {}) {
+  const fs = require('fs');
+  const path = require('path');
+  if (!cwd || /[*?[\]{}$`~"'\\]/.test(segment)) return false;
+  // Only a plain `rm …` (not `xargs rm`, `find … -delete`, `command rm`…): its words are the targets.
+  if (!/^rm(\s|$)/.test(segment.trim())) return false;
+  const words = segment.trim().split(/\s+/).slice(1);
+  const targets = words.filter((w) => !w.startsWith('-'));
+  if (!targets.length || words.some((w) => w === '--')) return false;
+  const root = fs.realpathSync(cwd);
+  const isTracked =
+    tracked ||
+    ((rel) => {
+      const { spawnSync } = require('child_process');
+      const res = spawnSync('git', ['ls-files', '--', rel], { cwd: root, encoding: 'utf8' });
+      return res.status !== 0 || res.stdout.trim() !== '';
+    });
+  return targets.every((t) => {
+    if (t.endsWith('/')) return false;
+    const abs = path.resolve(root, t);
+    if (abs === root || !abs.startsWith(root + path.sep)) return false;
+    let st;
+    try {
+      st = fs.lstatSync(abs);
+    } catch (err) {
+      return err.code === 'ENOENT'; // already gone: nothing to protect; anything else, blocked
+    }
+    if (st.isSymbolicLink()) return false;
+    // Reached through a symlinked folder: the real path leaves the worktree.
+    if (fs.realpathSync(abs) !== abs) return false;
+    return !isTracked(path.relative(root, abs));
+  });
 }
 
 const DENY_PREFIX = 'optimia-policy';
@@ -131,6 +177,7 @@ const HARD_DENY = [
 ];
 
 module.exports = {
+  ownFilesOnly,
   RULES,
   DENY_PREFIX,
   segments,

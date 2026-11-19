@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
 const { prepareActiveDir } = require('../ecc/library');
+const { engineOverride } = require('../ai/fallback');
 const wiki = require('../knowledge/wikiStore');
 const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
 
@@ -12,6 +13,13 @@ Dispones de la tool MCP "create_task". Usala solo despues de cerrar un plan conc
 usuario (por ejemplo tras usar la skill plan-optimizer), nunca para un pedido vago o a mitad de
 una exploracion. Cada tarea creada arranca un agente independiente en su propio worktree; dale una
 instruccion autocontenida (el agente no vera el resto de esta conversacion).`;
+
+// For every session: fewer round trips, so tasks take less time.
+const WORK_PACE_PROMPT = `## Ritmo de trabajo
+Lee en paralelo (en un mismo turno) todos los ficheros y búsquedas que necesites. Cuando ya sepas qué
+cambiar, haz todos los cambios seguidos: lanza en el mismo turno todas las ediciones independientes
+(varias llamadas a herramientas a la vez), sin releer ni comentar entre una y otra. Comprueba el
+resultado una sola vez al final (tests, build o lint), no tras cada edición.`;
 
 function taskProgressPrompt(taskId) {
   return `## Reportar progreso de esta tarea
@@ -51,6 +59,17 @@ function localDefaults(ai) {
  * name as is to ANTHROPIC_BASE_URL ("qwen2.5-coder:7b", "google/gemma-4-12b"), so each agent can use
  * a different local model at the same time. See localAi.js for the environment of those sessions.
  */
+/**
+ * The engine a session runs on. While Claude is out of usage (see ai/fallback.js), the local model
+ * takes the place of Claude for the sessions that would use it.
+ */
+function engineFor(settings, agent) {
+  const wanted = agent ? agent.engine : settings.ai.mode === 'local' ? 'local' : 'claude';
+  if (wanted !== 'claude') return wanted;
+  const override = engineOverride(settings);
+  return override || 'claude';
+}
+
 function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;
   const opts = { projectRoot: cwd };
@@ -70,7 +89,8 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
     if (fs.existsSync(projectMcp)) opts.extraMcpConfigPaths = [projectMcp];
   }
 
-  // ECC skills and commands the user enabled (copied to a folder Claude Code reads with --add-dir).
+  // optimia's built-in skills plus the ECC skills and commands the user enabled (copied to a folder
+  // Claude Code reads with --add-dir).
   try {
     const eccDir = prepareActiveDir(settings.ecc || {});
     if (eccDir) opts.addDirs = [eccDir];
@@ -80,6 +100,7 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const parts = [];
   if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);
+  parts.push(WORK_PACE_PROMPT);
   // Workflow instructions shared by all repos and then this repo's (which win if they contradict
   // the shared ones).
   const prefs = settings.preferences || {};
@@ -106,7 +127,8 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   if (opts.mcpConfigPath) parts.push(taskId ? taskProgressPrompt(taskId) : CHAT_TASKS_PROMPT);
   if (parts.length) opts.systemPrompt = parts.join('\n\n');
 
-  const engine = agent ? agent.engine : ai.mode === 'local' ? 'local' : 'claude';
+  const engine = engineFor(settings, agent);
+  opts.engine = engine;
   if (engine === 'local') {
     Object.assign(opts, localDefaults(ai));
     if (!opts.baseUrl) {
@@ -114,7 +136,8 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
         `${agent ? `el agente "${agent.name}" usa un modelo local, pero` : 'el chat usa IA local, pero'} no hay servidor configurado: abre Ajustes › IA local y pulsa «Detectar servidores locales»`
       );
     }
-    const model = (agent ? agent.model : '') || ai.localAi.model;
+    // An agent that runs on the local model only because Claude is out keeps no Claude model name.
+    const model = (agent?.engine === 'local' ? agent.model : '') || ai.localAi.model;
     if (!model) throw new Error('elige un modelo local para este agente o en Ajustes > IA local');
     opts.model = model;
   } else {
@@ -126,4 +149,4 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   return opts;
 }
 
-module.exports = { buildSessionOptions };
+module.exports = { buildSessionOptions, engineFor };

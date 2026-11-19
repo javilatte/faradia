@@ -1,0 +1,294 @@
+'use strict';
+
+const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { configDir } = require('../store/globalPaths');
+const { globalSettingsPath } = require('../store/settingsStore');
+const catalog = require('../agents/catalog');
+const portable = require('../config/portable');
+const envelope = require('./envelope');
+const targets = require('./targets');
+
+// Keeps optimia's global configuration (settings, keys, agents, stages, notices: what
+// portable.exportConfig gathers) the same on every computer of the user. Every few minutes, and
+// after a change, it compares three things: this computer's configuration, the copy in the target
+// and what both looked like after the last sync.
+//   only this computer changed   → upload
+//   only the copy changed        → apply it here (import makes a backup first)
+//   both changed                 → the newest wins; the other is kept in ~/.config/optimia/backups
+// Repos, workbenches and tasks stay on each computer: they depend on its paths.
+
+const INTERVAL = 3 * 60 * 1000;
+const DEBOUNCE = 4000;
+
+function stateFile() {
+  return path.join(configDir(), 'sync.json');
+}
+
+function loadState() {
+  try {
+    return JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+// It holds the passphrase: readable only by the user.
+function saveState(state) {
+  fs.mkdirSync(path.dirname(stateFile()), { recursive: true });
+  fs.writeFileSync(stateFile(), JSON.stringify(state, null, 2) + '\n', { mode: 0o600 });
+  try {
+    fs.chmodSync(stateFile(), 0o600);
+  } catch {
+    /* not supported here */
+  }
+}
+
+function localSnapshot() {
+  const config = portable.exportConfig({ includeSecrets: true });
+  const { exportedAt, optimiaVersion, ...content } = config;
+  const hash = crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex');
+  return { config, hash };
+}
+
+// When this computer's configuration last changed: the newest of its files.
+function localModifiedAt() {
+  const files = [globalSettingsPath(), path.join(configDir(), 'preferences.json')];
+  try {
+    const dir = catalog.globalAgentsDir();
+    for (const n of fs.readdirSync(dir)) files.push(path.join(dir, n));
+  } catch {
+    /* no global agents */
+  }
+  let newest = 0;
+  for (const f of files) {
+    try {
+      newest = Math.max(newest, fs.statSync(f).mtimeMs);
+    } catch {
+      /* missing */
+    }
+  }
+  return Math.floor(newest); // updatedAt has whole milliseconds
+}
+
+const stampOf = (remote) => (remote ? `${remote.updatedAt}|${remote.machineId}` : null);
+
+// Copies that sync set aside (the other computer's version after a conflict, or one it could not
+// apply), next to the import backups but rotated on their own: the last 20 are kept.
+function keepCopy(config, why) {
+  const root = path.join(configDir(), 'backups');
+  const dir = path.join(root, `${new Date().toISOString().replace(/[:.]/g, '-')}-${why}`);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'optimia-config.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
+  const mine = fs
+    .readdirSync(root)
+    .filter((n) => /-sync-[a-z]+$/.test(n))
+    .sort();
+  for (const old of mine.slice(0, Math.max(0, mine.length - 20))) {
+    fs.rmSync(path.join(root, old), { recursive: true, force: true });
+  }
+}
+
+function createSync({ log = () => {}, onChange = () => {} } = {}) {
+  let state = loadState();
+  // Only folders for now; anything else saved by another version is ignored.
+  if (state.target && state.target.kind !== 'folder') state.target = null;
+  let timer = null;
+  let soon = null;
+  let running = null;
+
+  function targetOf(t = state.target) {
+    if (!t) return null;
+    if (t.kind === 'folder') return targets.folderTarget(t.path);
+    return null;
+  }
+
+  function status() {
+    const t = state.target;
+    return {
+      enabled: Boolean(t),
+      kind: t?.kind || null,
+      label: t?.path || null,
+      machine: os.hostname(),
+      lastSyncAt: state.lastSyncAt || null,
+      lastAction: state.lastAction || null,
+      lastError: state.lastError || null
+    };
+  }
+
+  function record(patch) {
+    state = { ...state, ...patch };
+    saveState(state);
+    onChange(status());
+  }
+
+  async function push(target, local) {
+    const updatedAt = new Date().toISOString();
+    if (!state.machineId) state.machineId = crypto.randomUUID();
+    const sealed = envelope.seal(local.config, state.passphrase, {
+      updatedAt,
+      machine: os.hostname().slice(0, 60),
+      machineId: state.machineId
+    });
+    await target.write(sealed);
+    return { lastHash: local.hash, lastRemoteStamp: stampOf(sealed) };
+  }
+
+  function pull(remote, config) {
+    portable.importConfig(config);
+    return { lastHash: localSnapshot().hash, lastRemoteStamp: stampOf(remote) };
+  }
+
+  /** One pass. Returns what it did: 'up', 'down', 'none', 'unusable', or 'conflict-up'/'conflict-down'. */
+  async function syncOnce() {
+    const target = targetOf();
+    if (!target) return 'none';
+    const started = state.target;
+    const local = localSnapshot();
+    const remote = await target.read();
+    let action = 'none';
+    let next = {};
+    let problem = null;
+    if (!remote) {
+      next = await push(target, local);
+      action = 'up';
+    } else {
+      const remoteChanged = stampOf(remote) !== state.lastRemoteStamp;
+      const localChanged = local.hash !== state.lastHash;
+      // A copy this version cannot apply (another version of optimia, a damaged file) is kept
+      // aside and stops blocking: this computer's changes go up again from the next change on.
+      let unusable = null;
+      let config = null;
+      if (remoteChanged) {
+        config = envelope.open(remote, state.passphrase);
+        try {
+          portable.validateConfig(config);
+        } catch (err) {
+          if (!(err instanceof portable.ConfigError)) throw err;
+          unusable = err.message;
+        }
+      }
+      if (unusable) {
+        keepCopy(config, 'sync-unreadable');
+        problem = `la copia de ${remote.machine || 'otro equipo'} no se pudo aplicar (${unusable}); quedó guardada en ~/.config/optimia/backups`;
+        next = { lastRemoteStamp: stampOf(remote) };
+        action = 'unusable';
+        if (localChanged) {
+          next = await push(target, local);
+          action = 'up';
+        }
+      } else if (remoteChanged) {
+        const remoteHash = (() => {
+          const { exportedAt, optimiaVersion, ...content } = config;
+          return crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex');
+        })();
+        if (remoteHash === local.hash) {
+          next = { lastHash: local.hash, lastRemoteStamp: stampOf(remote) };
+        } else if (!localChanged || !state.lastHash) {
+          next = pull(remote, config);
+          action = 'down';
+        } else if (Date.parse(remote.updatedAt) >= localModifiedAt()) {
+          next = pull(remote, config);
+          action = 'conflict-down';
+        } else {
+          keepCopy(config, 'sync-remote');
+          next = await push(target, local);
+          action = 'conflict-up';
+        }
+      } else if (localChanged) {
+        next = await push(target, local);
+        action = 'up';
+      }
+    }
+    // Turned off (or pointed elsewhere) while this pass ran: what it found no longer applies.
+    if (state.target !== started) return 'none';
+    record({
+      ...next,
+      lastSyncAt: new Date().toISOString(),
+      ...(action !== 'none' ? { lastAction: action } : {}),
+      lastError: problem
+    });
+    if (action !== 'none') log('sync.done', { action });
+    return action;
+  }
+
+  function run() {
+    if (!running) {
+      running = syncOnce()
+        .catch((err) => {
+          record({ lastError: err.message });
+          log('sync.failed', { error: err.message });
+          throw err;
+        })
+        .finally(() => {
+          running = null;
+        });
+    }
+    return running;
+  }
+
+  /** Connects a target. If it already holds a copy, the passphrase must open it and it is applied here. */
+  async function connect(targetConfig, passphrase) {
+    envelope.checkPassphrase(passphrase);
+    const target = targetOf(targetConfig);
+    const remote = await target.read();
+    if (remote) envelope.open(remote, passphrase);
+    // A new target starts from scratch: whatever is there wins over this computer, which is backed up.
+    const before = state;
+    record({ target: targetConfig, passphrase, lastHash: null, lastRemoteStamp: null, lastError: null });
+    let action;
+    try {
+      action = await run();
+    } catch (err) {
+      // The first pass failed: sync stays as it was, instead of looking on while nothing runs.
+      state = before;
+      saveState(state);
+      onChange(status());
+      throw err;
+    }
+    start();
+    return { action, existing: Boolean(remote) };
+  }
+
+  async function disconnect({ wipe = false } = {}) {
+    const target = targetOf();
+    if (wipe && target) await target.remove();
+    stop();
+    record({
+      target: null,
+      passphrase: null,
+      lastHash: null,
+      lastRemoteStamp: null,
+      lastSyncAt: null,
+      lastAction: null,
+      lastError: null
+    });
+  }
+
+  /** After a local change: sync a few seconds later (several changes go together). */
+  function changed() {
+    if (!state.target) return;
+    clearTimeout(soon);
+    soon = setTimeout(() => run().catch(() => {}), DEBOUNCE);
+    soon.unref?.();
+  }
+
+  function start() {
+    if (timer || !state.target) return;
+    run().catch(() => {});
+    timer = setInterval(() => run().catch(() => {}), INTERVAL);
+    timer.unref?.();
+  }
+
+  function stop() {
+    clearInterval(timer);
+    clearTimeout(soon);
+    timer = null;
+  }
+
+  return { status, syncNow: run, syncOnce, connect, disconnect, changed, start, stop };
+}
+
+module.exports = { createSync, stateFile };

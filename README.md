@@ -27,6 +27,11 @@
   <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><b>▶ Watch optimia in one minute</b></a>
 </p>
 
+<p align="center">
+  <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4"><img src="docs/assets/whats-new-2.3.gif" alt="What's new in optimia 2.3: a 40-second video" width="60%"></a><br>
+  <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4"><b>▶ What's new in 2.3</b></a>
+</p>
+
 ![optimia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
 
 ## Why optimia
@@ -34,6 +39,9 @@
 - **Agents that finish the job.** Every task runs a pipeline of agents (plan → implement →
   verify) in its own git worktree, with a model per agent. Agents only stop to ask when
   they lack context; anything blocked for safety can be allowed from the card.
+- **A chat that knows its tools.** While you type, optimia proposes the skill, agent or
+  task type that fits (Tab to use it). What needs permission is asked with a card in
+  the conversation, never in a terminal; in automatic mode only risky actions ask.
 - **Watch them think.** Each card streams what its agent is doing: what it says, the files
   it reads, its edits (+/−), the commands it runs and their results, the tests, how much it
   is thinking. Agents write in the language you wrote the task in.
@@ -50,7 +58,14 @@
   [ECC (Everything Claude Code)](https://github.com/affaan-m/ECC) are bundled: optimia's
   own agents follow their best ECC counterpart, and any ECC agent is one `@` away.
 - **Local or Claude.** Claude Code, or LM Studio / Ollama models for the chat or for
-  any agent; your Claude account never reaches the local server.
+  any agent; your Claude account never reaches the local server. When Claude runs out
+  of usage, the chat and running tasks go on with the local model in the same session
+  and come back to Claude when the limit resets.
+- **Good habits built in.** Skills for interface work (frontend-craft), plain writing
+  (unslop), security reviews (security-audit), plans (plan-optimizer) and the simplest
+  change that works (ponytail) are on for the chat and every agent.
+- **Your setup on every computer.** Settings, agents and keys sync through a folder you
+  already sync, encrypted with a passphrase only you know.
 - **Safe by default.** Agents run in Claude Code's OS sandbox, can never commit, push
   or merge, and a policy hook blocks destructive commands, with exceptions you approve.
 - **Live supervision.** Dashboard, live diffs, timeline, signals (large deletes,
@@ -242,11 +257,30 @@ configuration…). optimia shows what will change and backs up the current
 configuration to `~/.config/optimia/backups/` first. On a fresh install, the
 welcome sheet offers exactly that.
 
+### Sync between computers
+
+**Settings → Sync** keeps your global configuration the same on every computer: settings,
+AI keys, agents, stage map, instructions and notices. Pick a folder you already sync
+(Google Drive for desktop, Dropbox, iCloud, Syncthing…) and a passphrase; do the same on
+the other computers. The copy is encrypted on each computer (scrypt + AES-256-GCM) before
+it is written, so whoever stores the folder cannot read it. Changes travel a few seconds
+after you make them and every few minutes; if two computers change at once, the newest
+wins and the other is kept in `~/.config/optimia/backups/`. Turning it off can delete the
+copy too. Repos, workbenches and tasks stay on each computer.
+
 ### Updates
 
 optimia asks the npm registry at most once a day whether a newer version exists and
 shows a notice in the toolbar with the install command and the release notes. Turn
-it off in Settings → General, or with `OPTIMIA_NO_UPDATE_CHECK=1`.
+it off in Settings → General, or with `OPTIMIA_NO_UPDATE_CHECK=1`. After an update, a
+short optional tour shows what changed (Settings → General → What's new… shows it again).
+
+### Problem report
+
+Warnings and errors from every repo and from the page itself are grouped by kind in
+**Settings → Log → Problems found**, without keys, home paths or message text, together
+with how chat suggestions were received. Nothing leaves your computer; **Export report…**
+writes a file you can attach to an issue.
 
 ## Delivering tasks
 
@@ -259,10 +293,14 @@ After the agents finish, you review and commit from the card. In a repo with a r
   `gh`, or on GitLab and Bitbucket, the branch is pushed and the page to open it shows up.
 - **Jira**: a separate comment for the ticket (what was done, how to test it, what is
   pending), copied to the clipboard.
-- **Commit only**: the task ends with its commit on its branch. Type an existing branch in
+- **Merge**: the commit is merged into the base branch locally, also in a repo with a remote.
+- **Leave it on its branch**: the task ends with its commit. Type an existing branch in
   the task's "Branch" field and the next task continues it: several tasks, one branch.
 
-A repo without a remote merges locally instead.
+The pull request can be drafted before the commit. Finished tasks go to the **Archive**
+(the button on the agents board): what was asked, how it ended, which agents and models
+ran it and their report, with search. Entries are deleted after 30, 15, 7 or 1 days, or
+kept forever, as chosen at the bottom of the archive.
 
 ## Wiki and knowledge
 
@@ -338,6 +376,13 @@ Agents are contained in layers:
   are fixed when a stage starts, so an agent cannot grant itself one; if the hook cannot
   run, plain deny rules take its place.
 - **Never approvable**: commit, push, merge and rebase (deny rules plus a git hook).
+- **Network**: from their sandbox, agents reach package registries only (npm, Yarn, PyPI,
+  crates.io, Go, RubyGems, Maven), so they can install dependencies; turn it off in
+  Settings → General. Files an agent created in its worktree it may delete; tracked files
+  stay protected.
+- **Chat permissions**: in automatic mode (the default) Claude Code approves what is safe
+  and the rest is asked with a card in the chat (Allow, Always allow in this repo, Deny);
+  in "ask" mode every action that needs permission is asked.
 - Local-model sessions never receive your Claude credentials.
 
 File operations stay inside the repo (no absolute paths, `..`, or symlinks pointing
@@ -354,6 +399,7 @@ with a sandbox CSP.
 ├── claude-settings*.json        permissions for optimia's own claude sessions (--settings)
 ├── memory.md                    the repo's knowledge, included in every session's system prompt
 ├── tasks.json, chats.json       kanban and chat state
+├── tasks-archive.json           finished tasks (Archive)
 ├── agents/                      project agents and stage map
 ├── worktrees/                   one git worktree per agent task
 └── logs/optimia.log             activity log (Settings → Log)
@@ -363,10 +409,13 @@ with a sandbox CSP.
 ├── workbenches.json             workbenches and their repos
 ├── agents/                      agents for every project
 ├── watchlists.json              plane 2 patterns per repo
-└── preferences.json             signals, thresholds, notifications
+├── preferences.json             signals, thresholds, notifications
+├── sync.json                    sync folder and passphrase (readable only by you)
+└── backups/                     configuration before each import or sync conflict
 
 ~/.local/share/optimia/
 ├── timeline/events.jsonl        the timeline
+├── issues.jsonl                 problem report
 └── trash/                       files deleted from the explorer
 ```
 

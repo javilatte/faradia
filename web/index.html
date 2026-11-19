@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>optimia</title>
-    <link rel="icon" href="logo.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" />
     <link rel="stylesheet" href="styles.css" />
@@ -17,7 +17,7 @@
     <div class="app-window" id="app-window">
       <aside class="sidebar" id="sidebar" aria-label="Barra lateral">
         <div class="sidebar-top">
-          <img class="app-logo" src="logo.svg" alt="Optimia" width="120" height="23" />
+          <img class="app-logo" src="logo.svg" alt="Optimia" width="147" height="36" />
           <div class="wb-switcher" id="wb-switcher"></div>
         </div>
         <div class="sidebar-scroll">
@@ -279,6 +279,7 @@
         <nav class="settings-nav">
           <div class="settings-nav-group">optimia</div>
           <button class="settings-nav-item" data-pane="general">General</button>
+          <button class="settings-nav-item" data-pane="sync">Sincronización</button>
           <div class="settings-nav-group">IA</div>
           <button class="settings-nav-item active" data-pane="claude">Claude</button>
           <button class="settings-nav-item" data-pane="local-ai">IA local</button>
@@ -323,6 +324,10 @@
               <div id="general-pane"></div>
             </section>
 
+            <section class="settings-pane" data-pane="sync" hidden>
+              <div id="sync-pane"></div>
+            </section>
+
             <section class="settings-pane" data-pane="claude">
               <div class="settings-field">
                 <label>Cuenta</label>
@@ -332,7 +337,7 @@
                   <button type="button" id="claude-account-refresh">Actualizar</button>
                 </div>
                 <div id="claude-account-switch-note" class="muted" hidden>
-                  Se abrio una terminal con "claude auth login". Completa el inicio de sesion ahi y pulsa Actualizar.
+                  Se abrió una terminal con «claude auth login». Completa el inicio de sesión ahí y pulsa Actualizar.
                 </div>
               </div>
               <div class="settings-field">
@@ -355,6 +360,17 @@
                   <option value="xhigh">Muy alto</option>
                   <option value="max">Máximo</option>
                 </select>
+              </div>
+              <div class="settings-field">
+                <label for="suggestions-mode">Sugerencias mientras escribes</label>
+                <select id="suggestions-mode">
+                  <option value="auto">Activadas</option>
+                  <option value="off">Desactivadas</option>
+                </select>
+                <span class="muted">
+                  Tras una pausa al escribir se propone una skill, un agente o un tipo de tarea; nunca se aplica solo.
+                  Las responde tu modelo local si contesta rápido y, si no, Claude Haiku con poco esfuerzo.
+                </span>
               </div>
             </section>
 
@@ -430,7 +446,7 @@
                     data-target="setting-instructions"
                     title="Ayuda con IA"
                   >
-                    IA
+                    Redactar con IA
                   </button>
                 </div>
                 <textarea id="setting-instructions" rows="10"></textarea>
@@ -457,7 +473,7 @@
                     data-target="setting-memory"
                     title="Ayuda con IA"
                   >
-                    IA
+                    Redactar con IA
                   </button>
                 </div>
                 <textarea id="setting-memory" rows="10"></textarea>
@@ -484,7 +500,7 @@
                     data-target="nogo-input"
                     title="Ayuda con IA"
                   >
-                    IA
+                    Redactar con IA
                   </button>
                 </div>
                 <div class="new-task-row" style="padding: 0; border: none; margin-top: 8px">
@@ -503,6 +519,7 @@
             </section>
 
             <section class="settings-pane" data-pane="registro" hidden>
+              <div id="issues-pane"></div>
               <div class="settings-field">
                 <label for="log-filter">Eventos del proyecto (.optimia/logs/optimia.log)</label>
                 <div class="log-toolbar">
@@ -512,7 +529,7 @@
                     placeholder="Filtrar por evento, tarea o fichero"
                     spellcheck="false"
                   />
-                  <button class="icon-button" id="log-refresh">Actualizar</button>
+                  <button type="button" id="log-refresh">Actualizar</button>
                 </div>
               </div>
               <div class="log-chips" id="log-chips">
@@ -525,8 +542,9 @@
             </section>
 
             <section class="settings-pane" data-pane="skills" hidden>
+              <div id="skills-library"></div>
               <div class="settings-field">
-                <label>Skills instaladas (.claude/skills/)</label>
+                <label>Skills propias de este repo (.claude/skills/)</label>
                 <div id="skills-list" class="skills-list"></div>
                 <div class="ai-assist-row">
                   <input type="text" class="ai-assist-prompt" placeholder="Pide ayuda a la IA…" />
@@ -536,7 +554,7 @@
                     data-target="skill-desc-input"
                     title="Ayuda con IA"
                   >
-                    IA
+                    Redactar con IA
                   </button>
                 </div>
                 <div class="new-task-row" style="padding: 0; border: none; margin-top: 8px">
@@ -571,9 +589,14 @@
     <script src="js/project/activity.js"></script>
     <script src="js/project/tasks.js"></script>
     <script src="js/project/chat-ui.js"></script>
+    <script src="js/project/permissions.js"></script>
     <script src="js/project/ws.js"></script>
     <script src="js/project/composer.js"></script>
     <script src="js/project/skills.js"></script>
+    <script src="js/project/intent.js"></script>
+    <script src="js/project/sync.js"></script>
+    <script src="js/project/issues.js"></script>
+    <script src="js/project/archive.js"></script>
     <script src="js/project/settings.js"></script>
     <script src="js/project/switch.js"></script>
     <script src="js/project/main.js"></script>

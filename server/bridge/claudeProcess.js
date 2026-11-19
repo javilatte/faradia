@@ -35,7 +35,9 @@ class ClaudeSession extends EventEmitter {
     disallowedTools = [],
     gitHooksPath,
     extraEnv = {},
-    addDirs = []
+    addDirs = [],
+    approvals = false,
+    permissionMode
   } = {}) {
     super();
     this.projectRoot = projectRoot;
@@ -51,7 +53,14 @@ class ClaudeSession extends EventEmitter {
     } else {
       args.push('--session-id', this.sessionId);
     }
-    args.push('--permission-prompts', 'none');
+    // approvals: whatever needs permission is asked to optimia (stdin/stdout control messages, the
+    // same protocol as the Agent SDK) and shown to the user in the chat; without it, nobody is asked
+    // and it is denied (task agents, which go on by themselves and list what was blocked).
+    this.approvals = approvals;
+    if (approvals) args.push('--permission-prompts', 'host', '--permission-prompt-tool', 'stdio');
+    else args.push('--permission-prompts', 'none');
+    this.pendingPermissions = new Map(); // request_id -> request
+    if (permissionMode) args.push('--permission-mode', permissionMode);
     if (model) args.push('--model', model);
     // Extra folders Claude Code reads skills and commands from (ECC, see ecc/library.js).
     for (const dir of addDirs) args.push('--add-dir', dir);
@@ -119,8 +128,64 @@ class ClaudeSession extends EventEmitter {
         this.emit('error', new Error(`unparseable stream-json line: ${line}`));
         continue;
       }
+      if (event.type === 'control_request') {
+        this._onControlRequest(event);
+        continue;
+      }
+      if (event.type === 'control_cancel_request') {
+        if (this.pendingPermissions.delete(event.request_id)) this.emit('permission_cancelled', event.request_id);
+        continue;
+      }
       this.emit('event', event);
     }
+  }
+
+  _onControlRequest(event) {
+    const req = event.request || {};
+    if (req.subtype !== 'can_use_tool') {
+      // Nothing else is supported: answer so the CLI does not wait.
+      this._write({
+        type: 'control_response',
+        response: { subtype: 'error', request_id: event.request_id, error: `unsupported: ${req.subtype}` }
+      });
+      return;
+    }
+    const request = {
+      requestId: event.request_id,
+      toolName: req.tool_name,
+      input: req.input || {},
+      description: req.description || '',
+      suggestions: req.permission_suggestions || []
+    };
+    this.pendingPermissions.set(event.request_id, request);
+    this.emit('permission_request', request);
+  }
+
+  /**
+   * Answers a permission request. decision: 'allow' | 'always' | 'deny'. 'always' also allows the
+   * same rule for the rest of this session (the caller stores it for the repo).
+   */
+  respondPermission(requestId, decision, { message } = {}) {
+    const request = this.pendingPermissions.get(requestId);
+    if (!request || this._exited) return false;
+    this.pendingPermissions.delete(requestId);
+    let response;
+    if (decision === 'deny') {
+      response = { behavior: 'deny', message: message || 'El usuario no lo ha permitido.' };
+    } else {
+      response = { behavior: 'allow', updatedInput: request.input };
+      if (decision === 'always') {
+        const rules = request.suggestions.filter((s) => s.type === 'addRules' && s.behavior === 'allow');
+        if (rules.length) response.updatedPermissions = rules.map((r) => ({ ...r, destination: 'session' }));
+      }
+    }
+    this._write({ type: 'control_response', response: { subtype: 'success', request_id: requestId, response } });
+    return true;
+  }
+
+  _write(obj) {
+    if (this._exited) return;
+    this.proc.stdin.write(JSON.stringify(obj) + '\n');
   }
 
   /** text: string, images: [{mediaType, base64Data}] */
@@ -143,6 +208,18 @@ class ClaudeSession extends EventEmitter {
   kill() {
     if (this._exited) return;
     this.proc.kill();
+  }
+
+  /** Resolves once the process has exited (at most `timeoutMs` later, if it never says so). */
+  exited(timeoutMs = 5000) {
+    if (this._exited || !this.proc) return Promise.resolve();
+    return new Promise((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs);
+      this.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
   }
 }
 

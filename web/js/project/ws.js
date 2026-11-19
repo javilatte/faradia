@@ -2,6 +2,8 @@
 
 // WebSocket connection to the server and message dispatch.
 
+let lastTaskSwitchNote = '';
+
 function connect() {
   setConnectionState(false, 'Conectando...');
 
@@ -49,6 +51,33 @@ function connect() {
         );
         setWaiting(false);
       }
+    } else if (msg.type === 'permission_request') {
+      if (msg.chatId === currentChatId) showPermissionRequest(msg.request);
+    } else if (msg.type === 'permission_resolved') {
+      if (msg.chatId === currentChatId) resolvePermission(msg.requestId, msg.decision);
+    } else if (msg.type === 'sync_status') {
+      window.onSyncStatus?.(msg.status);
+    } else if (msg.type === 'provider_switch') {
+      const names = { claude: 'Claude', local: 'el modelo local' };
+      const until = msg.until
+        ? new Date(msg.until).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : '';
+      let text;
+      if (msg.from === 'claude' && !msg.to)
+        text = `Claude se ha quedado sin uso${until ? ` hasta las ${until}` : ''}. Configura un modelo local en Ajustes › IA local para seguir sin esperar.`;
+      else if (msg.from === 'claude')
+        text = `Claude se ha quedado sin uso${until ? ` hasta las ${until}` : ''}. Sigo con ${names[msg.to] || msg.to}, con toda la conversación.`;
+      else text = `Vuelvo a ${names[msg.to] || msg.to}, con toda la conversación.`;
+      if (msg.scope === 'chat' && msg.id === currentChatId) appendMessage('system', text);
+      // Tasks: once per switch (several agents can hit the limit at the same time).
+      if (msg.scope === 'task' && lastTaskSwitchNote !== `${msg.from}>${msg.to}`) {
+        lastTaskSwitchNote = `${msg.from}>${msg.to}`;
+        appendMessage('system', `Agentes: ${text.replace('con toda la conversación', 'con todo su contexto')}`);
+      }
+      refreshProviderLabel();
     } else if (msg.type === 'client_error') {
       console.warn('[optimia] client_error', msg.error);
       appendMessage('error', msg.error);
@@ -112,7 +141,9 @@ function connect() {
         renderTasks();
       }
     } else if (msg.type === 'task_error') {
-      console.warn('[optimia] task_error', msg.taskId, msg.error);
+      // A task that could not start or go on: said in the conversation, not only in the console.
+      const task = tasks.get(msg.taskId);
+      appendMessage('error', `${task ? `«${task.title}»` : 'Una tarea'}: ${msg.error}`);
     } else if (msg.type === 'terminal_scrollback') {
       if (window.TerminalView) window.TerminalView.handleScrollback(msg.data);
     } else if (msg.type === 'terminal_data') {

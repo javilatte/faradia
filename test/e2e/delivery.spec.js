@@ -52,9 +52,15 @@ test('with a GitHub remote: PR and Jira descriptions are drafted by the agent an
   try {
     await openProject(page);
     const card = await readyTask(page, 'Tarea con PR');
+    // Before the commit the PR can already be drafted; creating it waits for the commit.
+    await expect(card.getByRole('tab', { name: 'Pull request' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Crear PR' })).toBeDisabled();
+    await expect(card).toContainText('se crea después del commit');
     await card.getByRole('button', { name: 'Commit', exact: true }).click();
     await expect(card.getByRole('tab', { name: 'Pull request' })).toHaveAttribute('aria-selected', 'true');
-    await expect(card.getByRole('button', { name: 'Fusionar en main' })).toHaveCount(0);
+    // With a remote the PR is the main way out; merging locally (no PR, no push) stays possible.
+    await expect(card.getByRole('button', { name: 'Fusionar en main' })).not.toHaveClass(/primary/);
+    await expect(card.getByRole('button', { name: 'Dejar en su rama' })).toBeVisible();
 
     // PR: title and description from the describe stage (the notes steer what to leave out).
     await card.getByLabel('Indicaciones para la descripción').fill('no menciones la migración');

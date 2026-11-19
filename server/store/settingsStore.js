@@ -33,6 +33,9 @@ function defaultSettings() {
       claude: { model: 'default', effort: 'high' },
       localAi: { url: '', model: '', authHeader: '' }
     },
+    // Skill/agent suggestions while typing in the chat: 'auto' (the local model when it answers fast,
+    // else Claude Haiku with low effort) or 'off'.
+    suggestions: { mode: 'auto' },
     preferences: {
       instructions: '',
       // Claude Code "deny" patterns, e.g. "Read(**/.env*)" or "Bash(rm -rf *)". Passed to optimia's
@@ -120,6 +123,12 @@ function sanitizeGlobal(raw) {
       clock: CLOCKS.includes(g.ui?.clock) ? g.ui.clock : d.ui.clock
     },
     ai,
+    suggestions: { mode: ['auto', 'off'].includes(g.suggestions?.mode) ? g.suggestions.mode : d.suggestions.mode },
+    // Chat permissions: 'auto' (Claude Code's auto mode approves what is safe and asks the rest in
+    // the chat) or 'ask' (every action that needs permission is asked; read-only commands are not).
+    chat: { permissions: ['auto', 'ask'].includes(g.chat?.permissions) ? g.chat.permissions : 'auto' },
+    // Archive of finished tasks: days they are kept (0 = forever). See store/taskArchive.js.
+    tasks: { archiveDays: [0, 1, 7, 15, 30].includes(Number(g.tasks?.archiveDays)) ? Number(g.tasks.archiveDays) : 30 },
     preferences: {
       instructions: str(g.preferences?.instructions),
       noGo: strList(g.preferences?.noGo)
@@ -137,7 +146,9 @@ function sanitizeGlobal(raw) {
     wiki: { autoUpdate: g.wiki?.autoUpdate !== false, preferLocal: g.wiki?.preferLocal !== false },
     // OPTIMIA_AGENT_SANDBOX=off forces it off (test runs with a fake claude).
     security: {
-      sandbox: g.security?.sandbox === 'off' || process.env.OPTIMIA_AGENT_SANDBOX === 'off' ? 'off' : 'required'
+      sandbox: g.security?.sandbox === 'off' || process.env.OPTIMIA_AGENT_SANDBOX === 'off' ? 'off' : 'required',
+      // Agents may reach package registries (npm, PyPI…) to install dependencies.
+      registries: g.security?.registries !== false
     }
   };
 }
@@ -165,8 +176,17 @@ function saveGlobalSettings(patch = {}) {
   next.security = { ...current.security, ...(patch.security || {}) };
   next.wiki = { ...current.wiki, ...(patch.wiki || {}) };
   next.ecc = { ...current.ecc, ...(patch.ecc || {}) };
+  next.suggestions = { ...current.suggestions, ...(patch.suggestions || {}) };
+  next.chat = { ...current.chat, ...(patch.chat || {}) };
+  next.tasks = { ...current.tasks, ...(patch.tasks || {}) };
   const clean = sanitizeGlobal(next);
   writeJson(globalSettingsPath(), clean);
+  // It may hold API keys.
+  try {
+    fs.chmodSync(globalSettingsPath(), 0o600);
+  } catch {
+    /* not supported here */
+  }
   return clean;
 }
 
@@ -283,6 +303,9 @@ function effectiveFrom(global, project) {
     security: global.security,
     wiki: global.wiki,
     ecc: global.ecc,
+    suggestions: global.suggestions,
+    chat: global.chat,
+    tasks: global.tasks,
     preferences: {
       // The repo's instructions are added to those for all repos.
       instructions: [globalInstructions, projectInstructions].filter(Boolean).join('\n\n'),

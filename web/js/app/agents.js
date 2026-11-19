@@ -233,7 +233,7 @@ function renderAgent(agent) {
         draft.engine = e.target.value;
         draft.model = draft.engine === 'claude' ? 'default' : localModels[0]?.name || '';
         // Without a local model there is nothing to save yet: one has to be chosen first.
-        if (draft.engine === 'claude' || draft.model) draft.save({ engine: draft.engine, model: draft.model });
+        if (draft.engine !== 'local' || draft.model) draft.save({ engine: draft.engine, model: draft.model });
         else {
           modelSlot.replaceChildren(modelControl(agent, draft));
           effortSelect.disabled = true;

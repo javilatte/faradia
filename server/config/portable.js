@@ -19,6 +19,8 @@ const pkg = require('../../package.json');
 //   agents       the global agents (their .md files as they are)
 //   stageMap     which agent runs each stage (global)
 //   preferences  signals, thresholds and notifications
+// Security (sandbox, package registries) is exported for reference but not imported: whether the
+// sandbox can run depends on each machine.
 // It leaves out what depends on the machine (workbenches, repo paths, watchlists)
 // and what belongs to each repo (its memory and overrides). The local AI auth
 // header is a secret: it is only included on request.
@@ -67,7 +69,9 @@ function globalStageMapFile() {
 
 function exportConfig({ includeSecrets = false } = {}) {
   const settings = loadGlobalSettings();
-  if (!includeSecrets) settings.ai.localAi.authHeader = '';
+  if (!includeSecrets) {
+    settings.ai.localAi.authHeader = '';
+  }
   return {
     format: FORMAT,
     formatVersion: FORMAT_VERSION,
@@ -205,7 +209,11 @@ function backupGlobal() {
   const dir = path.join(root, new Date().toISOString().replace(/[:.]/g, '-'));
   fs.mkdirSync(dir, { recursive: true });
   writeJson(path.join(dir, 'optimia-config.json'), exportConfig({ includeSecrets: true }));
-  const all = fs.readdirSync(root).sort();
+  // Copies set aside by sync (…-sync-remote) rotate on their own (sync/engine.js).
+  const all = fs
+    .readdirSync(root)
+    .filter((n) => !/-sync-[a-z]+$/.test(n))
+    .sort();
   for (const old of all.slice(0, Math.max(0, all.length - 10))) {
     fs.rmSync(path.join(root, old), { recursive: true, force: true });
   }
@@ -229,6 +237,11 @@ function importConfig(raw) {
   saveGlobalSettings({
     ui: s.ui,
     ai,
+    suggestions: s.suggestions,
+    chat: s.chat,
+    tasks: s.tasks,
+    wiki: s.wiki,
+    ecc: s.ecc,
     preferences: s.preferences ? { instructions: s.preferences.instructions, noGo: s.preferences.noGo } : undefined,
     updates: s.updates
   });
@@ -257,7 +270,20 @@ function markWelcomed() {
   writeJson(stateFile(), { ...readJson(stateFile(), {}), welcomed: new Date().toISOString() });
 }
 
+// ---------- what's new ----------
+
+/** Last version whose "what's new" tour was shown (or skipped), or null. */
+function tourSeen() {
+  return readJson(stateFile(), {}).tourSeen || null;
+}
+
+function markTourSeen(version) {
+  writeJson(stateFile(), { ...readJson(stateFile(), {}), tourSeen: String(version).slice(0, 20) });
+}
+
 module.exports = {
+  tourSeen,
+  markTourSeen,
   FORMAT,
   FORMAT_VERSION,
   ConfigError,

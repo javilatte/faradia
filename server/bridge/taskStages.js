@@ -287,7 +287,7 @@ function buildDescribePrompt(task, { target, notes }) {
       '- Si el repo tiene plantilla de PR (.github/pull_request_template.md, .github/PULL_REQUEST_TEMPLATE/, docs/pull_request_template.md), síguela.',
       '- Si no: un resumen de 1-3 frases, "## Cambios" con los cambios principales y "## Cómo probarlo".',
       '- Describe solo lo que contiene el diff. No cuentes el proceso interno de la tarea (planes descartados, intentos fallidos, preguntas al usuario) ni contexto interno que no aporte a la revisión.',
-      'Primera línea exactamente "TÍTULO: <título de la PR>", corto y en el estilo de los commits del repo (Conventional Commits si los usa). Después, la descripción en markdown, sin preámbulo.'
+      'Primera línea exactamente "TÍTULO: <título de la PR>", corto y en el estilo de los commits del repo (Conventional Commits si los usa). Después, la descripción en markdown, sin preámbulo. Sin firmas de IA ni líneas «Generated with…» o Co-Authored-By.'
     ].join('\n')
   ]
     .filter(Boolean)
@@ -408,7 +408,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}
         `Encargo original:\n${goal}`,
         'Ejecuta los tests, el lint y la compilacion que tenga el proyecto. Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
         'No hagas git commit ni git push.',
-        'Termina tu respuesta con una línea exactamente "VEREDICTO: OK" si todo pasa, o "VEREDICTO: FALLA" seguido del motivo.'
+        'Termina tu respuesta con una línea exactamente "VEREDICTO: OK" si todo pasa, "VEREDICTO: FALLA" seguido del motivo si algo falla por estos cambios, o "VEREDICTO: SIN VERIFICAR" seguido de lo que falta si no has podido ejecutar las comprobaciones (herramientas, versión del lenguaje o servicios que no hay en este equipo).'
       ].join('\n\n');
     case 'review':
       return [
@@ -484,11 +484,13 @@ function answerPrompt(answer, stage) {
   return `Respuesta del usuario a tus preguntas:\n${answer.trim()}\n\n${tail}`;
 }
 
-// "VEREDICTO: OK" / "VEREDICTO: FALLA ..." at the end of the verification.
+// "VEREDICTO: OK" / "VEREDICTO: FALLA ..." / "VEREDICTO: SIN VERIFICAR ..." at the end of the
+// verification. Unverified (the checks could not run here) is not a failure of the change.
 function parseVerdict(text) {
-  const m = /VEREDICTO:\s*(OK|FALLA)\b[^\n]*/i.exec(text || '');
+  const m = /VEREDICTO:\s*(OK|FALLA|SIN VERIFICAR)\b[^\n]*/i.exec(text || '');
   if (!m) return null;
-  return { ok: m[1].toUpperCase() === 'OK', line: m[0].trim() };
+  const kind = m[1].toUpperCase();
+  return { ok: kind === 'OK', unverified: kind === 'SIN VERIFICAR', line: m[0].trim() };
 }
 
 // Message proposed by the "Preparar commit" stage (its last "MENSAJE: ..." line).

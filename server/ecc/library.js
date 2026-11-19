@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { dataDir } = require('../store/globalPaths');
+const { builtinSkills, copyBuiltinSkills } = require('../skills/library');
 
 // ECC (Everything Claude Code, github.com/affaan-m/ECC, MIT) bundled in vendor/ecc: its agents,
 // skills and commands are part of optimia, not a plugin.
@@ -126,17 +127,19 @@ function activeDir() {
 }
 
 /**
- * Builds <data>/optimia/ecc/.claude/{skills,commands} with what is enabled and returns that folder
- * for --add-dir, or null when nothing is. Rebuilt only when the selection or the bundle changes.
+ * Builds <data>/optimia/ecc/.claude/{skills,commands} with optimia's built-in skills (always) and
+ * what is enabled of ECC, and returns that folder for --add-dir, or null when there is nothing.
+ * Rebuilt only when the selection or the bundles change.
  */
 function prepareActiveDir(prefs) {
-  if (!available()) return null;
-  const sel = selection(prefs);
-  if (!sel.skills.length && !sel.commands) return null;
+  const builtin = builtinSkills();
+  const sel = available() ? selection(prefs) : { skills: [], commands: false };
+  if (!builtin.length && !sel.skills.length && !sel.commands) return null;
   const dir = activeDir();
+  const eccStamp = available() ? fs.statSync(path.join(VENDOR, 'SOURCE.md')).mtimeMs : 0;
   const signature = crypto
     .createHash('sha256')
-    .update(JSON.stringify(sel) + fs.statSync(path.join(VENDOR, 'SOURCE.md')).mtimeMs)
+    .update(JSON.stringify({ sel, eccStamp, builtin: builtin.map((s) => [s.name, s.mtimeMs]) }))
     .digest('hex');
   const stamp = path.join(dir, '.selection');
   try {
@@ -145,13 +148,14 @@ function prepareActiveDir(prefs) {
     /* first time */
   }
   fs.rmSync(path.join(dir, '.claude'), { recursive: true, force: true });
+  copyBuiltinSkills(dir);
   for (const name of sel.skills) {
     fs.cpSync(path.join(VENDOR, 'skills', name), path.join(dir, '.claude', 'skills', name), { recursive: true });
   }
   if (sel.commands) {
     fs.cpSync(path.join(VENDOR, 'commands'), path.join(dir, '.claude', 'commands'), { recursive: true });
   }
-  fs.copyFileSync(path.join(VENDOR, 'LICENSE'), path.join(dir, 'LICENSE'));
+  if (available()) fs.copyFileSync(path.join(VENDOR, 'LICENSE'), path.join(dir, 'LICENSE'));
   fs.writeFileSync(stamp, signature);
   return dir;
 }

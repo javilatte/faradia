@@ -60,8 +60,18 @@ test('verify: stores the verdict and leaves the task ready for review', () => {
   assert.equal(decideAfterStage(task('coding'), 'verify', { text: 'sin veredicto' }).patch.verification, null);
 });
 
-test('parseVerdict: recognizes OK and FALLA on any line', () => {
-  assert.deepEqual(parseVerdict('a\nveredicto: ok\n'), { ok: true, line: 'veredicto: ok' });
+test('parseVerdict: recognizes OK, FALLA and SIN VERIFICAR on any line', () => {
+  assert.deepEqual(parseVerdict('a\nveredicto: ok\n'), { ok: true, unverified: false, line: 'veredicto: ok' });
+  assert.deepEqual(parseVerdict('VEREDICTO: FALLA el test x'), {
+    ok: false,
+    unverified: false,
+    line: 'VEREDICTO: FALLA el test x'
+  });
+  assert.deepEqual(parseVerdict('...\nVEREDICTO: SIN VERIFICAR no hay Python 3.14 ni Postgres'), {
+    ok: false,
+    unverified: true,
+    line: 'VEREDICTO: SIN VERIFICAR no hay Python 3.14 ni Postgres'
+  });
   assert.equal(parseVerdict('nada'), null);
 });
 

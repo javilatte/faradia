@@ -19,6 +19,22 @@ test('listFilesModifiedSince: includes files ignored by git and skips dependenci
   assert.deepEqual(listFilesModifiedSince(dir, since), ['docs/seo.docx']);
 });
 
+test('listFilesModifiedSince: build output is skipped when git ignores it, real files in a folder named build are not', (t) => {
+  const dir = mkTmpDir('taskfiles-build');
+  t.after(() => rmTmpDir(dir));
+  execFileSync('git', ['init', '-q'], { cwd: dir });
+  fs.writeFileSync(path.join(dir, '.gitignore'), 'dist/\n');
+  const since = Date.now() - 1000;
+  for (const rel of ['dist/app.js', 'src/build/config.ts', 'coverage/index.html']) {
+    fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), 'x');
+  }
+  const listed = listFilesModifiedSince(dir, since);
+  assert.ok(!listed.includes('dist/app.js'), 'ignored build output');
+  assert.ok(listed.includes('src/build/config.ts'), 'a real file of the task');
+  assert.ok(listed.includes('coverage/index.html'), 'not ignored: the task may have meant it');
+});
+
 test('resolveInside: does not allow leaving the worktree', (t) => {
   const dir = mkTmpDir('taskfiles-resolve');
   t.after(() => rmTmpDir(dir));

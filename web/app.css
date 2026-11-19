@@ -914,6 +914,12 @@
 .tl-date {
   color: var(--text-dim);
 }
+.tl-dates {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: center;
+}
 .tl-layout {
   flex: 1;
   min-height: 0;
