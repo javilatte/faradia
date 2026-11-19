@@ -2112,6 +2112,13 @@ select,
   border: 1px solid var(--panel-border);
   padding: 3px 7px;
 }
+/* In a narrow card a table scrolls sideways instead of breaking its headers letter by letter. */
+.md th {
+  white-space: nowrap;
+}
+.md td {
+  min-width: 5em;
+}
 .md a {
   color: var(--accent);
 }
