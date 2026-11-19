@@ -52,7 +52,6 @@ function connectCard() {
       pid ? api.get(projectApi(pid, '/claude-auth')).catch(() => ({})) : {},
       pid ? api.get(projectApi(pid, '/settings')).catch(() => ({})) : {}
     ]);
-    const gemini = settings.providers?.gemini || {};
     const local = settings.ai?.localAi || {};
     rows.replaceChildren(
       row(
@@ -65,12 +64,6 @@ function connectCard() {
               label: 'Iniciar sesión…',
               run: () => pid && api.post(projectApi(pid, '/claude-auth/login')).catch(() => {})
             }
-      ),
-      row(
-        'Gemini',
-        gemini.hasKey ? 'Conectado' : 'Gratis con una clave de Google',
-        gemini.hasKey,
-        gemini.hasKey ? null : { label: 'Conectar…', run: () => openPane('gemini') }
       ),
       row(
         'Modelo local',
@@ -88,7 +81,7 @@ const INTRO = [
   {
     icon: 'plug',
     title: 'Conecta una IA y listo',
-    text: 'Con una basta. Si Claude se queda sin uso, optimia sigue con Gemini o con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.',
+    text: 'Con una basta. Si Claude se queda sin uso, optimia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.',
     extra: connectCard
   },
   {
@@ -120,9 +113,9 @@ const NEWS = [
     cards: [
       {
         icon: 'swap',
-        title: 'Gemini, y sin cortes si Claude se agota',
-        text: 'Conecta Gemini con una clave gratuita en Ajustes › Gemini. Úsalo como IA principal o como respaldo: si Claude se queda sin uso, la conversación sigue con todo su contexto.',
-        action: { label: 'Conectar Gemini…', run: () => openPane('gemini') }
+        title: 'Sin cortes si Claude se agota',
+        text: 'Si Claude se queda sin uso, el chat y las tareas siguen con tu modelo local en la misma sesión, con todo su contexto, y vuelven a Claude cuando se renueva.',
+        action: { label: 'Configurar la IA local…', run: () => openPane('local-ai') }
       },
       {
         icon: 'spark',

@@ -7,7 +7,6 @@ const path = require('path');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 const envelope = require('../../server/sync/envelope');
 const targets = require('../../server/sync/targets');
-const google = require('../../server/sync/google');
 const { createSync, stateFile } = require('../../server/sync/engine');
 const { isConfigWrite } = require('../../server/http/syncRoutes');
 const store = require('../../server/store/settingsStore');
@@ -47,7 +46,7 @@ test('sync: a second computer receives the first one’s configuration, secrets 
   on(a);
   store.saveGlobalSettings({
     ui: { theme: 'dark' },
-    providers: { gemini: { apiKey: 'AIzaSECRET', model: 'gemini-flash' } },
+    ai: { localAi: { url: 'http://ollama:11434', model: 'qwen', authHeader: 'Authorization: Bearer s3cret' } },
     preferences: { instructions: 'Conventional Commits.' },
     tasks: { archiveDays: 7 }
   });
@@ -56,7 +55,7 @@ test('sync: a second computer receives the first one’s configuration, secrets 
   assert.equal((await syncA.connect({ kind: 'folder', path: shared }, PASS)).action, 'up');
   syncA.stop();
   const onDisk = fs.readFileSync(path.join(shared, targets.FILE_NAME), 'utf8');
-  assert.ok(!onDisk.includes('AIzaSECRET') && !onDisk.includes('Conventional'), 'stored encrypted');
+  assert.ok(!onDisk.includes('s3cret') && !onDisk.includes('Conventional'), 'stored encrypted');
   assert.equal(fs.statSync(stateFile()).mode & 0o777, 0o600);
 
   on(b);
@@ -68,7 +67,7 @@ test('sync: a second computer receives the first one’s configuration, secrets 
   assert.equal(existing, true);
   const s = store.loadGlobalSettings();
   assert.equal(s.ui.theme, 'dark');
-  assert.equal(s.providers.gemini.apiKey, 'AIzaSECRET');
+  assert.equal(s.ai.localAi.authHeader, 'Authorization: Bearer s3cret', 'secrets travel too, encrypted');
   assert.equal(s.preferences.instructions, 'Conventional Commits.');
   assert.equal(s.tasks.archiveDays, 7);
   assert.ok(catalog.loadAgents(null).some((ag) => ag.name === 'Traductor'));
@@ -139,83 +138,6 @@ test('folder check: absolute existing writable folder only', (t) => {
   assert.equal(targets.checkFolder(shared), shared);
   assert.throws(() => targets.checkFolder('relativa'), /ruta completa/);
   assert.throws(() => targets.checkFolder(path.join(shared, 'no-existe')), /no existe/);
-});
-
-// A fake Google: OAuth token endpoint plus Drive's appDataFolder in memory.
-function fakeGoogle() {
-  const files = new Map();
-  const calls = [];
-  const json = (body, status = 200) => ({
-    ok: status < 400,
-    status,
-    json: async () => body,
-    text: async () => (typeof body === 'string' ? body : JSON.stringify(body))
-  });
-  const fetcher = async (url, init = {}) => {
-    calls.push({ url, method: init.method || 'GET' });
-    if (url === 'https://oauth2.googleapis.com/token') {
-      const form = new URLSearchParams(init.body);
-      if (form.get('grant_type') === 'authorization_code') {
-        assert.ok(form.get('code_verifier'));
-        const idToken = `x.${Buffer.from(JSON.stringify({ email: 'ana@example.com' })).toString('base64url')}.y`;
-        return json({ access_token: 'at1', refresh_token: 'rt1', expires_in: 3600, id_token: idToken });
-      }
-      return json({ access_token: 'at2', expires_in: 3600 });
-    }
-    assert.match(init.headers.Authorization, /^Bearer at/);
-    const u = new URL(url);
-    if (u.pathname === '/drive/v3/files' && !init.method) {
-      return json({ files: [...files.keys()].map((id) => ({ id })) });
-    }
-    if (u.pathname === '/upload/drive/v3/files' && init.method === 'POST') {
-      const content = init.body.split('\r\n\r\n')[2].split('\r\n--')[0];
-      files.set('f1', content);
-      return json({ id: 'f1' });
-    }
-    const id = u.pathname.split('/').pop();
-    if (init.method === 'PATCH') files.set(id, init.body);
-    else if (init.method === 'DELETE') files.delete(id);
-    else return json(files.get(id));
-    return json({});
-  };
-  return { fetcher, files, calls };
-}
-
-test('google: sign-in with PKCE, then the config goes to appDataFolder and back', async (t) => {
-  const { a, on } = setup(t);
-  on(a);
-  process.env.OPTIMIA_GOOGLE_CLIENT_ID = 'test-client';
-  t.after(() => delete process.env.OPTIMIA_GOOGLE_CLIENT_ID);
-  const g = fakeGoogle();
-  const authUrl = new URL(google.startSignIn('http://127.0.0.1:5/oauth/google', { passphrase: PASS }));
-  assert.equal(authUrl.searchParams.get('code_challenge_method'), 'S256');
-  assert.match(authUrl.searchParams.get('scope'), /drive\.appdata/);
-  const state = authUrl.searchParams.get('state');
-  const signIn = await google.finishSignIn({ state, code: 'c0de' }, g.fetcher);
-  assert.equal(signIn.email, 'ana@example.com');
-  assert.equal(signIn.extra.passphrase, PASS);
-  // The state is single use.
-  await assert.rejects(google.finishSignIn({ state, code: 'c0de' }, g.fetcher), /caducó/);
-
-  store.saveGlobalSettings({ ui: { theme: 'dark' } });
-  const sync = createSync({ fetcher: g.fetcher });
-  await sync.connect({ kind: 'google', refreshToken: signIn.refreshToken, email: signIn.email }, PASS);
-  sync.stop();
-  assert.equal(sync.status().label, 'ana@example.com');
-  assert.equal(g.files.size, 1);
-  assert.ok(envelope.isEnvelope(JSON.parse(g.files.get('f1'))));
-  store.saveGlobalSettings({ ui: { theme: 'light' } });
-  assert.equal(await sync.syncOnce(), 'up');
-  assert.ok(g.calls.some((c) => c.method === 'PATCH'));
-  await sync.disconnect({ wipe: true });
-  assert.equal(g.files.size, 0);
-  assert.ok(g.calls.some((c) => c.url.startsWith('https://oauth2.googleapis.com/revoke')));
-});
-
-test('google: unavailable without a client id', () => {
-  delete process.env.OPTIMIA_GOOGLE_CLIENT_ID;
-  assert.equal(google.client(), null);
-  assert.throws(() => google.startSignIn('http://127.0.0.1:5/oauth/google'), /cliente de Google/);
 });
 
 test('only writes to the global configuration trigger a sync', () => {

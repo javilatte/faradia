@@ -4,13 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const { dataDir } = require('../store/globalPaths');
 
-// When Claude runs out of usage, optimia goes on with another provider and comes back by itself
+// When Claude runs out of usage, optimia goes on with the local model and comes back by itself
 // when the limit resets.
 //
 // The claude CLI reports its limits in the stream: {type: "rate_limit_event", rate_limit_info:
 // {status: "allowed" | "allowed_warning" | "rejected", resetsAt, rateLimitType}}. A rejected one
 // (or a result that says the limit was hit) marks Claude as unavailable until resetsAt; meanwhile
-// sessions that would use Claude use Gemini or, without it, the local model. Switching keeps the
+// sessions that would use Claude use the local model, when there is one. Switching keeps the
 // same session (claude --resume), so the conversation and the task keep all their context.
 
 const FILE = () => path.join(dataDir(), 'claude-usage.json');
@@ -78,10 +78,8 @@ function clearClaudeBlock() {
   save();
 }
 
-/** The provider to use while Claude is out: Gemini when connected, else the local model, else null. */
+/** The provider to use while Claude is out: the local model when configured, else null. */
 function fallbackEngine(settings) {
-  const g = settings.providers?.gemini || {};
-  if (g.apiKey && g.model) return 'gemini';
   const local = settings.ai?.localAi || {};
   if (local.url && local.model) return 'local';
   return null;

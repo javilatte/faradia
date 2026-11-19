@@ -282,7 +282,6 @@
           <button class="settings-nav-item" data-pane="sync">Sincronización</button>
           <div class="settings-nav-group">IA</div>
           <button class="settings-nav-item active" data-pane="claude">Claude</button>
-          <button class="settings-nav-item" data-pane="gemini">Gemini</button>
           <button class="settings-nav-item" data-pane="local-ai">IA local</button>
           <button class="settings-nav-item" data-pane="agents">Agentes</button>
           <div class="settings-nav-group">Supervisión</div>
@@ -338,7 +337,7 @@
                   <button type="button" id="claude-account-refresh">Actualizar</button>
                 </div>
                 <div id="claude-account-switch-note" class="muted" hidden>
-                  Se abrio una terminal con "claude auth login". Completa el inicio de sesion ahi y pulsa Actualizar.
+                  Se abrió una terminal con «claude auth login». Completa el inicio de sesión ahí y pulsa Actualizar.
                 </div>
               </div>
               <div class="settings-field">
@@ -362,10 +361,17 @@
                   <option value="max">Máximo</option>
                 </select>
               </div>
-            </section>
-
-            <section class="settings-pane" data-pane="gemini" hidden>
-              <div id="gemini-pane"></div>
+              <div class="settings-field">
+                <label for="suggestions-mode">Sugerencias mientras escribes</label>
+                <select id="suggestions-mode">
+                  <option value="auto">Activadas</option>
+                  <option value="off">Desactivadas</option>
+                </select>
+                <span class="muted">
+                  Tras una pausa al escribir se propone una skill, un agente o un tipo de tarea; nunca se aplica solo.
+                  Las responde tu modelo local si contesta rápido y, si no, Claude Haiku con poco esfuerzo.
+                </span>
+              </div>
             </section>
 
             <section class="settings-pane" data-pane="local-ai" hidden>
@@ -588,7 +594,6 @@
     <script src="js/project/composer.js"></script>
     <script src="js/project/skills.js"></script>
     <script src="js/project/intent.js"></script>
-    <script src="js/project/gemini.js"></script>
     <script src="js/project/sync.js"></script>
     <script src="js/project/issues.js"></script>
     <script src="js/project/archive.js"></script>

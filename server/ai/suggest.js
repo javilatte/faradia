@@ -3,7 +3,6 @@
 const crypto = require('crypto');
 const os = require('os');
 const { spawn } = require('child_process');
-const gemini = require('./gemini');
 const { listSkills } = require('../bridge/skills');
 const { builtinSkills } = require('../skills/library');
 const ecc = require('../ecc/library');
@@ -15,9 +14,8 @@ const { TASK_TYPES } = require('../bridge/taskStages');
 // ids from the catalog it is given; anything else is dropped.
 //
 // Engines, in order (the first configured one that answers wins):
-//   1. Gemini (Settings › AI › Gemini), fast and cheap
-//   2. the local model (Settings › AI › Local AI), free
-//   3. Claude Haiku with low effort, through the claude CLI (uses a little of the account)
+//   1. the local model (Settings › AI › Local AI), free, while it answers within 3 s
+//   2. Claude Haiku with low effort, through the claude CLI (uses a little of the account)
 
 const MAX_DESC = 140;
 
@@ -187,28 +185,25 @@ function parseSuggestions(raw, catalog) {
   return out;
 }
 
-// The fast model of each key, looked up once (listing the models takes a request).
-const fastModels = new Map();
+// The local model is used only while it answers fast: a suggestion that comes late is no use, and
+// a busy or big model would hold every suggestion up. After a slow answer or a failure it is
+// skipped for a while and Claude Haiku answers instead.
+const LOCAL_TIMEOUT = 3000;
+const LOCAL_PAUSE = 10 * 60 * 1000;
+let localSkipUntil = 0;
 
-async function suggestionModel(g, fetcher) {
-  const key = crypto.createHash('sha256').update(g.apiKey).digest('hex');
-  if (!fastModels.has(key)) {
-    const models = await gemini.listModels(g.apiKey, { fetcher, timeoutMs: 4000 }).catch(() => []);
-    fastModels.set(key, gemini.fastModel(models) || '');
-  }
-  return fastModels.get(key) || g.model;
-}
-
-async function viaGemini(settings, system, user, { fetcher } = {}) {
-  const g = settings.providers?.gemini || {};
-  if (!g.apiKey || !g.model) return null;
-  const model = await suggestionModel(g, fetcher);
-  return gemini.askJson({ apiKey: g.apiKey, model, system, user, timeoutMs: 4000, fetcher });
-}
-
-async function viaLocal(settings, system, user, { fetcher = fetch } = {}) {
+async function viaLocal(settings, system, user, { fetcher = fetch, now = Date.now } = {}) {
   const local = settings.ai?.localAi || {};
-  if (!local.url || !local.model) return null;
+  if (!local.url || !local.model || now() < localSkipUntil) return null;
+  try {
+    return await askLocal(local, system, user, fetcher);
+  } catch (err) {
+    localSkipUntil = now() + LOCAL_PAUSE;
+    throw err;
+  }
+}
+
+async function askLocal(local, system, user, fetcher) {
   const headers = { 'Content-Type': 'application/json' };
   const h = /^([^:]+):\s*(.+)$/.exec(local.authHeader || '');
   if (h) headers[h[1].trim()] = h[2].trim();
@@ -224,7 +219,7 @@ async function viaLocal(settings, system, user, { fetcher = fetch } = {}) {
         { role: 'user', content: user }
       ]
     }),
-    signal: AbortSignal.timeout(12000)
+    signal: AbortSignal.timeout(LOCAL_TIMEOUT)
   });
   if (!res.ok) throw new Error(`modelo local: HTTP ${res.status}`);
   const data = await res.json();
@@ -278,7 +273,6 @@ function viaClaude(settings, system, user, { spawnFn = spawn } = {}) {
 }
 
 const ENGINES = [
-  ['gemini', viaGemini],
   ['local', viaLocal],
   ['claude', viaClaude]
 ];
@@ -325,4 +319,15 @@ async function suggest({ text, projectRoot, settings, deps = {} }) {
   return { suggestions: [], engine: null, errors };
 }
 
-module.exports = { suggest, buildCatalog, shortlist, parseSuggestions, userPrompt, SYSTEM, _cache: cache };
+module.exports = {
+  _resetLocal: () => {
+    localSkipUntil = 0;
+  },
+  suggest,
+  buildCatalog,
+  shortlist,
+  parseSuggestions,
+  userPrompt,
+  SYSTEM,
+  _cache: cache
+};

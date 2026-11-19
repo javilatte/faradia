@@ -57,7 +57,6 @@ function stageLabel(stage) {
 
 function modelText(engine, model) {
   if (engine === 'local') return `local · ${model}`;
-  if (engine === 'gemini') return `Gemini · ${model || 'modelo de Ajustes'}`;
   return !model || model === 'default' ? 'modelo por defecto' : model;
 }
 

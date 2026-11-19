@@ -101,8 +101,7 @@ class ClaudeSession extends EventEmitter {
       env.GIT_CONFIG_KEY_0 = 'core.hooksPath';
       env.GIT_CONFIG_VALUE_0 = gitHooksPath;
     }
-    // Local model or Gemini (through ai/anthropicProxy.js): the account's credentials stay out of the
-    // request (see localAi.js).
+    // Local model: the account's credentials stay out of the request (see localAi.js).
     const finalEnv = baseUrl ? localSessionEnv(env, { baseUrl, authHeader, authToken, model }) : env;
 
     this.proc = spawn('claude', args, { cwd: projectRoot, env: finalEnv });

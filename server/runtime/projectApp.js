@@ -98,23 +98,11 @@ function createApp(
       const { global, project, effective, overrides } = loadSettingsLayers(projectRoot);
       // The effective "Prohibido" list is the one optimia's sessions receive.
       syncClaudeSettings(projectRoot, effective.preferences.noGo);
-      // API keys never go back to the page: only whether there is one and its last characters.
-      const mask = (g) => ({
-        ...g,
-        providers: {
-          gemini: {
-            model: g.providers.gemini.model,
-            apiKey: '',
-            hasKey: Boolean(g.providers.gemini.apiKey),
-            keyHint: g.providers.gemini.apiKey ? `…${g.providers.gemini.apiKey.slice(-4)}` : ''
-          }
-        }
-      });
       return {
-        ...mask(effective),
+        ...effective,
         activeEngine: engineFor(effective),
         claudeBlockedUntil: claudeBlockedUntil(),
-        layers: { global: mask(global), project, overrides }
+        layers: { global, project, overrides }
       };
     };
 
@@ -148,7 +136,6 @@ function createApp(
           updates: body.updates,
           security: body.security,
           wiki: body.wiki,
-          providers: body.providers,
           suggestions: body.suggestions,
           chat: body.chat,
           tasks: body.tasks

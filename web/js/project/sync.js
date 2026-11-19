@@ -1,14 +1,13 @@
 'use strict';
 
 // Settings › Sincronización: the same configuration on every computer (server/sync). The user picks
-// where the copy lives (their Google Drive or a folder they already sync) and a passphrase; the copy
-// is encrypted here with it before it leaves, so neither Google nor optimia can read it.
+// a folder they already sync between computers and a passphrase; the copy is encrypted here with it
+// before it is written, so whoever stores the folder (Google, Dropbox…) cannot read it.
 
 const syncPane = document.getElementById('sync-pane');
-let syncWay = null; // 'google' | 'folder'
+let syncDraft = { folder: '', passphrase: '' };
 let syncError = '';
 let syncBusy = false;
-let syncWaitTimer = null;
 
 function sEl(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -78,7 +77,7 @@ function connectedView(st) {
     sEl(
       'ul',
       { class: 'grouped-list' },
-      row(st.kind === 'google' ? 'Cuenta de Google' : 'Carpeta', st.label),
+      row('Carpeta', st.label),
       row('Este equipo', st.machine),
       row('Última comprobación', syncWhen(st.lastSyncAt)),
       st.lastAction ? row('Último cambio', ACTION_TEXT[st.lastAction] || st.lastAction) : ''
@@ -103,8 +102,7 @@ function connectedView(st) {
   ];
 }
 
-function setupView(st) {
-  const way = syncWay || (st.googleAvailable ? 'google' : 'folder');
+function setupView() {
   const pass = sEl('input', {
     type: 'password',
     id: 'sync-passphrase',
@@ -118,77 +116,42 @@ function setupView(st) {
     id: 'sync-folder',
     spellcheck: 'false',
     placeholder: '~/Google Drive/Mi unidad, ~/Dropbox…',
-    'aria-label': 'Carpeta sincronizada'
+    'aria-describedby': 'sync-folder-help'
   });
+  // What was typed survives a re-render (an error, a status update).
+  pass.value = syncDraft.passphrase;
+  folder.value = syncDraft.folder;
+  pass.addEventListener('input', () => (syncDraft.passphrase = pass.value));
+  folder.addEventListener('input', () => (syncDraft.folder = folder.value));
   const choose = sEl('button', { type: 'button' }, 'Elegir…');
   choose.addEventListener('click', async () => {
     const { path } = await syncCall('POST', '/api/pick-folder', {}).catch(() => ({}));
-    if (path) folder.value = path;
+    if (path) folder.value = syncDraft.folder = path;
   });
   const activate = sEl(
     'button',
     { type: 'button', class: 'primary', disabled: syncBusy },
-    syncBusy ? 'Activando…' : way === 'google' ? 'Iniciar sesión con Google…' : 'Activar'
+    syncBusy ? 'Activando…' : 'Activar'
   );
-  activate.addEventListener('click', () => {
-    if (way === 'google') {
-      run(async () => {
-        const { authUrl } = await syncCall('POST', '/api/sync/google', { passphrase: pass.value });
-        window.open(authUrl, '_blank', 'noopener');
-        waitForGoogle();
-      });
-    } else {
-      run(() => syncCall('POST', '/api/sync/folder', { path: folder.value.trim(), passphrase: pass.value }));
-    }
-  });
+  activate.addEventListener('click', () =>
+    run(async () => {
+      await syncCall('POST', '/api/sync/folder', { path: folder.value.trim(), passphrase: pass.value });
+      syncDraft = { folder: '', passphrase: '' };
+    })
+  );
   for (const input of [pass, folder]) input.addEventListener('keydown', (e) => e.key === 'Enter' && activate.click());
-  const choice = (value, label, disabled) =>
-    sEl(
-      'button',
-      {
-        type: 'button',
-        role: 'radio',
-        'aria-checked': String(way === value),
-        class: way === value ? 'on' : '',
-        disabled,
-        onclick: () => {
-          syncWay = value;
-          syncError = '';
-          renderSyncPane();
-        }
-      },
-      label
-    );
   return [
     sEl(
       'div',
       { class: 'settings-field' },
-      sEl('span', { class: 'field-label', id: 'sync-way-label' }, 'Dónde guardar la copia'),
-      sEl(
-        'div',
-        { class: 'segmented', role: 'radiogroup', 'aria-labelledby': 'sync-way-label' },
-        choice('google', 'Mi Google Drive', !st.googleAvailable),
-        choice('folder', 'Una carpeta')
-      ),
+      sEl('label', { for: 'sync-folder' }, 'Carpeta'),
+      sEl('div', { class: 'inline-row' }, folder, choose),
       sEl(
         'span',
-        { class: 'muted' },
-        way === 'google'
-          ? 'En una carpeta oculta de tu Drive que solo ve optimia. No da acceso al resto de tus archivos.'
-          : 'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing…'
-      ),
-      !st.googleAvailable && way === 'folder'
-        ? sEl('span', { class: 'muted' }, 'El inicio de sesión con Google aún no está disponible en esta versión.')
-        : ''
+        { class: 'muted', id: 'sync-folder-help' },
+        'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing… En los demás equipos elige la misma.'
+      )
     ),
-    way === 'folder'
-      ? sEl(
-          'div',
-          { class: 'settings-field' },
-          sEl('label', { for: 'sync-folder' }, 'Carpeta'),
-          sEl('div', { class: 'gemini-key-row' }, folder, choose)
-        )
-      : '',
     sEl(
       'div',
       { class: 'settings-field' },
@@ -197,7 +160,7 @@ function setupView(st) {
       sEl(
         'span',
         { class: 'muted', id: 'sync-passphrase-help' },
-        'Cifra la copia en este equipo antes de enviarla. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).'
+        'Cifra la copia en este equipo antes de guardarla en la carpeta. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).'
       )
     ),
     syncError ? sEl('div', { class: 'error-text', role: 'alert' }, syncError) : '',
@@ -219,19 +182,6 @@ async function run(fn) {
   }
 }
 
-// After opening Google's page: check until the sign-in lands (or two minutes pass).
-function waitForGoogle() {
-  clearInterval(syncWaitTimer);
-  const until = Date.now() + 120_000;
-  syncWaitTimer = setInterval(async () => {
-    const st = await syncCall('GET', '/api/sync').catch(() => null);
-    if (st?.enabled || Date.now() > until) {
-      clearInterval(syncWaitTimer);
-      renderSyncPane();
-    }
-  }, 2000);
-}
-
 async function renderSyncPane() {
   const st = await syncCall('GET', '/api/sync').catch((err) => ({ error: err.message }));
   if (st.error) {
@@ -244,7 +194,7 @@ async function renderSyncPane() {
       { class: 'muted settings-help' },
       'Tu configuración igual en todos tus equipos: ajustes, claves de IA, agentes, etapas, instrucciones y avisos. Los repos y las tareas se quedan en cada equipo.'
     ),
-    ...(st.enabled ? connectedView(st) : setupView(st))
+    ...(st.enabled ? connectedView(st) : setupView())
   );
 }
 

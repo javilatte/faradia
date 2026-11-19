@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
 const { prepareActiveDir } = require('../ecc/library');
-const { sharedProxy } = require('../ai/anthropicProxy');
 const { engineOverride } = require('../ai/fallback');
 const wiki = require('../knowledge/wikiStore');
 const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
@@ -65,7 +64,7 @@ function localDefaults(ai) {
  * out of usage, see ai/fallback.js) wins over the agent's and the chat's choice for Claude sessions.
  */
 function engineFor(settings, agent) {
-  const wanted = agent ? agent.engine : ['local', 'gemini'].includes(settings.ai.mode) ? settings.ai.mode : 'claude';
+  const wanted = agent ? agent.engine : settings.ai.mode === 'local' ? 'local' : 'claude';
   if (wanted !== 'claude') return wanted;
   const override = settings.engineOverride !== undefined ? settings.engineOverride : engineOverride(settings);
   return override || 'claude';
@@ -130,17 +129,6 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const engine = engineFor(settings, agent);
   opts.engine = engine;
-  if (engine === 'gemini') {
-    const proxy = sharedProxy();
-    const gemini = settings.providers?.gemini || {};
-    if (!gemini.apiKey) throw new Error('Gemini no está conectado: abre Ajustes › Gemini y pega tu API key');
-    if (!proxy?.url) throw new Error('el puente con Gemini aún no ha arrancado; inténtalo de nuevo en un momento');
-    opts.baseUrl = `${proxy.url}/gemini`;
-    opts.authToken = proxy.token;
-    opts.model = (agent?.engine === 'gemini' && agent.model) || gemini.model;
-    opts.effort = undefined;
-    return opts;
-  }
   if (engine === 'local') {
     Object.assign(opts, localDefaults(ai));
     if (!opts.baseUrl) {

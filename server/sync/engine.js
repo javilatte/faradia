@@ -10,7 +10,6 @@ const catalog = require('../agents/catalog');
 const portable = require('../config/portable');
 const envelope = require('./envelope');
 const targets = require('./targets');
-const google = require('./google');
 
 // Keeps optimia's global configuration (settings, keys, agents, stages, notices: what
 // portable.exportConfig gathers) the same on every computer of the user. Every few minutes, and
@@ -36,7 +35,7 @@ function loadState() {
   }
 }
 
-// It holds the passphrase and the Google token: readable only by the user.
+// It holds the passphrase: readable only by the user.
 function saveState(state) {
   fs.mkdirSync(path.dirname(stateFile()), { recursive: true });
   fs.writeFileSync(stateFile(), JSON.stringify(state, null, 2) + '\n', { mode: 0o600 });
@@ -82,8 +81,10 @@ function keepCopy(config, why) {
   fs.writeFileSync(path.join(dir, 'optimia-config.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
 }
 
-function createSync({ fetcher = fetch, log = () => {}, onChange = () => {} } = {}) {
+function createSync({ log = () => {}, onChange = () => {} } = {}) {
   let state = loadState();
+  // Only folders for now; anything else saved by another version is ignored.
+  if (state.target && state.target.kind !== 'folder') state.target = null;
   let timer = null;
   let soon = null;
   let running = null;
@@ -91,9 +92,6 @@ function createSync({ fetcher = fetch, log = () => {}, onChange = () => {} } = {
   function targetOf(t = state.target) {
     if (!t) return null;
     if (t.kind === 'folder') return targets.folderTarget(t.path);
-    if (t.kind === 'google') {
-      return targets.googleTarget({ auth: google.accessTokens(t.refreshToken, fetcher), email: t.email, fetcher });
-    }
     return null;
   }
 
@@ -102,12 +100,11 @@ function createSync({ fetcher = fetch, log = () => {}, onChange = () => {} } = {
     return {
       enabled: Boolean(t),
       kind: t?.kind || null,
-      label: t ? (t.kind === 'folder' ? t.path : t.email || 'Google Drive') : null,
+      label: t?.path || null,
       machine: os.hostname(),
       lastSyncAt: state.lastSyncAt || null,
       lastAction: state.lastAction || null,
-      lastError: state.lastError || null,
-      googleAvailable: Boolean(google.client())
+      lastError: state.lastError || null
     };
   }
 
@@ -213,7 +210,6 @@ function createSync({ fetcher = fetch, log = () => {}, onChange = () => {} } = {
   async function disconnect({ wipe = false } = {}) {
     const target = targetOf();
     if (wipe && target) await target.remove();
-    if (state.target?.kind === 'google') await google.revoke(state.target.refreshToken, fetcher);
     stop();
     record({
       target: null,

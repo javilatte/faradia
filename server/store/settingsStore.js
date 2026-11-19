@@ -19,7 +19,7 @@ const { configDir } = require('./globalPaths');
 
 const THEMES = ['system', 'light', 'dark'];
 const CLOCKS = ['datetime', 'time'];
-const MODES = ['claude', 'local', 'gemini'];
+const MODES = ['claude', 'local'];
 const PROJECT_VERSION = 2;
 
 // Fields of `ai` a repo can override (dotted paths).
@@ -29,15 +29,12 @@ function defaultSettings() {
   return {
     ui: { theme: 'system', clock: 'datetime' },
     ai: {
-      mode: 'claude', // 'claude' | 'local' | 'gemini'
+      mode: 'claude', // 'claude' | 'local'
       claude: { model: 'default', effort: 'high' },
       localAi: { url: '', model: '', authHeader: '' }
     },
-    // Other AI providers. Only in the global layer (never in a repo, where a key could end up
-    // committed). Gemini: a Google AI Studio key and the model picked from the ones it offers.
-    providers: { gemini: { apiKey: '', model: '' } },
-    // Skill/agent suggestions while typing in the chat: 'auto' (Gemini, then the local model, then
-    // Claude Haiku with low effort) or 'off'.
+    // Skill/agent suggestions while typing in the chat: 'auto' (the local model when it answers fast,
+    // else Claude Haiku with low effort) or 'off'.
     suggestions: { mode: 'auto' },
     preferences: {
       instructions: '',
@@ -126,12 +123,6 @@ function sanitizeGlobal(raw) {
       clock: CLOCKS.includes(g.ui?.clock) ? g.ui.clock : d.ui.clock
     },
     ai,
-    providers: {
-      gemini: {
-        apiKey: str(g.providers?.gemini?.apiKey).trim(),
-        model: str(g.providers?.gemini?.model).trim()
-      }
-    },
     suggestions: { mode: ['auto', 'off'].includes(g.suggestions?.mode) ? g.suggestions.mode : d.suggestions.mode },
     // Chat permissions: 'auto' (Claude Code's auto mode approves what is safe and asks the rest in
     // the chat) or 'ask' (every action that needs permission is asked; read-only commands are not).
@@ -185,7 +176,6 @@ function saveGlobalSettings(patch = {}) {
   next.security = { ...current.security, ...(patch.security || {}) };
   next.wiki = { ...current.wiki, ...(patch.wiki || {}) };
   next.ecc = { ...current.ecc, ...(patch.ecc || {}) };
-  next.providers = { gemini: { ...current.providers.gemini, ...(patch.providers?.gemini || {}) } };
   next.suggestions = { ...current.suggestions, ...(patch.suggestions || {}) };
   next.chat = { ...current.chat, ...(patch.chat || {}) };
   next.tasks = { ...current.tasks, ...(patch.tasks || {}) };
@@ -313,7 +303,6 @@ function effectiveFrom(global, project) {
     security: global.security,
     wiki: global.wiki,
     ecc: global.ecc,
-    providers: global.providers,
     suggestions: global.suggestions,
     chat: global.chat,
     tasks: global.tasks,

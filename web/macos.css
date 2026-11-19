@@ -1403,81 +1403,7 @@ body {
   margin-bottom: 4px;
 }
 
-/* Settings > Gemini: the three steps to connect a key, as a vertical timeline. */
-.gemini-steps {
-  list-style: none;
-  margin: 0 0 8px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-.gemini-step {
-  position: relative;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-  padding-bottom: 18px;
-}
-.gemini-step:not(:last-child)::before {
-  content: '';
-  position: absolute;
-  left: 13px;
-  top: 30px;
-  bottom: 2px;
-  width: 2px;
-  border-radius: 1px;
-  background: var(--separator);
-}
-.gemini-step.done:not(:last-child)::before {
-  background: var(--accent);
-}
-.gemini-step-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  border: 2px solid var(--separator);
-  color: var(--secondary-label);
-  background: var(--content-bg);
-}
-.gemini-step.done .gemini-step-mark {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.gemini-step.current .gemini-step-mark {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
-}
-.gemini-step-body {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding-top: 4px;
-  min-width: 0;
-}
-.gemini-step.next .gemini-step-body {
-  opacity: 0.6;
-}
-.gemini-step-body > select {
-  max-width: 100%;
-}
-.gemini-key-row {
-  display: flex;
-  gap: 8px;
-  align-self: stretch;
-  flex-wrap: wrap;
-}
-.gemini-key-row input {
-  flex: 1;
-  min-width: 200px;
-  font-family: var(--mono);
-}
+/* A link that looks like a button (Settings › Registro: export). */
 .button-link {
   display: inline-flex;
   align-items: center;
@@ -1492,8 +1418,18 @@ body {
 .button-link:hover {
   background: var(--hover-bg);
 }
-#gemini-pane > .general-actions {
-  margin-bottom: 20px;
+
+/* An input with its button on one line (Settings › Sincronización). */
+.inline-row {
+  display: flex;
+  gap: 8px;
+  align-self: stretch;
+  flex-wrap: wrap;
+}
+.inline-row input {
+  flex: 1;
+  min-width: 200px;
+  font-family: var(--mono);
 }
 
 /* Settings > Registro: problems found, one row per kind. */
@@ -2026,11 +1962,6 @@ input.switch:focus-visible {
 #sync-pane > .grouped-list {
   margin-bottom: 10px;
 }
-#sync-pane .field-label {
-  font-size: var(--text-body);
-  font-weight: 500;
-  color: var(--label);
-}
 .sync-row-value {
   font-size: var(--text-body);
   color: var(--secondary-label);
@@ -2040,32 +1971,6 @@ input.switch:focus-visible {
 }
 #sync-pane > .group-help {
   margin-bottom: 12px;
-}
-/* A macOS segmented control on a radiogroup of buttons. */
-.segmented {
-  display: inline-flex;
-  align-self: flex-start;
-  padding: 2px;
-  gap: 2px;
-  border-radius: 7px;
-  background: var(--quaternary-label);
-}
-.segmented > button {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 3px 14px;
-  border-radius: 5px;
-  font-size: var(--text-callout);
-  color: var(--label);
-}
-.segmented > button.on {
-  background: var(--control-bg);
-  box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.2);
-  font-weight: 500;
-}
-.segmented > button:disabled {
-  color: var(--tertiary-label);
 }
 #sync-pane .skill-row-text {
   flex: 0 0 auto;

@@ -5,6 +5,25 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing… En los demás equipos elige la misma.':
+      'A folder you already sync between your computers: Google Drive for desktop, Dropbox, iCloud, Syncthing… Pick the same one on your other computers.',
+    'Cifra la copia en este equipo antes de guardarla en la carpeta. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).':
+      'It encrypts the copy on this computer before it is written to the folder. Use the same one on all your computers. If you forget it, the copy cannot be recovered (your local configuration is not lost).',
+    'Claude Code decide qué es seguro (leer, buscar, cambios dentro del repo) y lo hace sin preguntar; lo demás te lo pide con una tarjeta en el chat. Con un modelo local siempre se pregunta.':
+      'Claude Code decides what is safe (reading, searching, changes inside the repo) and does it without asking; anything else is asked with a card in the chat. With a local model it always asks.',
+    Activadas: 'On',
+    'Tras una pausa al escribir se propone una skill, un agente o un tipo de tarea; nunca se aplica solo. Las responde tu modelo local si contesta rápido y, si no, Claude Haiku con poco esfuerzo.':
+      'When you pause typing, a skill, an agent or a task type is proposed; it is never applied on its own. Your local model answers when it is fast, otherwise Claude Haiku with low effort.',
+    'Sin cortes si Claude se agota': 'No stops when Claude runs out',
+    'Si Claude se queda sin uso, el chat y las tareas siguen con tu modelo local en la misma sesión, con todo su contexto, y vuelven a Claude cuando se renueva.':
+      'If Claude runs out of usage, the chat and the tasks go on with your local model in the same session, with all their context, and go back to Claude when it resets.',
+    'Configurar la IA local…': 'Set up local AI…',
+    'Configura un modelo local en Ajustes › IA local para seguir sin esperar.':
+      'Set up a local model in Settings › Local AI to go on without waiting.',
+    'Con una basta. Si Claude se queda sin uso, optimia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
+      'One is enough. If Claude runs out of usage, optimia goes on with your local model without losing the conversation, and goes back to Claude when it resets.',
+    'Se abrió una terminal con «claude auth login». Completa el inicio de sesión ahí y pulsa Actualizar.':
+      'A terminal opened with “claude auth login”. Finish signing in there and click Refresh.',
     'Tu configuración en todos tus equipos': 'Your configuration on all your computers',
     'Actívalo en Ajustes › Sincronización con una carpeta que ya sincronices. Se cifra en tu equipo con una frase que solo tú conoces antes de salir.':
       'Turn it on in Settings › Sync with a folder you already sync. It is encrypted on your computer with a passphrase only you know before it leaves.',
@@ -13,23 +32,10 @@ window.OPTIMIA_I18N_EN = {
     Sincronización: 'Sync',
     'Tu configuración igual en todos tus equipos: ajustes, claves de IA, agentes, etapas, instrucciones y avisos. Los repos y las tareas se quedan en cada equipo.':
       'Your configuration, the same on all your computers: settings, AI keys, agents, stages, instructions and notices. Repos and tasks stay on each computer.',
-    'Dónde guardar la copia': 'Where to keep the copy',
-    'Mi Google Drive': 'My Google Drive',
-    'Una carpeta': 'A folder',
-    'En una carpeta oculta de tu Drive que solo ve optimia. No da acceso al resto de tus archivos.':
-      'In a hidden folder of your Drive that only optimia can see. It gives no access to the rest of your files.',
-    'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing…':
-      'A folder you already sync between your computers: Google Drive for desktop, Dropbox, iCloud, Syncthing…',
-    'El inicio de sesión con Google aún no está disponible en esta versión.':
-      'Signing in with Google is not available in this version yet.',
     'Elegir…': 'Choose…',
     'Frase de paso': 'Passphrase',
     'Al menos 8 caracteres': 'At least 8 characters',
-    'Cifra la copia en este equipo antes de enviarla. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).':
-      'It encrypts the copy on this computer before it is sent. Use the same one on all your computers. If you forget it, the copy cannot be recovered (your local configuration is not lost).',
-    'Iniciar sesión con Google…': 'Sign in with Google…',
     'Activando…': 'Turning on…',
-    'Cuenta de Google': 'Google account',
     'Este equipo': 'This computer',
     'Última comprobación': 'Last check',
     'Último cambio': 'Last change',
@@ -311,10 +317,7 @@ window.OPTIMIA_I18N_EN = {
     'Modelo local': 'Local model',
     'Gratis con una clave de Google': 'Free with a Google key',
     'Ollama o LM Studio': 'Ollama or LM Studio',
-    'Conectar Gemini…': 'Connect Gemini…',
     'Conecta una IA y listo': 'Connect an AI and you are set',
-    'Con una basta. Si Claude se queda sin uso, optimia sigue con Gemini o con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
-      'One is enough. If Claude runs out of usage, optimia goes on with Gemini or your local model without losing the conversation, and returns to Claude when it renews.',
     'Pide en el chat': 'Ask in the chat',
     'Mientras escribes, optimia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.':
       'As you type, optimia suggests the skill, agent or task type that fits. Tab to use it. @ calls an agent and / a skill.',
@@ -327,9 +330,6 @@ window.OPTIMIA_I18N_EN = {
     'Una wiki que se escribe sola': 'A wiki that writes itself',
     'En Wiki, «Generar desde el repo» documenta el proyecto, y tras cada tarea los agentes apuntan lo que aprendieron. Todo se ajusta en Ajustes cuando quieras.':
       'In Wiki, "Generate from the repo" documents the project, and after each task the agents write down what they learned. Everything can be adjusted in Settings whenever you want.',
-    'Gemini, y sin cortes si Claude se agota': 'Gemini, and no stops when Claude runs out',
-    'Conecta Gemini con una clave gratuita en Ajustes › Gemini. Úsalo como IA principal o como respaldo: si Claude se queda sin uso, la conversación sigue con todo su contexto.':
-      'Connect Gemini with a free key in Settings › Gemini. Use it as your main AI or as a fallback: if Claude runs out of usage, the conversation goes on with all its context.',
     'Sugerencias mientras escribes': 'Suggestions while you type',
     'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.':
       'optimia proposes the skill, agent or task type that fits your message. Tab to accept it, Esc to dismiss it.',
@@ -343,8 +343,6 @@ window.OPTIMIA_I18N_EN = {
     'Automático: pregunta solo lo arriesgado': 'Automatic: asks only what is risky',
     'Preguntar todo salvo lo de solo lectura': 'Ask everything except read-only',
     'Se aplica desde el siguiente mensaje': 'Applies from the next message',
-    'Claude Code decide qué es seguro (leer, buscar, cambios dentro del repo) y lo hace sin preguntar; lo demás te lo pide con una tarjeta en el chat. Con Gemini o un modelo local siempre se pregunta.':
-      'Claude Code decides what is safe (reading, searching, changes inside the repo) and does it without asking; anything else is asked with a card in the chat. With Gemini or a local model it always asks.',
     'Cada acción que necesite permiso aparece como una tarjeta en el chat, salvo los comandos que solo leen (git log, ls, grep…).':
       'Every action that needs permission shows up as a card in the chat, except commands that only read (git log, ls, grep…).',
     'Permiso pendiente': 'Pending permission',
@@ -389,25 +387,15 @@ window.OPTIMIA_I18N_EN = {
       'No problems recorded. If something fails, it shows up here grouped by kind.',
     'Exportar informe…': 'Export report…',
     Vaciar: 'Clear',
-    'El de Ajustes › Gemini': 'The one in Settings › Gemini',
-    'Abre Google AI Studio': 'Open Google AI Studio',
     'Entra con tu cuenta de Google.': 'Sign in with your Google account.',
-    'Abrir aistudio.google.com ↗': 'Open aistudio.google.com ↗',
-    'Pulsa «Get API key» y pega la clave': 'Click "Get API key" and paste the key',
     'Se comprueba con Google antes de guardarla. Solo se guarda en este equipo.':
       'It is checked with Google before it is saved. It stays on this computer.',
     Comprobar: 'Check',
     'Elige el modelo': 'Pick the model',
-    'Aparecen al comprobar la clave.': 'They show up once the key is checked.',
     'Quitar la clave': 'Remove the key',
-    'Activadas: Gemini, luego IA local, luego Claude Haiku': 'On: Gemini, then local AI, then Claude Haiku',
     Desactivadas: 'Off',
     'Tras una pausa al escribir, un modelo rápido propone una skill, un agente o un tipo de tarea. Nunca se aplica solo.':
       'When you pause typing, a fast model proposes a skill, an agent or a task type. It is never applied on its own.',
-    'Gemini de Google con una clave gratuita de AI Studio. optimia lo usa para las sugerencias del chat, como IA principal si lo eliges en el chat y como respaldo cuando Claude se queda sin uso.':
-      "Google's Gemini with a free AI Studio key. optimia uses it for chat suggestions, as the main AI if you pick it in the chat, and as a fallback when Claude runs out of usage.",
-    'Google no acepta esa clave. Cópiala otra vez desde AI Studio.':
-      'Google does not accept that key. Copy it again from AI Studio.',
     'Sugerencias para este mensaje': 'Suggestions for this message',
     'Descartar sugerencias': 'Dismiss suggestions',
     'Descartar (Esc)': 'Dismiss (Esc)',
@@ -797,7 +785,6 @@ window.OPTIMIA_I18N_EN = {
       '^Sugerencias del chat: (\\d+) aceptadas y (\\d+) descartadas\\.$',
       'Chat suggestions: $1 accepted and $2 dismissed.'
     ],
-    ['^Gemini · modelo de Ajustes$', 'Gemini · model from Settings'],
     ['^Solo de este repo \\((.+)\\)\\.$', 'Only this repo ($1).'],
     ['^(.+) · recomendado$', '$1 · recommended'],
     ['^(\\d+) modelos disponibles con tu clave\\.$', '$1 models available with your key.'],

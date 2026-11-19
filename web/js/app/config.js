@@ -726,7 +726,7 @@ function renderChatPermissionsField(chat) {
       'span',
       { class: 'muted' },
       mode === 'auto'
-        ? 'Claude Code decide qué es seguro (leer, buscar, cambios dentro del repo) y lo hace sin preguntar; lo demás te lo pide con una tarjeta en el chat. Con Gemini o un modelo local siempre se pregunta.'
+        ? 'Claude Code decide qué es seguro (leer, buscar, cambios dentro del repo) y lo hace sin preguntar; lo demás te lo pide con una tarjeta en el chat. Con un modelo local siempre se pregunta.'
         : 'Cada acción que necesite permiso aparece como una tarjeta en el chat, salvo los comandos que solo leen (git log, ls, grep…).'
     )
   );

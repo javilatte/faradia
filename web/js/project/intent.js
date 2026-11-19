@@ -1,6 +1,6 @@
 'use strict';
 
-// Suggestions while typing: after a short pause, a cheap model (Gemini, the local model or Claude
+// Suggestions while typing: after a short pause, a cheap model (the local model or Claude
 // Haiku, see server/ai/suggest.js) reads the message and may propose a skill, an agent or a task
 // type. They show as chips above the message box; nothing is applied until the user picks one
 // (click or Tab). Esc or × dismisses them for that message.
@@ -153,3 +153,19 @@ document.getElementById('send-button').addEventListener('click', hideIntent);
 window.addEventListener('focus', () => {
   intentOff = false;
 });
+
+// Settings › Claude: suggestions on or off (for every repo).
+const suggestionsMode = document.getElementById('suggestions-mode');
+async function loadSuggestionsMode() {
+  const s = await fetch(apiPath('/api/settings'))
+    .then((r) => r.json())
+    .catch(() => null);
+  if (s?.suggestions) suggestionsMode.value = s.suggestions.mode === 'off' ? 'off' : 'auto';
+}
+suggestionsMode.addEventListener('change', async () => {
+  await patchSettings({ scope: 'global', suggestions: { mode: suggestionsMode.value } });
+  intentOff = suggestionsMode.value === 'off';
+  if (intentOff) hideIntent();
+});
+document.querySelector('.settings-nav-item[data-pane="claude"]').addEventListener('click', loadSuggestionsMode);
+document.getElementById('settings-button').addEventListener('click', loadSuggestionsMode);

@@ -7,7 +7,6 @@ const { sandboxStatus } = require('../bridge/sandbox');
 const knowledge = require('../knowledge/bundle');
 const ecc = require('../ecc/library');
 const { builtinSkills } = require('../skills/library');
-const gemini = require('../ai/gemini');
 const issues = require('../feedback/issues');
 const { sendJson, readJsonBody } = require('./util');
 const pkg = require('../../package.json');
@@ -116,23 +115,6 @@ async function handleConfigRoutes(req, res, url) {
       agents: ecc.eccAgents().length,
       builtin: builtinSkills().map((s) => ({ name: s.name, description: s.description, credit: s.credit }))
     });
-  }
-  // Gemini: checks a key (the one given, or the saved one) and lists the models it can use.
-  //   POST /api/providers/gemini/models {apiKey?}  -> {models, recommended}
-  if (p === '/api/providers/gemini/models' && req.method === 'POST') {
-    const body = await readJsonBody(req).catch(() => ({}));
-    const apiKey = String(body.apiKey || '').trim() || loadGlobalSettings().providers.gemini.apiKey;
-    try {
-      const models = await gemini.listModels(apiKey);
-      return sendJson(res, 200, { models, recommended: gemini.recommendedModel(models) });
-    } catch (err) {
-      const bad = [400, 401, 403].includes(err.status);
-      return sendJson(res, bad ? 400 : 502, {
-        error: bad
-          ? 'Google no acepta esa clave. Cópiala otra vez desde AI Studio.'
-          : `No se pudo hablar con Gemini: ${err.message}`
-      });
-    }
   }
   // Problem report (feedback/issues.js).
   //   GET    /api/issues          {total, groups, signals}

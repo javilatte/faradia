@@ -58,7 +58,7 @@ function connect() {
     } else if (msg.type === 'sync_status') {
       window.onSyncStatus?.(msg.status);
     } else if (msg.type === 'provider_switch') {
-      const names = { claude: 'Claude', gemini: 'Gemini', local: 'el modelo local' };
+      const names = { claude: 'Claude', local: 'el modelo local' };
       const until = msg.until
         ? new Date(msg.until).toLocaleTimeString(window.optimiaLang?.locale || 'es-ES', {
             hour: '2-digit',
@@ -67,7 +67,7 @@ function connect() {
         : '';
       let text;
       if (msg.from === 'claude' && !msg.to)
-        text = `Claude se ha quedado sin uso${until ? ` hasta las ${until}` : ''}. Conecta Gemini o un modelo local en Ajustes para seguir sin esperar.`;
+        text = `Claude se ha quedado sin uso${until ? ` hasta las ${until}` : ''}. Configura un modelo local en Ajustes › IA local para seguir sin esperar.`;
       else if (msg.from === 'claude')
         text = `Claude se ha quedado sin uso${until ? ` hasta las ${until}` : ''}. Sigo con ${names[msg.to] || msg.to}, con toda la conversación.`;
       else text = `Vuelvo a ${names[msg.to] || msg.to}, con toda la conversación.`;

@@ -2,158 +2,13 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('path');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
-const proxy = require('../../server/ai/anthropicProxy');
 const fallback = require('../../server/ai/fallback');
 const suggest = require('../../server/ai/suggest');
-const gemini = require('../../server/ai/gemini');
-const { buildSessionOptions, engineFor } = require('../../server/bridge/sessionOptions');
+const { engineFor } = require('../../server/bridge/sessionOptions');
 const { defaultSettings } = require('../../server/store/settingsStore');
 
-const memorySignatures = () => {
-  const m = new Map();
-  return { get: (k) => m.get(k), set: (k, v) => m.set(k, v) };
-};
-
-test('an Anthropic request becomes a Gemini one: roles, tools, results and signatures', () => {
-  const sigs = memorySignatures();
-  sigs.set('toolu_1', 'SIG');
-  const req = proxy.toGeminiRequest(
-    {
-      system: [{ type: 'text', text: 'Be brief' }],
-      max_tokens: 1000,
-      tools: [{ name: 'Bash', description: 'run', input_schema: { $schema: 'x', type: 'object', properties: {} } }],
-      messages: [
-        { role: 'user', content: 'hi' },
-        {
-          role: 'assistant',
-          content: [
-            { type: 'thinking', thinking: 'secret', signature: 'anthropic' },
-            { type: 'text', text: 'running' },
-            { type: 'tool_use', id: 'toolu_1', name: 'Bash', input: { command: 'ls' } },
-            { type: 'tool_use', id: 'toolu_2', name: 'Bash', input: { command: 'pwd' } }
-          ]
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'tool_result', tool_use_id: 'toolu_1', content: [{ type: 'text', text: 'a.txt' }] },
-            { type: 'tool_result', tool_use_id: 'toolu_2', content: 'boom', is_error: true }
-          ]
-        }
-      ]
-    },
-    sigs
-  );
-  assert.deepEqual(req.systemInstruction, { parts: [{ text: 'Be brief' }] });
-  assert.deepEqual(
-    req.contents.map((c) => c.role),
-    ['user', 'model', 'user']
-  );
-  const model = req.contents[1].parts;
-  assert.equal(model.length, 3, 'thinking blocks are dropped');
-  assert.equal(model[1].thoughtSignature, 'SIG');
-  assert.equal(model[2].thoughtSignature, proxy.SKIP_SIGNATURE, 'history from Claude has no signature');
-  assert.deepEqual(req.contents[2].parts[0].functionResponse, {
-    id: 'toolu_1',
-    name: 'Bash',
-    response: { output: 'a.txt' }
-  });
-  assert.deepEqual(req.contents[2].parts[1].functionResponse.response, { error: 'boom' });
-  assert.equal(req.tools[0].functionDeclarations[0].parametersJsonSchema.$schema, undefined);
-  assert.equal(req.generationConfig.maxOutputTokens, 1000);
-});
-
-test('Gemini parts become Anthropic blocks and keep the function call signature', () => {
-  const sigs = memorySignatures();
-  const blocks = proxy.partsToBlocks(
-    [
-      { text: 'thinking…', thought: true },
-      { text: 'a' },
-      { text: 'b' },
-      { functionCall: { name: 'Read', args: { file_path: 'x' } }, thoughtSignature: 'S2' }
-    ],
-    sigs
-  );
-  assert.equal(blocks[0].text, 'ab');
-  assert.equal(blocks[1].type, 'tool_use');
-  assert.equal(sigs.get(blocks[1].id), 'S2');
-});
-
-test('the proxy answers the claude CLI protocol, streamed, and only with its token', async (t) => {
-  const dir = mkTmpDir('proxy');
-  const fetcher = async () =>
-    new Response(
-      new ReadableStream({
-        start(c) {
-          const chunk = {
-            candidates: [{ content: { parts: [{ text: 'hola' }] }, finishReason: 'STOP' }],
-            usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 1 }
-          };
-          c.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\r\n\r\n`));
-          c.close();
-        }
-      }),
-      { status: 200 }
-    );
-  const p = proxy.createProxy({
-    getConfig: () => ({ apiKey: 'k', model: 'gemini-x' }),
-    fetcher,
-    signaturesFile: path.join(dir, 's.json')
-  });
-  await p.listen();
-  t.after(async () => {
-    await p.close();
-    rmTmpDir(dir);
-  });
-  const denied = await fetch(`${p.url}/gemini/v1/messages`, { method: 'POST', body: '{}' });
-  assert.equal(denied.status, 401);
-  const res = await fetch(`${p.url}/gemini/v1/messages?beta=true`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${p.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-haiku',
-      stream: true,
-      max_tokens: 10,
-      messages: [{ role: 'user', content: 'hi' }]
-    })
-  });
-  const text = await res.text();
-  const events = [...text.matchAll(/^event: (.+)$/gm)].map((m) => m[1]);
-  assert.deepEqual(events, [
-    'message_start',
-    'content_block_start',
-    'content_block_delta',
-    'content_block_stop',
-    'message_delta',
-    'message_stop'
-  ]);
-  assert.match(text, /"model":"gemini-x"/, 'Claude model names map to the chosen Gemini model');
-});
-
-test('a Gemini quota error reaches the CLI as a rate limit', async (t) => {
-  const dir = mkTmpDir('proxy-429');
-  const p = proxy.createProxy({
-    getConfig: () => ({ apiKey: 'k', model: 'gemini-x' }),
-    fetcher: async () => new Response(JSON.stringify({ error: { message: 'quota' } }), { status: 429 }),
-    signaturesFile: path.join(dir, 's.json')
-  });
-  await p.listen();
-  t.after(async () => {
-    await p.close();
-    rmTmpDir(dir);
-  });
-  const res = await fetch(`${p.url}/v1/messages`, {
-    method: 'POST',
-    headers: { 'x-api-key': p.token },
-    body: JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] })
-  });
-  assert.equal(res.status, 429);
-  assert.equal((await res.json()).error.type, 'rate_limit_error');
-});
-
-test('Claude out of usage: detected from the stream, then sessions use Gemini or the local model', (t) => {
+test('Claude out of usage: detected from the stream, then sessions use the local model', (t) => {
   const data = mkTmpDir('fallback');
   const prev = process.env.XDG_DATA_HOME;
   process.env.XDG_DATA_HOME = data;
@@ -177,33 +32,13 @@ test('Claude out of usage: detected from the stream, then sessions use Gemini or
   assert.equal(fallback.fallbackEngine(settings), null);
   settings.ai.localAi = { url: 'http://127.0.0.1:1234', model: 'gemma', authHeader: '' };
   assert.equal(fallback.fallbackEngine(settings), 'local');
-  settings.providers.gemini = { apiKey: 'k', model: 'gemini-x' };
-  assert.equal(fallback.fallbackEngine(settings), 'gemini');
 
   assert.equal(engineFor(settings), 'claude');
   fallback.markClaudeBlocked(Date.now() + 60_000);
-  assert.equal(engineFor(settings), 'gemini');
+  assert.equal(engineFor(settings), 'local');
   assert.equal(engineFor(settings, { engine: 'local', model: 'm' }), 'local', 'an agent on another engine keeps it');
   fallback.clearClaudeBlock();
   assert.equal(engineFor(settings), 'claude', 'back to Claude when it is available');
-});
-
-test('a Gemini session goes through the local proxy with its token, never the account', (t) => {
-  const dir = mkTmpDir('gemini-session');
-  t.after(() => {
-    proxy.setSharedProxy(null);
-    rmTmpDir(dir);
-  });
-  const settings = defaultSettings();
-  settings.ai.mode = 'gemini';
-  assert.throws(() => buildSessionOptions(settings, dir), /Ajustes › Gemini/);
-  settings.providers.gemini = { apiKey: 'k', model: 'gemini-x' };
-  proxy.setSharedProxy({ url: 'http://127.0.0.1:9', token: 'tok' });
-  const opts = buildSessionOptions(settings, dir);
-  assert.equal(opts.engine, 'gemini');
-  assert.equal(opts.baseUrl, 'http://127.0.0.1:9/gemini');
-  assert.equal(opts.authToken, 'tok');
-  assert.equal(opts.model, 'gemini-x');
 });
 
 test('suggestions keep only catalog entries and shortlist the relevant ones', () => {
@@ -225,12 +60,11 @@ test('suggestions keep only catalog entries and shortlist the relevant ones', ()
   assert.deepEqual(short, ['bugfix', 'security-audit', 'ecc-database-reviewer']);
 });
 
-test('suggestions try Gemini, then the local model, then Claude, and skip short messages', async () => {
+test('suggestions try the local model, then Claude, and skip short messages', async () => {
   const settings = defaultSettings();
   const catalog = [{ kind: 'task', id: 'bugfix', description: 'fix a bug', core: true }];
   const tried = [];
   const engines = [
-    ['gemini', async () => (tried.push('gemini'), null)],
     ['local', async () => (tried.push('local'), Promise.reject(new Error('down')))],
     ['claude', async () => (tried.push('claude'), '{"suggestions":[{"kind":"task","id":"bugfix","reason":"r"}]}')]
   ];
@@ -240,7 +74,7 @@ test('suggestions try Gemini, then the local model, then Claude, and skip short 
     settings,
     deps: { catalog, engines }
   });
-  assert.deepEqual(tried, ['gemini', 'local', 'claude']);
+  assert.deepEqual(tried, ['local', 'claude']);
   assert.equal(r.engine, 'claude');
   assert.equal(r.suggestions[0].id, 'bugfix');
   const none = await suggest.suggest({ text: 'hola', projectRoot: '/x', settings, deps: { catalog, engines } });
@@ -249,46 +83,52 @@ test('suggestions try Gemini, then the local model, then Claude, and skip short 
   assert.equal((await suggest.suggest({ text: 'a b c d e', projectRoot: '/x', settings })).off, true);
 });
 
-test('the recommended Gemini model is Hydrogen when offered, else the newest Flash', () => {
-  assert.equal(
-    gemini.recommendedModel([{ id: 'gemini-3-pro' }, { id: 'gemini-3-flash' }, { id: 'gemini-4-hydrogen' }]),
-    'gemini-4-hydrogen'
-  );
-  assert.equal(
-    gemini.recommendedModel([{ id: 'gemini-3-pro' }, { id: 'gemini-3-flash-lite' }, { id: 'gemini-3-flash' }]),
-    'gemini-3-flash'
-  );
-});
-
-test('gemini: suggestions use the newest stable Flash-Lite, not the chat model', () => {
-  const ids = [
-    'gemini-4-hydrogen',
-    'gemini-3.5-flash',
-    'gemini-3.5-flash-lite',
-    'gemini-3.1-flash-lite-image',
-    'gemini-3.6-flash-lite-preview',
-    'gemini-flash-lite-latest'
-  ].map((id) => ({ id }));
-  assert.equal(gemini.fastModel(ids), 'gemini-flash-lite-latest');
-  assert.equal(gemini.fastModel(ids.filter((m) => m.id !== 'gemini-flash-lite-latest')), 'gemini-3.5-flash-lite');
-  assert.equal(gemini.fastModel([{ id: 'gemini-4-hydrogen' }]), '');
-});
-
-test('gemini: askJson tries the thinking options the model accepts and remembers the one that works', async () => {
-  const sent = [];
+test('the local model answers suggestions only while it is fast; after a failure Claude takes over for a while', async () => {
+  suggest._resetLocal();
+  const settings = defaultSettings();
+  settings.ai.localAi = { url: 'http://127.0.0.1:11434', model: 'qwen', authHeader: '' };
+  const catalog = [{ kind: 'task', id: 'bugfix', description: 'fix a bug', core: true }];
+  let localCalls = 0;
+  let slow = true;
   const fetcher = async (url, init) => {
-    const thinking = JSON.parse(init.body).generationConfig.thinkingConfig || null;
-    sent.push(thinking);
-    const ok = thinking === null;
-    const body = ok
-      ? { candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }
-      : { error: { message: 'Request contains an invalid argument.' } };
-    return { ok, status: ok ? 200 : 400, text: async () => JSON.stringify(body) };
+    localCalls++;
+    if (slow) {
+      // Behaves like a model that does not answer in time: the 3 s timeout aborts it.
+      return new Promise((resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)));
+    }
+    return { ok: true, json: async () => ({ choices: [{ message: { content: '{"suggestions":[]}' } }] }) };
   };
-  const ask = () => gemini.askJson({ apiKey: 'k', model: 'm-only-plain', system: 's', user: 'u', fetcher });
-  assert.equal(await ask(), '{"ok":true}');
-  assert.deepEqual(sent, [{ thinkingLevel: 'minimal' }, { thinkingBudget: 0 }, null]);
-  sent.length = 0;
-  await ask();
-  assert.deepEqual(sent, [null], 'the second call goes straight to what worked');
+  const claude = [];
+  const spawnFn = () => {
+    const { EventEmitter } = require('events');
+    const proc = new EventEmitter();
+    proc.stdout = new EventEmitter();
+    proc.kill = () => {};
+    proc.stdin = {
+      end: () => {
+        claude.push(1);
+        setImmediate(() => {
+          proc.stdout.emit('data', JSON.stringify({ result: '{"suggestions":[{"kind":"task","id":"bugfix"}]}' }));
+          proc.emit('exit', 0);
+        });
+      }
+    };
+    return proc;
+  };
+  // The 3 s timeout timer does not keep the process alive by itself.
+  const keepAlive = setInterval(() => {}, 1000);
+  const ask = (text) => suggest.suggest({ text, projectRoot: '/y', settings, deps: { catalog, fetcher, spawnFn } });
+  const started = Date.now();
+  const first = await ask('el pago falla con el carrito vacío');
+  assert.ok(Date.now() - started < 4500, 'a slow local model is given up within about 3 s');
+  assert.equal(first.engine, 'claude');
+  slow = false;
+  const second = await ask('el login falla con correos en mayúsculas');
+  assert.equal(second.engine, 'claude', 'the local model is skipped for a while after failing');
+  assert.equal(localCalls, 1);
+  suggest._resetLocal();
+  const third = await ask('la búsqueda devuelve resultados repetidos siempre');
+  assert.equal(third.engine, 'local');
+  assert.equal(claude.length, 2);
+  clearInterval(keepAlive);
 });

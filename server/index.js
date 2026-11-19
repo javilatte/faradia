@@ -1,7 +1,6 @@
 'use strict';
 
 const http = require('http');
-const { createProxy, setSharedProxy } = require('./ai/anthropicProxy');
 const path = require('path');
 const { WebSocketServer, WebSocket } = require('ws');
 const { checkClaudeCapabilities } = require('./bridge/claudeVersion');
@@ -18,7 +17,7 @@ const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRout
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
 const { handleFsRoutes } = require('./http/fsRoutes');
 const { handleConfigRoutes } = require('./http/configRoutes');
-const { handleSyncRoutes, handleGoogleCallback, isConfigWrite, GOOGLE_CALLBACK } = require('./http/syncRoutes');
+const { handleSyncRoutes, isConfigWrite } = require('./http/syncRoutes');
 const { createSync } = require('./sync/engine');
 const { MonitorService } = require('./monitor/monitorService');
 const { Timeline } = require('./monitor/timeline');
@@ -37,10 +36,6 @@ const PROJECT_ROUTE = /^\/api\/projects\/([a-f0-9]{12})(\/.*)$/;
 function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {}) {
   const sessionToken = token || process.env.OPTIMIA_TOKEN || security.createToken();
   const server = http.createServer();
-  // Anthropic-compatible endpoint backed by Gemini, for sessions that run on Gemini (see
-  // ai/anthropicProxy.js). The key is read on every request, so changing it needs no restart.
-  const geminiProxy = createProxy({ getConfig: () => loadGlobalSettings().providers.gemini });
-  geminiProxy.listen().then(() => setSharedProxy(geminiProxy));
   const wss = new WebSocketServer({ noServer: true });
   // Sync of the global configuration between the user's computers (off until they turn it on).
   const sync = createSync({
@@ -195,7 +190,6 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
       url.pathname.startsWith('/api/config/') ||
       url.pathname.startsWith('/api/knowledge/') ||
       url.pathname === '/api/ecc' ||
-      url.pathname.startsWith('/api/providers/') ||
       url.pathname === '/api/issues' ||
       url.pathname === '/api/issues/export' ||
       url.pathname === '/api/update'
@@ -205,7 +199,7 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     }
 
     if (url.pathname === '/api/sync' || url.pathname.startsWith('/api/sync/')) {
-      const handled = await handleSyncRoutes(req, res, url, { sync, port: actualPort });
+      const handled = await handleSyncRoutes(req, res, url, { sync });
       if (handled !== null) return handled;
     }
 
@@ -241,11 +235,6 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
     if (!security.hostAllowed(req, actualPort)) {
       res.writeHead(421, { 'Content-Type': 'text/plain' });
       return res.end('host no permitido');
-    }
-    if (url.pathname === GOOGLE_CALLBACK && req.method === 'GET') {
-      return handleGoogleCallback(req, res, url, { sync }).catch((err) => {
-        if (!res.headersSent) sendJson(res, 500, { error: err.message });
-      });
     }
     // The link optimia prints carries ?token=: it is stored in a cookie and removed from the URL.
     const given = url.searchParams.get('token');

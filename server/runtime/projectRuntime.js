@@ -561,7 +561,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   // if it's still running, re-attaches to the same live process.
   /**
    * Claude ran out of usage in this session: Claude is marked unavailable until the reset, the
-   * session is stopped and the same conversation goes on with Gemini or the local model (same
+   * session is stopped and the same conversation goes on with the local model (same
    * session id, so the new provider gets the whole history). Returns true when it took over.
    */
   function switchOnLimit(scope, id, session, event) {

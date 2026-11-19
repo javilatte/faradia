@@ -665,7 +665,7 @@ localDetectButton.addEventListener('click', detectLocalAi);
 
 // Which panes support both scopes and which only one.
 const SCOPED_PANES = new Set(['claude', 'local-ai', 'instructions', 'nogo', 'agents']);
-const GLOBAL_PANES = new Set(['gemini', 'general', 'sync', 'appearance', 'monitor']);
+const GLOBAL_PANES = new Set(['general', 'sync', 'appearance', 'monitor']);
 let settingsScope = 'global';
 try {
   settingsScope = localStorage.getItem('optimia:settings-scope') === 'project' ? 'project' : 'global';

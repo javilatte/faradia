@@ -63,19 +63,6 @@ async function populateChatModelSelect(settings) {
   }
   chatModelSelect.appendChild(claudeGroup);
 
-  // Gemini, when a key is connected (Settings › Gemini): the model chosen there.
-  const gemini = settings.providers?.gemini;
-  if (gemini?.hasKey && gemini.model) {
-    const group = document.createElement('optgroup');
-    group.label = 'Gemini';
-    const opt = document.createElement('option');
-    opt.value = `gemini:${gemini.model}`;
-    opt.textContent = gemini.model;
-    if (settings.ai.mode === 'gemini') opt.selected = true;
-    group.appendChild(opt);
-    chatModelSelect.appendChild(group);
-  }
-
   const { servers = [] } = await fetch(apiPath('/api/local-ai/detect'))
     .then((r) => r.json())
     .catch(() => ({}));
@@ -139,9 +126,7 @@ chatModelSelect.addEventListener('change', async () => {
   const ai =
     engine === 'local'
       ? { mode: 'local', localAi: { model, url: option?.dataset.url || settings.ai.localAi.url } }
-      : engine === 'gemini'
-        ? { mode: 'gemini' }
-        : { mode: 'claude', claude: { model } };
+      : { mode: 'claude', claude: { model } };
   await fetch(apiPath('/api/settings'), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -150,12 +135,12 @@ chatModelSelect.addEventListener('change', async () => {
   modeLabel.textContent = ENGINE_LABEL[engine] || 'Claude Code';
   syncTaskControls();
   const where = own ? 'solo en este repo' : 'en todos los repos';
-  const label = engine === 'local' ? `local "${model}"` : engine === 'gemini' ? `Gemini "${model}"` : `"${model}"`;
+  const label = engine === 'local' ? `local "${model}"` : `"${model}"`;
   appendMessage('system', `Modelo ${label} ${where}, desde la próxima sesión.`);
 });
 const connectionStatus = document.getElementById('connection-status');
 const modeLabel = document.getElementById('mode-label');
-const ENGINE_LABEL = { claude: 'Claude Code', local: 'IA local', gemini: 'Gemini' };
+const ENGINE_LABEL = { claude: 'Claude Code', local: 'IA local' };
 // The header shows the provider in use, including a temporary switch while Claude is out of usage.
 async function refreshProviderLabel() {
   const s = await fetch(apiPath('/api/settings'))
