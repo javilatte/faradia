@@ -2144,3 +2144,24 @@ input.switch:focus-visible {
 :root .evidence-check.expected .evidence-mark {
   color: var(--secondary-label);
 }
+
+/* A question from an agent is shown whole: its numbered questions usually come last. */
+:root .task-output.question,
+:root .task-output.question.md {
+  max-height: min(70vh, 720px);
+}
+
+/* Generated files: the name, then its folder dimmed. */
+:root .task-file-dir {
+  color: var(--secondary-label);
+}
+:root .task-workspace > .button-link {
+  align-self: flex-start;
+  width: auto;
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 2px 0;
+  color: var(--link);
+  font-size: var(--text-subheadline);
+}

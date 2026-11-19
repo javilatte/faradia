@@ -5,6 +5,7 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.OPTIMIA_I18N_EN = {
   exact: {
+    'Mostrar menos': 'Show less',
     '! Sin verificar: lo que se ejecutó no respalda el «OK» del agente':
       "! Not verified: what ran does not back the agent's “OK”",
     'Debía fallar y terminó bien': 'It should have failed and it finished fine',
@@ -201,7 +202,11 @@ window.OPTIMIA_I18N_EN = {
     'Añadir un repo…': 'Add a repo…',
     Bajo: 'Low',
     'Barra lateral': 'Sidebar',
-    'Bienvenido a optimia 2': 'Welcome to optimia 2',
+    'Bienvenido a optimia': 'Welcome to optimia',
+    'optimia-config-….json, exportado desde Ajustes › General':
+      'optimia-config-….json, exported from Settings › General',
+    'Puedes importarla o exportarla cuando quieras desde Ajustes › General.':
+      'You can import or export it whenever you want from Settings › General.',
     'Borrados grandes': 'Large deletes',
     'Buscar agentes de ECC': 'Search ECC agents',
     'Buscar agentes de ECC (react, security, go…)': 'Search ECC agents (react, security, go…)',
@@ -781,6 +786,7 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^Mostrar (\\d+) más$', 'Show $1 more'],
     ['^Evidencia: (\\d+) comprobaci(?:ón|ones)$', 'Evidence: $1 check(s)'],
     ['^Evidencia: (\\d+) comprobaci(?:ón|ones) \\((\\d+) con fallos\\)$', 'Evidence: $1 check(s) ($2 failing)'],
     ['^Evidencia: (\\d+) comprobaci(?:ón|ones), (\\d+) capturas?$', 'Evidence: $1 check(s), $2 capture(s)'],

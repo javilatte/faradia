@@ -142,8 +142,11 @@ function approvalRule(tool, command) {
 // Claude Code asks for approval for any redirection to /dev/null even when a rule matches, so a
 // stage that uses one gets stuck with no way to approve it from the card. Every stage is asked to
 // avoid it.
-const SHELL_RULE =
-  'Al ejecutar comandos no uses redirecciones a /dev/null (2>/dev/null ni >/dev/null): para silenciar errores usa 2>&1.';
+const SHELL_RULE = [
+  'Al ejecutar comandos no uses redirecciones a /dev/null (2>/dev/null ni >/dev/null): para silenciar errores usa 2>&1.',
+  // Claude Code's sandbox shows placeholders of the user's dotfiles in the working folder.
+  'Si git status muestra sin seguimiento ficheros como .bashrc, .gitconfig, .profile, .zshrc, .mcp.json, .vscode o .claude/ que no has creado tú, son del sandbox: ignóralos y no los menciones.'
+].join('\n');
 
 function firstStage(type) {
   return pipelineOf(type)[0];
@@ -217,7 +220,7 @@ function canRun(task, stage, { answer, docOptions } = {}) {
 }
 
 function buildWritePrompt(task, { mode, format, targetPath, template }, research) {
-  const goal = task.instruction || task.title;
+  const goal = requestWithDecisions(task, 'write');
   const tpl = template ? ` Usa la plantilla ${template} como base de estructura y estilo.` : '';
   const fmtNote =
     format === 'docx'
@@ -366,12 +369,27 @@ function previousOutput(task, stage) {
 // The bundled skills reach a session through --add-dir (ecc/library.js), not the worktree: a prompt
 // that sends the agent to read one gives its absolute path. pstack's skills cannot be invoked with
 // the Skill tool (disable-model-invocation), so they are read and followed.
+// Where the verification kit stage writes the skill; optimia moves it to .claude/skills/ after the
+// stage (moveVerificationKit), because Claude Code does not let a session write in .claude/.
+const KIT_STAGING = '.optimia-kit';
+
 function skillFile(skillsDir, name) {
   return skillsDir ? path.join(skillsDir, name, 'SKILL.md') : `la skill ${name} (/${name})`;
 }
 
-function buildStageBody(task, stage, { docOptions, agent, describeOptions, evidenceDir, skillsDir } = {}) {
+// The request plus what the user decided when an agent asked: every later stage works (and the
+// Verifier judges) against both, the decisions winning.
+function requestWithDecisions(task, stage) {
   const goal = task.instruction || task.title;
+  const decisions = (task.answers || []).filter((a) => a.stage !== stage);
+  if (!decisions.length) return goal;
+  return `${goal}\n\nDecisiones del usuario durante la tarea, al responder a los agentes (mandan sobre el encargo si lo contradicen):\n${decisions
+    .map((a) => `- ${a.text}`)
+    .join('\n')}`;
+}
+
+function buildStageBody(task, stage, { docOptions, agent, describeOptions, evidenceDir, skillsDir } = {}) {
+  const goal = requestWithDecisions(task, stage);
   const out = (s) => (task.stageOutputs && task.stageOutputs[s]) || '';
   switch (stage) {
     case 'plan':
@@ -442,15 +460,15 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
       return [
         'Etapa de KIT DE VERIFICACION. Vas a dar a este repo una forma guionizada de probar la aplicación de verdad.',
         `Indicaciones del usuario:\n${goal}`,
-        `Lee y sigue ${skillFile(skillsDir, 'create-verification-skill')}. Donde diga .cursor/skills usa .claude/skills de este worktree (el adaptador de Claude Code está en ${skillsDir ? path.join(path.dirname(skillsDir), 'docs', 'harness', 'claude-code.md') : '.claude/docs/harness/claude-code.md'}). No hay nadie a quien preguntar durante la entrevista: deduce las respuestas del repo y anota las suposiciones en la skill.`,
-        'Crea la skill en .claude/skills/verify-<app>/ de este worktree, con su mapa de funciones, y ejecútala al menos una vez para demostrar que arranca la aplicación y comprueba una función.',
+        `Lee y sigue ${skillFile(skillsDir, 'create-verification-skill')}. No hay nadie a quien preguntar durante la entrevista: deduce las respuestas del repo y anota las suposiciones en la skill.`,
+        `Claude Code no deja escribir en .claude/ desde una tarea: crea la skill en ${KIT_STAGING}/verify-<app>/ de este worktree (con su SKILL.md y su mapa de funciones) en lugar de .cursor/skills o .claude/skills, y escribe sus rutas como si ya estuviera en .claude/skills/verify-<app>/. Al terminar, optimia la mueve a .claude/skills/. Ejecútala al menos una vez para demostrar que arranca la aplicación y comprueba una función.`,
         'No hagas git commit ni git push.'
       ].join('\n\n');
     case 'verify':
       return [
         'Etapa de VERIFICACION de los cambios de este worktree (git diff HEAD).',
         `Encargo original:\n${goal}`,
-        'Ejecuta los tests, el lint y la compilacion que tenga el proyecto. Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
+        'Ejecuta los tests, el lint y la compilacion que tenga el proyecto, completos y no solo los ficheros nuevos. Si faltan dependencias, instálalas primero con el gestor del proyecto (npm ci, pnpm install, uv sync, pip install -e ., bundle install…). Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
         'Si el repo tiene una skill de verificación (.claude/skills/verify-*/SKILL.md), úsala para probar en la aplicación real lo que cambió esta tarea.',
         'optimia guarda como evidencia cada comando que ejecutes y su resultado: ejecuta las comprobaciones de verdad, una por comando, en vez de describirlas. Si ejecutas algo que debe fallar a propósito (por ejemplo, para demostrar que una comprobación detecta el error), termina ese comando con el comentario "# se espera que falle"; si no, su fallo cuenta como un fallo de la verificación.',
         evidenceDir
@@ -782,5 +800,6 @@ module.exports = {
   parseRuleProposals,
   crossCheckVerdict,
   isCheckCommand,
+  KIT_STAGING,
   decideAfterStage
 };

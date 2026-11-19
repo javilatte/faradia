@@ -1173,6 +1173,9 @@ function renderOrb(state) {
   return row;
 }
 
+const FILES_SHOWN = 6;
+const expandedFileLists = new Set();
+
 function renderTaskWorkspace(taskId, task) {
   const box = document.createElement('div');
   box.className = 'task-workspace';
@@ -1190,14 +1193,26 @@ function renderTaskWorkspace(taskId, task) {
     title.className = 'task-meta';
     title.textContent = 'Ficheros generados (incluidos los ignorados por git):';
     box.appendChild(title);
-    for (const rel of files) {
+    // The file name first (what tells the files apart), its folder after, dimmed. A long list
+    // shows the first ones and folds the rest.
+    const shown = expandedFileLists.has(taskId) ? files : files.slice(0, FILES_SHOWN);
+    for (const rel of shown) {
       const row = document.createElement('div');
       row.className = 'task-file';
       const name = document.createElement('button');
       name.type = 'button';
       name.className = 'task-file-name marquee-text';
-      name.textContent = rel;
-      name.title = 'Abrir con la aplicacion del sistema';
+      const slash = rel.lastIndexOf('/');
+      const base = document.createElement('span');
+      base.textContent = rel.slice(slash + 1);
+      name.appendChild(base);
+      if (slash > 0) {
+        const dir = document.createElement('span');
+        dir.className = 'task-file-dir';
+        dir.textContent = ` ${rel.slice(0, slash)}`;
+        name.appendChild(dir);
+      }
+      name.title = `${rel}\nAbrir con la aplicacion del sistema`;
       name.addEventListener('click', (e) => {
         e.stopPropagation();
         openTaskFile(taskId, rel, false);
@@ -1206,6 +1221,18 @@ function renderTaskWorkspace(taskId, task) {
       row.appendChild(actionButton('Ver', { onClick: () => openFilePreview(taskId, rel) }));
       row.appendChild(actionButton('Carpeta', { onClick: () => openTaskFile(taskId, rel, true) }));
       box.appendChild(row);
+    }
+    if (files.length > FILES_SHOWN) {
+      const more = expandedFileLists.has(taskId);
+      const toggle = actionButton(more ? 'Mostrar menos' : `Mostrar ${files.length - FILES_SHOWN} más`, {
+        onClick: () => {
+          if (more) expandedFileLists.delete(taskId);
+          else expandedFileLists.add(taskId);
+          renderTasks();
+        }
+      });
+      toggle.classList.add('button-link');
+      box.appendChild(toggle);
     }
   }
   const running = task.status === 'in_progress';
@@ -1340,7 +1367,8 @@ function buildTaskCard(taskId, task, lastStep) {
   const text = raw && !question && task.verification ? stripVerdict(raw) : raw;
   if (text && text.trim()) {
     const output = document.createElement('div');
-    output.className = 'task-output';
+    // A question is read in full: the numbered questions are usually at its end.
+    output.className = question ? 'task-output question' : 'task-output';
     paintMarkdown(output, text);
     card.appendChild(output);
   }

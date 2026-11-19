@@ -131,7 +131,9 @@ test('parseCorrection: the last NIVEL line, only known levels', () => {
 test('verification-kit: follows create-verification-skill in .claude/skills and is a test commit', () => {
   const prompt = buildStagePrompt(task('verification-kit'), 'verification-kit', { skillsDir: '/d/.claude/skills' });
   assert.match(prompt, /\/d\/\.claude\/skills\/create-verification-skill\/SKILL\.md/);
-  assert.match(prompt, /\/d\/\.claude\/docs\/harness\/claude-code\.md/);
+  // Claude Code does not let a session write in .claude/: the kit goes to a staging folder that
+  // optimia moves after the stage.
+  assert.match(prompt, /\.optimia-kit\/verify-<app>\//);
   assert.match(prompt, /\.claude\/skills\/verify-<app>/);
 });
 
@@ -382,4 +384,66 @@ test('a command marked "# se espera que falle" shows its failure but does not co
   multi.onEvent(bash('m', 'cp a b\nnpm test | grep fail # se espera que falle\ncp b a; npm test'));
   multi.onEvent(result('m', '# fail 3\n# fail 0'));
   assert.equal(multi.checks()[0].expectedFailure, true);
+});
+
+test('optimia state is written the way Prettier formats JSON, with the repo print width', (t) => {
+  const { stringify, printWidth, writeJsonFile, repoOf, _clearWidthCache } = require('../../server/store/jsonFile');
+  assert.equal(
+    stringify({ a: ['review'], b: {}, c: [], d: [{ x: 1 }] }),
+    '{\n  "a": ["review"],\n  "b": {},\n  "c": [],\n  "d": [\n    {\n      "x": 1\n    }\n  ]\n}\n'
+  );
+  assert.equal(
+    stringify([
+      [1, 2],
+      [3, 4]
+    ]),
+    '[\n  [1, 2],\n  [3, 4]\n]\n'
+  );
+  const long = Array.from({ length: 12 }, (_, i) => `item-${i}`);
+  assert.match(stringify({ list: long }, 80), /"list": \[\n/);
+  assert.match(stringify({ list: long }, 160), /"list": \["item-0"/);
+
+  const repo = mkTmpDir('json-width');
+  t.after(() => rmTmpDir(repo));
+  _clearWidthCache();
+  assert.equal(printWidth(repo), 80);
+  fs.writeFileSync(path.join(repo, '.prettierrc'), '{ "printWidth": 160 }');
+  _clearWidthCache();
+  assert.equal(printWidth(repo), 160);
+  const file = path.join(repo, '.optimia', 'tasks.json');
+  assert.equal(repoOf(file), repo);
+  writeJsonFile(file, { list: long });
+  assert.match(fs.readFileSync(file, 'utf8'), /"list": \["item-0"/);
+});
+
+test('a usage limit with no local model: a clear message with the reset time', () => {
+  const { limitMessage } = require('../../server/ai/fallback');
+  const now = new Date('2026-11-20T10:00:00').getTime();
+  assert.match(limitMessage(new Date('2026-11-20T13:30:00').getTime(), now), /hasta las 13:30\. La etapa seguirá sola/);
+  assert.match(limitMessage(new Date('2026-11-21T09:05:00').getTime(), now), /hasta el 21 de noviembre a las 09:05/);
+});
+
+test('a stage is resumed only when Claude Code still has its transcript', (t) => {
+  const { transcriptExists } = require('../../server/bridge/claudeTranscripts');
+  const dir = mkTmpDir('claude-config');
+  t.after(() => rmTmpDir(dir));
+  const id = '12345678-aaaa-bbbb-cccc-1234567890ab';
+  assert.equal(transcriptExists(id, dir), false);
+  fs.mkdirSync(path.join(dir, 'projects', '-tmp-repo'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'projects', '-tmp-repo', `${id}.jsonl`), '{}\n');
+  assert.equal(transcriptExists(id, dir), true);
+  assert.equal(transcriptExists('../../etc/passwd', dir), false);
+});
+
+test("the user's answers reach every later stage, and the Verifier judges against them", () => {
+  const t = task('coding', {
+    instruction: 'Añade show_date a version_option',
+    answers: [{ stage: 'plan', text: 'B: respeta la congelación y documenta el ejemplo', at: 'x' }]
+  });
+  for (const stage of ['implement', 'tidy', 'verify']) {
+    const prompt = buildStagePrompt(t, stage);
+    assert.match(prompt, /Decisiones del usuario durante la tarea[^\n]*\n- B: respeta la congelación/, stage);
+  }
+  // The stage that asked gets its own answers through the conversation, not twice.
+  assert.doesNotMatch(buildStagePrompt(t, 'plan'), /Decisiones del usuario/);
 });

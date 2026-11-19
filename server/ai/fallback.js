@@ -75,6 +75,17 @@ function markClaudeBlocked(until, kind = '') {
   save();
 }
 
+/** What a task card says while Claude is out of usage and no local model can take over. */
+function limitMessage(until, now = Date.now()) {
+  const at = new Date(until);
+  const time = at.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const sameDay = new Date(now).toDateString() === at.toDateString();
+  const when = sameDay
+    ? `hasta las ${time}`
+    : `hasta el ${at.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} a las ${time}`;
+  return `Claude se ha quedado sin uso ${when}. La etapa seguirá sola entonces; para seguir ya, configura un modelo local en Ajustes › IA local.`;
+}
+
 function clearClaudeBlock() {
   state = {};
   save();
@@ -99,6 +110,7 @@ module.exports = {
   clearClaudeBlock,
   fallbackEngine,
   engineOverride,
+  limitMessage,
   _reset: () => {
     state = null;
   }

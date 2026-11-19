@@ -53,7 +53,7 @@ test('first run: import the configuration from the welcome sheet, export it, and
   }
   await openProject(page);
   const welcome = page.locator('.welcome-sheet');
-  await expect(welcome).toContainText('Bienvenido a optimia 2');
+  await expect(welcome).toContainText('Bienvenido a optimia');
 
   const chooser = page.waitForEvent('filechooser');
   await welcome.getByRole('button', { name: 'Elegir fichero…' }).click();

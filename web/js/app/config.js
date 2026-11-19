@@ -283,7 +283,7 @@ function welcome() {
     if (e.key === ' ' || (e.key === 'Enter' && e.target === zone)) pickConfigFile();
   });
   openSheet({
-    title: 'Bienvenido a optimia 2',
+    title: 'Bienvenido a optimia',
     className: 'welcome-sheet',
     body: [
       h(
