@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
 const { prepareActiveDir } = require('../ecc/library');
+const { pstackPrinciple } = require('../skills/library');
 const { engineOverride } = require('../ai/fallback');
 const wiki = require('../knowledge/wikiStore');
 const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
@@ -70,6 +71,22 @@ function engineFor(settings, agent) {
   return override || 'claude';
 }
 
+/**
+ * The pstack principles of an agent (Lauren Tan, MIT; vendor/pstack/principles), with the rule that
+ * makes them visible in its report. Off for every agent with Settings › Agents, or for one agent with
+ * an empty list.
+ */
+function principlesPrompt(settings, agent) {
+  if (!agent || settings.principles?.enabled === false) return '';
+  const texts = (agent.principles || []).map((name) => pstackPrinciple(name)).filter(Boolean);
+  if (!texts.length) return '';
+  return [
+    '## Principios de ingeniería (de pstack, Lauren Tan, licencia MIT)',
+    'Aplica los que correspondan a tu trabajo. En tu informe, nombra cada principio que cambió una decisión y qué decisión cambió; no cites los que no aplicaste.',
+    ...texts.map((t) => t.replace(/^# /, '### '))
+  ].join('\n\n');
+}
+
 function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;
   const opts = { projectRoot: cwd };
@@ -100,6 +117,8 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
 
   const parts = [];
   if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);
+  const principles = principlesPrompt(settings, agent);
+  if (principles) parts.push(principles);
   parts.push(WORK_PACE_PROMPT);
   // Workflow instructions shared by all repos and then this repo's (which win if they contradict
   // the shared ones).
@@ -149,4 +168,4 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   return opts;
 }
 
-module.exports = { buildSessionOptions, engineFor };
+module.exports = { buildSessionOptions, engineFor, principlesPrompt };

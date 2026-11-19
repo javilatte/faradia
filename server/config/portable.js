@@ -238,6 +238,7 @@ function importConfig(raw) {
     ui: s.ui,
     ai,
     suggestions: s.suggestions,
+    principles: s.principles,
     chat: s.chat,
     tasks: s.tasks,
     wiki: s.wiki,

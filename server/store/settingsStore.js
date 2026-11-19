@@ -36,6 +36,8 @@ function defaultSettings() {
     // Skill/agent suggestions while typing in the chat: 'auto' (the local model when it answers fast,
     // else Claude Haiku with low effort) or 'off'.
     suggestions: { mode: 'auto' },
+    // pstack's engineering principles in each agent's prompt (see sessionOptions.js).
+    principles: { enabled: true },
     preferences: {
       instructions: '',
       // Claude Code "deny" patterns, e.g. "Read(**/.env*)" or "Bash(rm -rf *)". Passed to optimia's
@@ -124,6 +126,7 @@ function sanitizeGlobal(raw) {
     },
     ai,
     suggestions: { mode: ['auto', 'off'].includes(g.suggestions?.mode) ? g.suggestions.mode : d.suggestions.mode },
+    principles: { enabled: g.principles?.enabled !== false },
     // Chat permissions: 'auto' (Claude Code's auto mode approves what is safe and asks the rest in
     // the chat) or 'ask' (every action that needs permission is asked; read-only commands are not).
     chat: { permissions: ['auto', 'ask'].includes(g.chat?.permissions) ? g.chat.permissions : 'auto' },
@@ -177,6 +180,7 @@ function saveGlobalSettings(patch = {}) {
   next.wiki = { ...current.wiki, ...(patch.wiki || {}) };
   next.ecc = { ...current.ecc, ...(patch.ecc || {}) };
   next.suggestions = { ...current.suggestions, ...(patch.suggestions || {}) };
+  next.principles = { ...current.principles, ...(patch.principles || {}) };
   next.chat = { ...current.chat, ...(patch.chat || {}) };
   next.tasks = { ...current.tasks, ...(patch.tasks || {}) };
   const clean = sanitizeGlobal(next);
@@ -304,6 +308,7 @@ function effectiveFrom(global, project) {
     wiki: global.wiki,
     ecc: global.ecc,
     suggestions: global.suggestions,
+    principles: global.principles,
     chat: global.chat,
     tasks: global.tasks,
     preferences: {

@@ -1,6 +1,7 @@
 'use strict';
 
 const { eccAgents } = require('../ecc/library');
+const { pstackAgent, pstackPrinciples } = require('../skills/library');
 
 const fs = require('fs');
 const path = require('path');
@@ -8,7 +9,8 @@ const { configDir } = require('../store/globalPaths');
 
 // Agent catalog. An agent is a role with its own engine and model:
 //   id, name, description, engine (claude | local), model, effort, access (read | edit),
-//   enabled, and a role prompt (the body of the .md).
+//   enabled, principles (the pstack principles added to its prompt, see sessionOptions.js), and a
+//   role prompt (the body of the .md).
 // Three sources, from lowest to highest priority:
 //   builtin  default agents, defined in this file (restorable)
 //   global   ~/.config/optimia/agents/<id>.md       (every project)
@@ -23,7 +25,7 @@ const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
 // Model aliases the claude CLI understands; 'default' = the account's default model.
 const CLAUDE_MODELS = ['default', 'opus', 'sonnet', 'haiku', 'fable'];
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
-const FIELDS = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled'];
+const FIELDS = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled', 'principles'];
 
 const BUILTIN_AGENTS = [
   {
@@ -34,6 +36,13 @@ const BUILTIN_AGENTS = [
     model: 'opus',
     effort: 'high',
     access: 'read',
+    principles: [
+      'foundational-thinking',
+      'laziness-protocol',
+      'subtract-before-you-add',
+      'model-the-domain',
+      'sequence-verifiable-units'
+    ],
     prompt:
       'Eres el Planificador. Tu trabajo es entender el encargo a fondo, leer el código relevante y producir un plan concreto: ficheros a tocar, cambios en cada uno, riesgos y cómo verificarlo. Prefiere reutilizar lo que ya existe antes que crear código nuevo.'
   },
@@ -45,6 +54,13 @@ const BUILTIN_AGENTS = [
     model: 'sonnet',
     effort: 'high',
     access: 'edit',
+    principles: [
+      'laziness-protocol',
+      'fix-root-causes',
+      'boundary-discipline',
+      'minimize-reader-load',
+      'migrate-callers-then-delete-legacy-apis'
+    ],
     prompt:
       'Eres el Implementador. Aplica el plan con cambios pequenos y coherentes con el estilo del proyecto. No anadas funcionalidad que no se pidio. Si un paso del plan es incorrecto, corrigelo y explica por que.'
   },
@@ -56,6 +72,7 @@ const BUILTIN_AGENTS = [
     model: 'sonnet',
     effort: 'medium',
     access: 'edit',
+    principles: ['prove-it-works', 'test-behavior-not-implementation', 'explain-the-number'],
     prompt:
       'Eres el Verificador. Descubre como se prueba este proyecto (package.json, Makefile, CI) y ejecuta los tests, el lint y la compilacion que existan. Si algo falla por el cambio de esta tarea y el arreglo es pequeno y evidente, arreglalo. No cambies tests para que pasen sin motivo.'
   },
@@ -67,6 +84,7 @@ const BUILTIN_AGENTS = [
     model: 'opus',
     effort: 'high',
     access: 'read',
+    principles: ['prove-it-works', 'fix-root-causes', 'minimize-reader-load'],
     prompt:
       'Eres el Revisor. Busca errores reales (lógica, casos límite, seguridad, rendimiento) antes que cuestiones de estilo. Cada hallazgo con fichero:línea, gravedad y cómo arreglarlo.'
   },
@@ -112,6 +130,7 @@ const BUILTIN_AGENTS = [
     model: 'sonnet',
     effort: 'medium',
     access: 'read',
+    principles: ['minimize-reader-load'],
     prompt:
       'Eres el Investigador. Distingue siempre entre hechos verificados (con su fuente: fichero o URL) y suposiciones. Senala lo que falta por saber.'
   },
@@ -123,6 +142,7 @@ const BUILTIN_AGENTS = [
     model: 'sonnet',
     effort: 'medium',
     access: 'edit',
+    principles: ['minimize-reader-load'],
     prompt:
       'Eres el Redactor de documentación. Escribe claro y directo, para el lector que lo va a usar. Respeta el tono y la estructura de la documentación existente.'
   },
@@ -134,6 +154,7 @@ const BUILTIN_AGENTS = [
     model: 'opus',
     effort: 'high',
     access: 'read',
+    principles: ['fix-root-causes', 'attack-the-premise', 'prove-it-works'],
     prompt:
       'Eres el Depurador. Reproduce el fallo antes de teorizar, aisla la causa raíz con evidencias (trazas, comandos, líneas de código) y propone el arreglo mínimo que lo corrige sin efectos secundarios.'
   },
@@ -145,6 +166,7 @@ const BUILTIN_AGENTS = [
     model: 'sonnet',
     effort: 'medium',
     access: 'edit',
+    principles: ['test-behavior-not-implementation', 'prove-it-works'],
     prompt:
       'Eres el Escritor de tests. Usa el framework y las convenciones de tests que ya tiene el proyecto. Prueba comportamiento observable, incluidos los casos límite y de error, no detalles de implementación.'
   },
@@ -156,8 +178,35 @@ const BUILTIN_AGENTS = [
     model: 'opus',
     effort: 'high',
     access: 'read',
+    principles: ['boundary-discipline', 'explain-the-number', 'prove-it-works'],
     prompt:
       'Eres el Auditor. Analiza el alcance pedido buscando problemas de seguridad, rendimiento, fiabilidad y mantenibilidad. Ordena los hallazgos por gravedad, con evidencia (fichero:línea) y recomendación concreta. No modifiques nada.'
+  },
+  {
+    id: 'corrector',
+    name: 'Corrector',
+    description:
+      'Convierte un error que se repite en una comprobación que lo impide (arquitectura, tipos, lint o test).',
+    engine: 'claude',
+    model: 'opus',
+    effort: 'high',
+    access: 'edit',
+    principles: ['encode-lessons-in-structure', 'fix-root-causes', 'subtract-before-you-add'],
+    prompt:
+      'Eres el Corrector. Un agente ha cometido un error que el usuario no quiere volver a ver. Tu trabajo es que el siguiente agente no pueda repetirlo: una comprobación que falla, no una frase más en las instrucciones.'
+  },
+  {
+    id: 'comment-sicko',
+    name: 'Cazacomentarios',
+    description:
+      'Quita los comentarios que narran o justifican un apaño en los cambios de la tarea y propone una comprobación en su lugar.',
+    engine: 'claude',
+    model: 'sonnet',
+    effort: 'medium',
+    access: 'edit',
+    principles: ['encode-lessons-in-structure', 'fix-root-causes'],
+    prompt:
+      'Eres el Cazacomentarios. Solo tocas comentarios y supresiones de lint en los cambios de esta tarea; nunca cambias el código de la aplicación.'
   }
 ];
 
@@ -175,8 +224,20 @@ const ECC_METHOD = {
   auditor: ['ecc-security-reviewer', 'ecc-performance-optimizer']
 };
 const methodCache = new Map();
+// pstack's Comment Sicko (MIT, vendor/pstack/agents) is the method of optimia's comment stage.
+const PSTACK_METHOD = { 'comment-sicko': 'comment-sicko' };
 function withEccMethod(id, own) {
   if (methodCache.has(id)) return methodCache.get(id);
+  const pstack = PSTACK_METHOD[id] && pstackAgent(PSTACK_METHOD[id]);
+  if (pstack) {
+    const prompt = [
+      own,
+      'Responde en el idioma del usuario. Las instrucciones de la etapa de optimia mandan sobre este método (alcance, qué hacer con las restricciones y cómo terminar).',
+      `## Método: Comment Sicko (de pstack, Lauren Tan, licencia MIT)\n\n${pstack}`
+    ].join('\n\n');
+    methodCache.set(id, prompt);
+    return prompt;
+  }
   const methods = (ECC_METHOD[id] || []).map((eid) => eccAgents().find((a) => a.id === eid)).filter(Boolean);
   const prompt = methods.length
     ? [
@@ -267,6 +328,14 @@ function readDir(dir) {
   return out;
 }
 
+// A list of known principle names, from an array or the "a, b" of an agent file. Unknown names are
+// dropped; an empty list turns them off for that agent.
+function parsePrinciples(value) {
+  const list = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [];
+  const known = new Set(pstackPrinciples());
+  return [...new Set(list.map((n) => String(n).trim()).filter((n) => known.has(n)))];
+}
+
 function normalize(agent) {
   const a = { ...agent };
   if (!ENGINES.includes(a.engine)) a.engine = 'claude';
@@ -277,6 +346,7 @@ function normalize(agent) {
   a.name = typeof a.name === 'string' && a.name.trim() ? a.name.trim() : a.id;
   a.description = typeof a.description === 'string' ? a.description : '';
   a.prompt = typeof a.prompt === 'string' ? a.prompt : '';
+  a.principles = parsePrinciples(a.principles);
   return a;
 }
 
@@ -325,6 +395,12 @@ function validateAgentInput(input, { isNew }) {
   if (isNew && (typeof input.name !== 'string' || !input.name.trim())) return 'el agente necesita un nombre';
   if (input.name !== undefined && String(input.name).length > 60) return 'nombre demasiado largo';
   if (input.prompt !== undefined && String(input.prompt).length > 20000) return 'prompt demasiado largo';
+  if (input.principles !== undefined) {
+    const list = Array.isArray(input.principles) ? input.principles : String(input.principles).split(',');
+    const known = new Set(pstackPrinciples());
+    const unknown = list.map((n) => String(n).trim()).filter((n) => n && !known.has(n));
+    if (unknown.length) return `principio desconocido: ${unknown.join(', ')}`;
+  }
   return null;
 }
 
