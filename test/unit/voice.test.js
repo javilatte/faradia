@@ -183,6 +183,15 @@ test('without permission it says where to give it and stops trying', async (t) =
   assert.equal(apple.usable(['es']), false);
 });
 
+test('a helper that macOS kills is not tried again', async (t) => {
+  const killed = Object.assign(new Error('Command failed'), { signal: 'SIGABRT', code: null });
+  const { apple, calls } = appleWith(t, { err: killed });
+  await assert.rejects(apple.transcribe(new Float32Array(8000), ['es']), /falló/);
+  assert.equal(apple.status().state, 'unavailable');
+  assert.equal(apple.usable(['es']), false);
+  assert.equal(calls.length, 1);
+});
+
 test("the engine uses Apple's recognizer on a Mac and Whisper when it fails", async (t) => {
   const data = mkTmpDir('voice-apple-fallback');
   const prev = process.env.XDG_DATA_HOME;

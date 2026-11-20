@@ -19,7 +19,7 @@ const LOCALES = { es: 'es-ES', en: 'en-US', ca: 'ca-ES', pt: 'pt-BR', fr: 'fr-FR
 
 const MESSAGES = {
   denied:
-    'macOS no da permiso de reconocimiento de voz: actívalo para la app desde la que arrancas Faradia (Terminal, por ejemplo) en Ajustes del Sistema › Privacidad y seguridad › Reconocimiento de voz',
+    'macOS no da permiso de reconocimiento de voz: actívalo para faradia-transcribe en Ajustes del Sistema › Privacidad y seguridad › Reconocimiento de voz',
   restricted: 'el reconocimiento de voz está restringido en este Mac',
   missing:
     'esta instalación de Faradia no trae el reconocimiento de voz de macOS (npm run build:apple-voice lo compila)'
@@ -97,8 +97,9 @@ function createAppleEngine({ platform = process.platform, exec = execFile, helpe
       `el reconocimiento de voz de macOS falló: ${(out.stderr || out.err?.message || '').trim() || 'sin respuesta'}`;
     // Without permission it would fail every time; other errors (a busy recognizer) may pass.
     if (code === 'denied' || code === 'restricted') state.state = 'denied';
-    // It could not start at all (a broken or foreign binary): Whisper from now on.
-    else if (!answer && out.err?.code === 'ENOENT') state.state = 'unavailable';
+    // It could not start at all (a broken or foreign binary), or macOS killed it (a privacy check
+    // it failed): it would happen again on every dictation, so Whisper from now on.
+    else if (!answer && (out.err?.code === 'ENOENT' || out.err?.signal)) state.state = 'unavailable';
     state.message = message;
     throw Object.assign(new Error(message), { code });
   }

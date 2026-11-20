@@ -69,7 +69,8 @@ jobs:
           bin="$RUNNER_TEMP/faradia-transcribe"
           say -o "$RUNNER_TEMP/test.wav" --data-format=LEI16@16000 "This is a dictation test"
           set +e
-          out="$("$bin" "$RUNNER_TEMP/test.wav" en-US,es-ES)"
+          # At most 3 minutes: the helper itself gives up on an unanswered permission after 2.
+          out="$(perl -e 'alarm 180; exec @ARGV' "$bin" "$RUNNER_TEMP/test.wav" en-US,es-ES)"
           code=$?
           set -e
           echo "exit $code: $out"
