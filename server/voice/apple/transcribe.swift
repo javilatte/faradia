@@ -6,8 +6,8 @@
 //
 //   open -W -n -g --stdout out.json Faradia.app --args <recording.wav> <locale,locale…>
 //
-// With several locales (es-ES,en-US) it recognizes the recording in each and keeps the one Apple is
-// most confident about: the Speech framework does not detect the language by itself. It prints one
+// With several locales (es-ES,en-US) it recognizes the recording in each, in order, and keeps the one
+// Apple is most confident about: the Speech framework does not detect the language by itself. It prints one
 // JSON line: {"ok":true,"text":…,"locale":…,"confidence":…} or {"ok":false,"code":…,"message":…},
 // where code is denied, restricted, unsupported, unavailable or failed.
 
@@ -117,21 +117,14 @@ func run() -> Never {
   default: fail("denied", "macOS no ha dado permiso de reconocimiento de voz")
   }
 
-  // Every locale at once: each recognizer works on its own.
-  var results = [Recognition](repeating: Recognition(locale: ""), count: locales.count)
-  let group = DispatchGroup()
-  let lock = NSLock()
-  for (i, locale) in locales.enumerated() {
-    group.enter()
-    DispatchQueue.global(qos: .userInitiated).async {
-      let r = recognize(url, locale)
-      lock.lock()
-      results[i] = r
-      lock.unlock()
-      group.leave()
-    }
+  // One locale after another: two recognitions at once on the device interfere (one comes back
+  // empty). The first locale is the likeliest, so a confident answer there ends the search.
+  var results: [Recognition] = []
+  for locale in locales {
+    let r = recognize(url, locale)
+    results.append(r)
+    if r.error == nil && !r.text.isEmpty && r.confidence >= 0.85 { break }
   }
-  group.wait()
 
   let usable = results.filter { $0.error == nil }
   guard let best = usable.max(by: { a, b in
