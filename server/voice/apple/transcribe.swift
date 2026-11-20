@@ -1,11 +1,13 @@
 // Faradia's dictation with macOS's own speech recognition (the Speech framework), on the device: the
-// audio never leaves the Mac. Faradia compiles this file the first time it is needed (appleEngine.js)
-// and runs it once per dictation.
+// audio never leaves the Mac. CI compiles it into a small app, Faradia.app (scripts/build-apple-voice.sh),
+// and Faradia opens it once per dictation (appleEngine.js). It has to be an app opened by macOS, not a
+// program Faradia starts: macOS asks for speech recognition permission for the app that runs it, and
+// only shows that dialog to apps.
 //
-//   faradia-transcribe <recording.wav> <locale,locale…>
+//   open -W -n -g --stdout out.json Faradia.app --args <recording.wav> <locale,locale…>
 //
-// With several locales (es-ES,en-US) it recognizes the recording in each and keeps the one Apple is
-// most confident about: the Speech framework does not detect the language by itself. It prints one
+// With several locales (es-ES,en-US) it recognizes the recording in each, in order, and keeps the one
+// Apple is most confident about: the Speech framework does not detect the language by itself. It prints one
 // JSON line: {"ok":true,"text":…,"locale":…,"confidence":…} or {"ok":false,"code":…,"message":…},
 // where code is denied, restricted, unsupported, unavailable or failed.
 
@@ -23,8 +25,7 @@ func fail(_ code: String, _ message: String) -> Never {
   emit(["ok": false, "code": code, "message": message])
 }
 
-// Asks once: macOS shows its permission dialog the first time (for the app that started Faradia,
-// such as Terminal) and remembers the answer.
+// Asks once: macOS shows its permission dialog the first time and remembers the answer.
 func authorize() -> SFSpeechRecognizerAuthorizationStatus {
   let current = SFSpeechRecognizer.authorizationStatus()
   if current != .notDetermined { return current }
@@ -34,7 +35,8 @@ func authorize() -> SFSpeechRecognizerAuthorizationStatus {
     status = answer
     done.signal()
   }
-  done.wait()
+  // Nobody answered the dialog (or macOS could not show it): give up instead of waiting forever.
+  if done.wait(timeout: .now() + 120) == .timedOut { fail("denied", "nadie respondió al aviso de permiso de macOS") }
   return status
 }
 
@@ -115,21 +117,14 @@ func run() -> Never {
   default: fail("denied", "macOS no ha dado permiso de reconocimiento de voz")
   }
 
-  // Every locale at once: each recognizer works on its own.
-  var results = [Recognition](repeating: Recognition(locale: ""), count: locales.count)
-  let group = DispatchGroup()
-  let lock = NSLock()
-  for (i, locale) in locales.enumerated() {
-    group.enter()
-    DispatchQueue.global(qos: .userInitiated).async {
-      let r = recognize(url, locale)
-      lock.lock()
-      results[i] = r
-      lock.unlock()
-      group.leave()
-    }
+  // One locale after another: two recognitions at once on the device interfere (one comes back
+  // empty). The first locale is the likeliest, so a confident answer there ends the search.
+  var results: [Recognition] = []
+  for locale in locales {
+    let r = recognize(url, locale)
+    results.append(r)
+    if r.error == nil && !r.text.isEmpty && r.confidence >= 0.85 { break }
   }
-  group.wait()
 
   let usable = results.filter { $0.error == nil }
   guard let best = usable.max(by: { a, b in
@@ -140,7 +135,10 @@ func run() -> Never {
     let first = results.first!
     fail(first.code, first.error ?? "no se pudo reconocer la grabación")
   }
-  emit(["ok": true, "text": best.text, "locale": best.locale, "confidence": best.confidence])
+  // The locales that could not take part, and why (a language whose on-device model is not
+  // downloaded, for instance): Faradia shows it in Settings › Dictado.
+  let skipped = results.filter { $0.error != nil }.map { ["locale": $0.locale, "message": $0.error!] }
+  emit(["ok": true, "text": best.text, "locale": best.locale, "confidence": best.confidence, "skipped": skipped])
 }
 
 DispatchQueue.global(qos: .userInitiated).async { run() }

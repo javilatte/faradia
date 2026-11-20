@@ -316,6 +316,7 @@ function viaClaude(settings, system, user, { spawnFn = spawn, cwd = '', blockedU
         reject(new Error(`claude: salida no válida (código ${code})`));
       }
     });
+    proc.stdin.on('error', () => {}); // claude exited early: the exit handler reports it
     proc.stdin.end(user);
   });
 }

@@ -24,7 +24,10 @@ function run(cmd, args, { cwd, input, timeout = 30_000, env } = {}) {
         resolve({ stdout: String(stdout), stderr: String(stderr) });
       }
     );
-    if (input !== undefined) child.stdin.end(input);
+    if (input !== undefined) {
+      child.stdin.on('error', () => {}); // the command exited early: its callback reports it
+      child.stdin.end(input);
+    }
   });
 }
 

@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a PR cancels its older runs: a hung run would otherwise hold a runner until the job
+# times out, and the next runs wait in the queue behind it.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     # faradia runs on Linux and macOS: every suite runs on both.
@@ -16,6 +22,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # The suites take about 3 minutes; a hung test fails here instead of after 6 hours.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,32 +55,44 @@ jobs:
   # here so a change that breaks it fails the PR; publish.yml builds the one that goes to npm.
   apple-voice:
     runs-on: macos-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Build the speech recognition helper
-        run: scripts/build-apple-voice.sh "$RUNNER_TEMP/faradia-transcribe"
-      - name: Check the binary
+        run: scripts/build-apple-voice.sh "$RUNNER_TEMP/Faradia.app"
+      - name: Check the app
         run: |
-          bin="$RUNNER_TEMP/faradia-transcribe"
+          app="$RUNNER_TEMP/Faradia.app"
+          bin="$app/Contents/MacOS/faradia-transcribe"
           archs="$(lipo -archs "$bin")"
           [[ "$archs" == *arm64* && "$archs" == *x86_64* ]] || { echo "::error::not universal: $archs"; exit 1; }
-          codesign --verify "$bin"
-          # macOS kills a program that asks for speech recognition without saying why: the reason must be inside.
-          otool -P "$bin" | grep -q NSSpeechRecognitionUsageDescription \
-            || { echo "::error::Info.plist missing from the binary"; exit 1; }
-          # It runs and answers in JSON (no recording, so no permission dialog on the runner).
+          codesign --verify --deep --strict "$app"
+          # macOS kills a program that asks for speech recognition without saying why.
+          plutil -extract NSSpeechRecognitionUsageDescription raw "$app/Contents/Info.plist"
+          # It runs and answers in JSON (no recording, so no permission dialog).
           out="$("$bin" || true)"
           echo "$out"
           echo "$out" | grep -q '"ok":false'
+      - name: Open the app the way Faradia does and get an answer
+        run: |
+          say -o "$RUNNER_TEMP/test.wav" --data-format=LEI16@16000 "This is a dictation test"
+          # At most 3 minutes: the helper gives up on an unanswered permission dialog after 2.
+          perl -e 'alarm 180; exec @ARGV' open -W -n -g --stdout "$RUNNER_TEMP/out.json" --stderr "$RUNNER_TEMP/err.txt" \
+            "$RUNNER_TEMP/Faradia.app" --args "$RUNNER_TEMP/test.wav" en-US,es-ES
+          echo "out: $(cat "$RUNNER_TEMP/out.json")"
+          echo "err: $(cat "$RUNNER_TEMP/err.txt")"
+          # The runner has no one to grant permission: "denied" is the expected answer, but there must be one.
+          grep -q '^{"' "$RUNNER_TEMP/out.json" || { echo "::error::no JSON answer"; exit 1; }
       - name: Keep the helper (for a publish made by hand)
         uses: actions/upload-artifact@v4
         with:
-          name: faradia-transcribe
-          path: ${{ runner.temp }}/faradia-transcribe
+          name: faradia-app
+          path: ${{ runner.temp }}/Faradia.app
           retention-days: 14
 
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
