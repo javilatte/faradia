@@ -54,7 +54,8 @@ function load() {
 
 function save(store) {
   fs.mkdirSync(configDir(), { recursive: true });
-  const tmp = `${storePath()}.tmp`;
+  // One temporary file per process: two Faradia instances starting at once must not share it.
+  const tmp = `${storePath()}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(store, null, 2) + '\n');
   fs.renameSync(tmp, storePath());
 }
