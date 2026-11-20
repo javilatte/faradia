@@ -43,6 +43,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "build:apple-voice": "scripts/build-apple-voice.sh",
     "prepublishOnly": "npm run test:unit && bats test/"
   },
   "dependencies": {

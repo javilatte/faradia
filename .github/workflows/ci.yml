@@ -43,6 +43,28 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  # Dictation on macOS uses a small Swift helper (server/voice/apple/transcribe.swift). It is compiled
+  # here so a change that breaks it fails the PR; publish.yml builds the one that goes to npm.
+  apple-voice:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the speech recognition helper
+        run: scripts/build-apple-voice.sh "$RUNNER_TEMP/faradia-transcribe"
+      - name: Check the binary
+        run: |
+          bin="$RUNNER_TEMP/faradia-transcribe"
+          archs="$(lipo -archs "$bin")"
+          [[ "$archs" == *arm64* && "$archs" == *x86_64* ]] || { echo "::error::not universal: $archs"; exit 1; }
+          codesign --verify "$bin"
+          # macOS kills a program that asks for speech recognition without saying why: the reason must be inside.
+          otool -P "$bin" | grep -q NSSpeechRecognitionUsageDescription \
+            || { echo "::error::Info.plist missing from the binary"; exit 1; }
+          # It runs and answers in JSON (no recording, so no permission dialog on the runner).
+          out="$("$bin" || true)"
+          echo "$out"
+          echo "$out" | grep -q '"ok":false'
+
   secrets:
     runs-on: ubuntu-latest
     steps:
