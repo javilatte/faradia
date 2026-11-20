@@ -33,7 +33,7 @@ test('create a workbench, search repos in a folder and switch project', async ({
   await page.goto('/?token=e2e-token');
   await page.locator('#wb-manage').click();
   await page.getByLabel('Nombre del nuevo workbench').fill('Clientes');
-  await page.getByRole('button', { name: 'Crear' }).click();
+  await page.getByRole('button', { name: 'Crear', exact: true }).click();
   await expect(page.locator('.wb-list')).toContainText('Clientes');
 
   await page.getByLabel('Carpeta donde buscar').fill(root);
@@ -57,9 +57,9 @@ test('create a workbench, search repos in a folder and switch project', async ({
   await page.locator('#chat-input').fill('hola desde api');
   await page.locator('#chat-input').press('Enter');
   await expect(page.locator('#chat-log')).toContainText('Respuesta simulada a: hola desde api', { timeout: 15_000 });
-  // This repo's chat is stored in its own .optimia folder, excluded from git locally
-  expect(fs.existsSync(path.join(root, 'api', '.optimia', 'chats.json'))).toBe(true);
-  expect(fs.readFileSync(path.join(root, 'api', '.git', 'info', 'exclude'), 'utf8')).toContain('/.optimia');
+  // This repo's chat is stored in its own .faradia folder, excluded from git locally
+  expect(fs.existsSync(path.join(root, 'api', '.faradia', 'chats.json'))).toBe(true);
+  expect(fs.readFileSync(path.join(root, 'api', '.git', 'info', 'exclude'), 'utf8')).toContain('/.faradia');
   expect(errors).toEqual([]);
 });
 
@@ -75,7 +75,7 @@ test('switching repos is instant: no reload, each repo keeps its chat and draft,
   await page.goto('/?token=e2e-token');
   await page.locator('#wb-manage').click();
   await page.getByLabel('Nombre del nuevo workbench').fill('Cambio rápido');
-  await page.getByRole('button', { name: 'Crear' }).click();
+  await page.getByRole('button', { name: 'Crear', exact: true }).click();
   await expect(page.locator('#wb-manager .settings-content-header')).toContainText('Cambio rápido');
   await page.getByLabel('Carpeta donde buscar').fill(root);
   await page.getByRole('button', { name: 'Buscar' }).click();
@@ -128,7 +128,7 @@ test('switching repos is instant: no reload, each repo keeps its chat and draft,
   expect(errors).toEqual([]);
 });
 
-test('a folder that is not a git repo: declined it is not added, accepted optimia creates the repo', async ({
+test('a folder that is not a git repo: declined it is not added, accepted Faradia creates the repo', async ({
   page
 }) => {
   const plain = path.join(reposDir(), 'no-git');

@@ -13,14 +13,14 @@ const { git } = require('./gitState');
 // debounced and emitted as a batch:
 //   'change' { paths: [relative paths], git: boolean (change in HEAD/index/refs) }
 
-const SELF_DIRS = ['.optimia', '.codegraph'];
+const SELF_DIRS = ['.faradia', '.optimia', '.codegraph'];
 
 // Files in .git/ whose change means a commit, checkout or staging change.
 const GIT_META = ['HEAD', 'index', 'packed-refs', 'FETCH_HEAD', 'ORIG_HEAD'];
 
 // Native recursive watching: cheap on macOS (FSEvents) and Windows. On Linux it
 // would put one inotify watch on every subfolder (node_modules included), so
-// there optimia watches only the folders that matter, one by one.
+// there Faradia watches only the folders that matter, one by one.
 const NATIVE_RECURSIVE = process.platform === 'darwin' || process.platform === 'win32';
 
 // Which of `dirs` (relative) git ignores. One `git check-ignore --stdin` call.

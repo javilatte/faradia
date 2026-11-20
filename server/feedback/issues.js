@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { dataDir } = require('../store/globalPaths');
 
-// What goes wrong (and what users do with optimia's proposals), kept on this computer to improve the
+// What goes wrong (and what users do with faradia's proposals), kept on this computer to improve the
 // product: every warning and error any repo logs, errors from the page, and how suggestions are
 // received. Settings › Registro groups them by kind ("Problemas detectados") and exports them as a
 // file the user can choose to share. Nothing leaves the computer on its own.
@@ -165,7 +165,7 @@ function summary() {
 /** Everything, for the export file the user decides to share. */
 function exportReport() {
   return {
-    format: 'optimia-issues',
+    format: 'faradia-issues',
     formatVersion: 1,
     exportedAt: new Date().toISOString(),
     version: require('../../package.json').version,

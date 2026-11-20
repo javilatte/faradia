@@ -39,7 +39,7 @@ test('export: everything global, without the auth header unless asked', (t) => {
   isolated(t);
   seed();
   const cfg = portable.exportConfig();
-  assert.equal(cfg.format, 'optimia-config');
+  assert.equal(cfg.format, 'faradia-config');
   assert.equal(cfg.formatVersion, 1);
   assert.equal(cfg.settings.preferences.instructions, 'Conventional Commits.');
   assert.equal(cfg.settings.ai.localAi.url, 'http://ollama:11434');
@@ -71,7 +71,7 @@ test('import into a fresh install: preview first, then apply with a backup', (t)
 
   const result = portable.importConfig(exported);
   assert.equal(result.agents, 1);
-  assert.ok(fs.existsSync(path.join(result.backup, 'optimia-config.json')));
+  assert.ok(fs.existsSync(path.join(result.backup, 'faradia-config.json')));
   assert.ok(result.backup.startsWith(other));
   const g = store.loadGlobalSettings();
   assert.equal(g.preferences.instructions, 'Conventional Commits.');
@@ -102,18 +102,18 @@ test('import keeps the local auth header when the file has no secrets, and repla
 test('validation rejects foreign files and drops unknown stage mappings', (t) => {
   isolated(t);
   assert.throws(() => portable.validateConfig({ hello: 1 }), /no es un fichero de configuración/);
-  assert.throws(() => portable.validateConfig({ format: 'optimia-config', formatVersion: 99 }), /no compatible/);
+  assert.throws(() => portable.validateConfig({ format: 'faradia-config', formatVersion: 99 }), /no compatible/);
   assert.throws(
     () =>
       portable.validateConfig({
-        format: 'optimia-config',
+        format: 'faradia-config',
         formatVersion: 1,
         agents: [{ id: '../evil', content: 'x' }]
       }),
     /id no válido/
   );
   const cfg = portable.validateConfig({
-    format: 'optimia-config',
+    format: 'faradia-config',
     formatVersion: 1,
     agents: [{ id: 'mio', content: '---\nname: Mío\nengine: claude\nhack: yes\n---\nHola' }],
     stageMap: { plan: 'mio', implement: 'nobody', bogus: 'planner' }

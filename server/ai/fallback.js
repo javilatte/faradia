@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { dataDir } = require('../store/globalPaths');
 
-// When Claude runs out of usage, optimia goes on with the local model and comes back by itself
+// When Claude runs out of usage, Faradia goes on with the local model and comes back by itself
 // when the limit resets.
 //
 // The claude CLI reports its limits in the stream: {type: "rate_limit_event", rate_limit_info:
@@ -75,6 +75,17 @@ function markClaudeBlocked(until, kind = '') {
   save();
 }
 
+/** What a task card says while Claude is out of usage and no local model can take over. */
+function limitMessage(until, now = Date.now()) {
+  const at = new Date(until);
+  const time = at.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const sameDay = new Date(now).toDateString() === at.toDateString();
+  const when = sameDay
+    ? `hasta las ${time}`
+    : `hasta el ${at.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} a las ${time}`;
+  return `Claude se ha quedado sin uso ${when}. La etapa seguirá sola entonces; para seguir ya, configura un modelo local en Ajustes › IA local.`;
+}
+
 function clearClaudeBlock() {
   state = {};
   save();
@@ -99,6 +110,7 @@ module.exports = {
   clearClaudeBlock,
   fallbackEngine,
   engineOverride,
+  limitMessage,
   _reset: () => {
     state = null;
   }

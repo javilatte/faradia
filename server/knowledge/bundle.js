@@ -10,7 +10,7 @@ const { loadMemory, saveMemory } = require('../store/memoryStore');
 const wiki = require('./wikiStore');
 const pkg = require('../../package.json');
 
-// Everything optimia learns, in one file: the configuration (instructions, agents, models...), the
+// Everything Faradia learns, in one file: the configuration (instructions, agents, models...), the
 // wikis (personal and of every project) and each repo's memory. It is what a user carries between
 // machines (work, home...), and the unit the future auto-sync will exchange.
 //
@@ -18,7 +18,7 @@ const pkg = require('../../package.json');
 // project key (from the git remote). Each carries its updatedAt and a content hash, so importing
 // merges: new items are added, the newer side wins, and whatever gets replaced is backed up first.
 
-const FORMAT = 'optimia-knowledge';
+const FORMAT = 'faradia-knowledge';
 const FORMAT_VERSION = 1;
 const MAX_ITEMS = 20_000;
 const MAX_ITEM_BYTES = 512 * 1024;
@@ -52,7 +52,7 @@ function wikiExport(target) {
 }
 
 function memoryFile(root) {
-  return path.join(root, '.optimia', 'memory.md');
+  return path.join(root, '.faradia', 'memory.md');
 }
 
 /** The whole knowledge, as one JSON-serializable object. */
@@ -93,7 +93,7 @@ function exportKnowledge({ includeSecrets = false } = {}) {
     format: FORMAT,
     formatVersion: FORMAT_VERSION,
     exportedAt: new Date().toISOString(),
-    optimiaVersion: pkg.version,
+    faradiaVersion: pkg.version,
     config: portable.exportConfig({ includeSecrets }),
     wikis,
     memories: [...memories.values()].map((m) => ({ ...m, hash: hash(m.content) }))
@@ -106,11 +106,11 @@ const SAFE_KEY = /^[a-z0-9][a-z0-9.-]{0,119}$/;
 
 function validate(raw) {
   if (!raw || typeof raw !== 'object' || raw.format !== FORMAT) {
-    throw new KnowledgeError('no es un fichero de conocimiento de optimia');
+    throw new KnowledgeError('no es un fichero de conocimiento de faradia');
   }
   if (raw.formatVersion !== FORMAT_VERSION) {
     throw new KnowledgeError(
-      `formato ${raw.formatVersion} no compatible con esta versión de optimia; actualiza optimia`
+      `formato ${raw.formatVersion} no compatible con esta versión de Faradia; actualiza faradia`
     );
   }
   const wikis = Array.isArray(raw.wikis) ? raw.wikis : [];
@@ -136,7 +136,7 @@ function validate(raw) {
     memories,
     config: raw.config || null,
     exportedAt: raw.exportedAt,
-    optimiaVersion: raw.optimiaVersion
+    faradiaVersion: raw.faradiaVersion
   };
 }
 
@@ -187,7 +187,7 @@ function plan(raw) {
   }
   out.config = data.config ? portable.previewImport(data.config) : null;
   out.exportedAt = data.exportedAt;
-  out.optimiaVersion = data.optimiaVersion;
+  out.faradiaVersion = data.faradiaVersion;
   return out;
 }
 
@@ -196,7 +196,7 @@ function summary(p) {
     list.map(({ wiki: w, path: rel, key, repo }) => (key ? { key, repo } : { wiki: w, path: rel }));
   return {
     exportedAt: p.exportedAt,
-    optimiaVersion: p.optimiaVersion,
+    faradiaVersion: p.faradiaVersion,
     pages: Object.fromEntries(Object.entries(p.pages).map(([k, v]) => [k, strip(v)])),
     memories: Object.fromEntries(Object.entries(p.memories).map(([k, v]) => [k, strip(v)])),
     config: p.config

@@ -11,7 +11,7 @@ test('loadMemory: returns "" when memory.md does not exist', (t) => {
   assert.equal(loadMemory(dir), '');
 });
 
-test('saveMemory then loadMemory: round-trips free text exactly, creating .optimia/', (t) => {
+test('saveMemory then loadMemory: round-trips free text exactly, creating .faradia/', (t) => {
   const dir = mkTmpDir('memory');
   t.after(() => rmTmpDir(dir));
 

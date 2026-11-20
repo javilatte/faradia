@@ -53,7 +53,7 @@ class ClaudeSession extends EventEmitter {
     } else {
       args.push('--session-id', this.sessionId);
     }
-    // approvals: whatever needs permission is asked to optimia (stdin/stdout control messages, the
+    // approvals: whatever needs permission is asked to Faradia (stdin/stdout control messages, the
     // same protocol as the Agent SDK) and shown to the user in the chat; without it, nobody is asked
     // and it is denied (task agents, which go on by themselves and list what was blocked).
     this.approvals = approvals;
@@ -68,7 +68,7 @@ class ClaudeSession extends EventEmitter {
     if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
     if (settingsPath) args.push('--settings', settingsPath);
     const allowedTools = [];
-    // Task agents: only optimia's MCP servers and the project's own (.mcp.json). Without
+    // Task agents: only faradia's MCP servers and the project's own (.mcp.json). Without
     // --strict-mcp-config they would inherit the connectors of the user's claude.ai account (Gmail,
     // Drive, Slack...), which use up context, have nothing to do with a coding task and open a path
     // for prompt injection.
@@ -84,7 +84,7 @@ class ClaudeSession extends EventEmitter {
       // is the one mechanism that actually lets a specific MCP tool through
       // without granting bypassPermissions (which would also defeat the no-go
       // deny list).
-      allowedTools.push('mcp__optimia-tasks__create_task', 'mcp__optimia-tasks__update_task_progress');
+      allowedTools.push('mcp__faradia-tasks__create_task', 'mcp__faradia-tasks__update_task_progress');
     }
     // Extra tools a task stage needs without asking (see taskStages.js). Deny rules still win over
     // these.

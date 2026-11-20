@@ -30,8 +30,8 @@ test(
 );
 
 test('checkClaudeCapabilities: a nonexistent command reports ok=false with all flags missing', () => {
-  const result = checkClaudeCapabilities('__optimia_nonexistent_cli__');
+  const result = checkClaudeCapabilities('__faradia_nonexistent_cli__');
   assert.equal(result.ok, false);
   assert.deepEqual(result.missing, REQUIRED_FLAGS);
-  assert.match(result.error, /__optimia_nonexistent_cli__/);
+  assert.match(result.error, /__faradia_nonexistent_cli__/);
 });

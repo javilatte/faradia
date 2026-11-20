@@ -63,8 +63,8 @@ test('PATCH /api/settings: global for every repo, project for this repo only, wi
 
 test('POST /api/tasks/:id/apply-memory saves the proposed memory and keeps the previous one', async (t) => {
   const repo = isolated(t);
-  fs.mkdirSync(path.join(repo, '.optimia'), { recursive: true });
-  fs.writeFileSync(path.join(repo, '.optimia', 'memory.md'), 'memoria vieja\n');
+  fs.mkdirSync(path.join(repo, '.faradia'), { recursive: true });
+  fs.writeFileSync(path.join(repo, '.faradia', 'memory.md'), 'memoria vieja\n');
   const api = await serve(t, repo);
   const task = addTask(repo, { title: 'Conocer el repo', type: 'onboard', instruction: 'x' });
   updateTask(repo, task.id, {
@@ -76,10 +76,10 @@ test('POST /api/tasks/:id/apply-memory saves the proposed memory and keeps the p
   assert.equal(r.status, 200);
   assert.ok(r.body.memoryApplied);
   assert.equal(
-    fs.readFileSync(path.join(repo, '.optimia', 'memory.md'), 'utf8'),
+    fs.readFileSync(path.join(repo, '.faradia', 'memory.md'), 'utf8'),
     '## Qué es\nUna API.\n\n## Comandos\n- `npm test`\n'
   );
-  assert.equal(fs.readFileSync(path.join(repo, '.optimia', 'memory.prev.md'), 'utf8'), 'memoria vieja\n');
+  assert.equal(fs.readFileSync(path.join(repo, '.faradia', 'memory.prev.md'), 'utf8'), 'memoria vieja\n');
 
   const other = addTask(repo, { title: 'otra', type: 'coding', instruction: 'x' });
   assert.equal((await api('POST', `/api/tasks/${other.id}/apply-memory`)).status, 409);

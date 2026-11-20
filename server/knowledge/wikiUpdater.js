@@ -6,6 +6,7 @@ const { execFileSync } = require('child_process');
 const { ClaudeSession } = require('../bridge/claudeProcess');
 const { listModelsAt } = require('../bridge/localAi');
 const wiki = require('./wikiStore');
+const { writeRepoMapPage, buildRepoMap, renderRepoMap } = require('./repoMap');
 const { requestLanguage } = require('../bridge/taskStages');
 
 // Keeps the wikis up to date: after a task is committed (or delivers a report), an agent reads what
@@ -43,10 +44,16 @@ function commitSummary(dir, sha) {
   }
 }
 
-function buildPrompt({ project, projectRel, task, change }) {
+// The code map page is Faradia's (repoMap.js): the agents read it but never edit it.
+const mapRule = (mapPage, projectRel) =>
+  mapPage
+    ? `- ${projectRel}/${mapPage} lo genera Faradia a partir de CodeGraph: léelo si te sirve, pero no lo edites.`
+    : null;
+
+function buildPrompt({ project, projectRel, task, change, mapPage }) {
   const plan = task.stageOutputs?.plan || task.stageOutputs?.diagnose || task.stageOutputs?.research;
   return [
-    'Etapa de MANTENIMIENTO DE LA WIKI. Trabajas en la carpeta de wikis de optimia (tu directorio actual).',
+    'Etapa de MANTENIMIENTO DE LA WIKI. Trabajas en la carpeta de wikis de Faradia (tu directorio actual).',
     `- Wiki del proyecto «${project}»: ${projectRel}/ (index.md es la portada; log.md el registro).`,
     '- Wiki personal del usuario: personal/ (lo que le sirve en todos sus proyectos).',
     'Acaba de terminar una tarea de los agentes. Actualiza la wiki del proyecto con lo que aporte conocimiento duradero: cómo funciona algo, decisiones y su porqué, guías de uso, convenciones, problemas resueltos y cómo se resolvieron.',
@@ -61,8 +68,11 @@ function buildPrompt({ project, projectRel, task, change }) {
       '- No copies código entero: explica y enlaza a los ficheros (ruta:línea).',
       '- Si la tarea no aporta nada que merezca quedar, solo añade la línea al log.',
       `- Escribe en ${requestLanguage(`${task.title || ''}\n${task.instruction || ''}`) === 'en' ? 'inglés' : 'español'}, el idioma del encargo (títulos, carpetas y nombres de fichero también).`,
-      '- No uses Bash ni salgas de esta carpeta.'
-    ].join('\n'),
+      '- No uses Bash ni salgas de esta carpeta.',
+      mapRule(mapPage, projectRel)
+    ]
+      .filter(Boolean)
+      .join('\n'),
     `Tarea (${task.type}): ${task.title}\nEncargo:\n${cut(task.instruction, MAX_TEXT_CHARS)}`,
     plan ? `Plan o diagnóstico de la tarea:\n${cut(plan, MAX_TEXT_CHARS)}` : null,
     change.report ? `Informe que entregó la tarea:\n${cut(change.report, MAX_TEXT_CHARS)}` : null,
@@ -175,11 +185,14 @@ function enqueueWikiUpdate({ projectRoot, task, change, settings, agent, log, on
   wiki.ensureWiki(wiki.wikiFor('personal'));
   const detail = change.sha ? commitSummary(change.dir || projectRoot, change.sha) : {};
   const job = async () => {
+    const lang = requestLanguage(`${task.title || ''}\n${task.instruction || ''}`);
+    const mapPage = safeRepoMap(projectRoot, lang, log);
     const prompt = buildPrompt({
       project: target.title,
       projectRel: path.relative(wiki.wikisDir(), target.dir).split(path.sep).join('/'),
       task,
-      change: { ...change, ...detail }
+      change: { ...change, ...detail },
+      mapPage
     });
     const { engine, result } = await runWithFallback({ prompt, agent, settings, prefs, log, logId: task.id, Session });
     const outcome = {
@@ -198,9 +211,19 @@ function enqueueWikiUpdate({ projectRoot, task, change, settings, agent, log, on
   return run;
 }
 
-function buildFromRepoPrompt({ project, projectRel, projectRoot, lang }) {
+// The map is refreshed from CodeGraph's index without a model; a failure never stops the wiki.
+function safeRepoMap(projectRoot, lang, log) {
+  try {
+    return writeRepoMapPage(projectRoot, { lang });
+  } catch (err) {
+    log?.warn('wiki.code_map_failed', { error: err.message });
+    return null;
+  }
+}
+
+function buildFromRepoPrompt({ project, projectRel, projectRoot, lang, mapPage, codeMap }) {
   return [
-    'Etapa de CREACIÓN DE LA WIKI. Trabajas en la carpeta de wikis de optimia (tu directorio actual).',
+    'Etapa de CREACIÓN DE LA WIKI. Trabajas en la carpeta de wikis de Faradia (tu directorio actual).',
     `- Wiki del proyecto «${project}»: ${projectRel}/ (index.md es la portada; log.md el registro).`,
     `- El código del proyecto está en ${projectRoot} (solo lectura: no lo cambies).`,
     'Explora el repositorio y escribe la wiki que necesitaría alguien que llega nuevo al proyecto: qué es, cómo está organizado, cómo funciona por dentro y cómo se trabaja en él.',
@@ -223,10 +246,18 @@ function buildFromRepoPrompt({ project, projectRel, projectRoot, lang }) {
       '- Páginas concretas, con un título "# ...". Explica y enlaza a los ficheros (ruta:línea); no copies código entero.',
       '- Lo que deduzcas sin poder confirmarlo, márcalo como suposición.',
       `- Añade al final de ${projectRel}/log.md una línea: "- <fecha> · wiki creada a partir del repositorio: <número> páginas".`,
-      '- No uses Bash ni escribas fuera de la carpeta de la wiki.'
-    ].join('\n'),
+      '- No uses Bash ni escribas fuera de la carpeta de la wiki.',
+      mapRule(mapPage, projectRel)
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    codeMap
+      ? `Punto de partida: el mapa del código que Faradia sacó del índice de CodeGraph (las piezas más usadas y qué zona depende de cuál). Úsalo para elegir los módulos y la arquitectura, y compruébalo leyendo el código:\n\n${codeMap}`
+      : null,
     'Termina con una línea "PÁGINAS: <rutas tocadas separadas por comas>".'
-  ].join('\n\n');
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 /**
@@ -246,11 +277,21 @@ function enqueueWikiBuild({ projectRoot, settings, agent, lang, log, onEvent, on
     /* no log yet */
   }
   const job = async () => {
+    const mapPage = safeRepoMap(projectRoot, lang, log);
+    let codeMap = null;
+    try {
+      const map = mapPage && buildRepoMap(projectRoot);
+      codeMap = map ? renderRepoMap(map, lang) : null;
+    } catch {
+      /* the wiki is written without it */
+    }
     const prompt = buildFromRepoPrompt({
       project: target.title,
       projectRel: path.relative(wiki.wikisDir(), target.dir).split(path.sep).join('/'),
       projectRoot,
-      lang
+      lang,
+      mapPage,
+      codeMap
     });
     const { engine, result } = await runWithFallback({
       prompt,

@@ -194,8 +194,8 @@ test(
     assert.ok(session.proc.spawnargs.includes('/tmp/does-not-exist-mcp.json'));
     assert.ok(session.proc.spawnargs.includes('--allowedTools'));
     const idx = session.proc.spawnargs.indexOf('--allowedTools');
-    assert.match(session.proc.spawnargs[idx + 1], /mcp__optimia-tasks__create_task/);
-    assert.match(session.proc.spawnargs[idx + 1], /mcp__optimia-tasks__update_task_progress/);
+    assert.match(session.proc.spawnargs[idx + 1], /mcp__faradia-tasks__create_task/);
+    assert.match(session.proc.spawnargs[idx + 1], /mcp__faradia-tasks__update_task_progress/);
   }
 );
 
@@ -217,7 +217,7 @@ test(
 test('constructor: strictMcpConfig adds --strict-mcp-config and loads the extra MCP files', needsClaude, async (t) => {
   const session = new ClaudeSession({
     projectRoot: process.cwd(),
-    mcpConfigPath: '/tmp/optimia-mcp.json',
+    mcpConfigPath: '/tmp/faradia-mcp.json',
     extraMcpConfigPaths: ['/tmp/repo/.mcp.json'],
     strictMcpConfig: true
   });
@@ -227,7 +227,7 @@ test('constructor: strictMcpConfig adds --strict-mcp-config and loads the extra 
   const args = session.proc.spawnargs;
   assert.ok(args.includes('--strict-mcp-config'));
   const idx = args.indexOf('--mcp-config');
-  assert.deepEqual(args.slice(idx + 1, idx + 3), ['/tmp/optimia-mcp.json', '/tmp/repo/.mcp.json']);
+  assert.deepEqual(args.slice(idx + 1, idx + 3), ['/tmp/faradia-mcp.json', '/tmp/repo/.mcp.json']);
 });
 
 test('permission requests from the CLI are emitted and answered on stdin (allow, always, deny)', () => {

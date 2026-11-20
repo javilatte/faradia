@@ -8,12 +8,12 @@ const pkg = require('../../package.json');
 
 function isolated(t) {
   const cfg = mkTmpDir('update');
-  const prev = { cfg: process.env.XDG_CONFIG_HOME, off: process.env.OPTIMIA_NO_UPDATE_CHECK };
+  const prev = { cfg: process.env.XDG_CONFIG_HOME, off: process.env.FARADIA_NO_UPDATE_CHECK };
   process.env.XDG_CONFIG_HOME = cfg;
-  delete process.env.OPTIMIA_NO_UPDATE_CHECK;
+  delete process.env.FARADIA_NO_UPDATE_CHECK;
   t.after(() => {
     process.env.XDG_CONFIG_HOME = prev.cfg;
-    if (prev.off !== undefined) process.env.OPTIMIA_NO_UPDATE_CHECK = prev.off;
+    if (prev.off !== undefined) process.env.FARADIA_NO_UPDATE_CHECK = prev.off;
     rmTmpDir(cfg);
   });
 }
@@ -39,7 +39,7 @@ test('checkForUpdate: reports a newer version and caches it for a day', async (t
   assert.equal(first.updateAvailable, true);
   assert.equal(first.current, pkg.version);
   assert.equal(first.latest, '99.0.0');
-  assert.match(first.installCommand, /npm install -g @javilatte\/optimia@latest/);
+  assert.match(first.installCommand, /npm install -g faradia@latest/);
   assert.match(first.releaseUrl, /releases\/tag\/v99\.0\.0$/);
 
   await checkForUpdate({ fetcher, now: now + 60 * 60 * 1000 });

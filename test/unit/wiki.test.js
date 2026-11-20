@@ -32,10 +32,10 @@ function repo(t, remote) {
 
 test('projectKey: the same wiki on every machine for the same remote; folder name without one', (t) => {
   isolated(t);
-  assert.equal(wiki.keyFromRemote('git@github.com:Javi/Optimia.git'), 'github.com-javi-optimia');
-  assert.equal(wiki.keyFromRemote('https://github.com/javi/optimia'), 'github.com-javi-optimia');
-  assert.equal(wiki.projectKey(repo(t, 'git@github.com:javi/optimia.git')), 'github.com-javi-optimia');
-  assert.match(wiki.projectKey(repo(t)), /^local-optimia-wiki-repo-/);
+  assert.equal(wiki.keyFromRemote('git@github.com:Javi/Faradia.git'), 'github.com-javi-faradia');
+  assert.equal(wiki.keyFromRemote('https://github.com/javi/faradia'), 'github.com-javi-faradia');
+  assert.equal(wiki.projectKey(repo(t, 'git@github.com:javi/faradia.git')), 'github.com-javi-faradia');
+  assert.match(wiki.projectKey(repo(t)), /^local-faradia-wiki-repo-/);
 });
 
 test('pages: create, read with backlinks, list, search, map; paths cannot escape the wiki', (t) => {

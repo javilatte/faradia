@@ -1,11 +1,12 @@
 'use strict';
 
+const { writeJsonFile } = require('./jsonFile');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 function chatsPath(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'chats.json');
+  return path.join(projectRoot, '.faradia', 'chats.json');
 }
 
 function loadChats(projectRoot) {
@@ -15,9 +16,9 @@ function loadChats(projectRoot) {
 }
 
 function saveChats(projectRoot, chats) {
-  const dir = path.join(projectRoot, '.optimia');
+  const dir = path.join(projectRoot, '.faradia');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(chatsPath(projectRoot), JSON.stringify(chats, null, 2) + '\n');
+  writeJsonFile(chatsPath(projectRoot), chats);
 }
 
 // Metadata only (no messages) — cheap to list without loading every transcript.

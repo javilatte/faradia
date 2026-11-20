@@ -6,7 +6,7 @@ const { dataDir } = require('../store/globalPaths');
 
 // Claude Code's OS sandbox for agent sessions: Bash can only write inside the task's worktree.
 // macOS uses Seatbelt (built in); Linux needs bubblewrap and socat. Without them Claude Code would
-// warn and run the commands unsandboxed, so optimia checks first and, when the sandbox is required,
+// warn and run the commands unsandboxed, so Faradia checks first and, when the sandbox is required,
 // does not start the agent.
 
 function onPath(bin, envPath = process.env.PATH || '') {
@@ -81,17 +81,19 @@ function agentCacheEnv(dir = agentCacheDir()) {
   };
 }
 
-function sandboxSettings(mode, { registries = true } = {}) {
+// extraWrite: folders outside the worktree an agent's commands may write to (the verification
+// evidence of the repo's tasks, see evidence.js).
+function sandboxSettings(mode, { registries = true, extraWrite = [] } = {}) {
   if (mode === 'off') return undefined;
+  const allowWrite = [...(registries ? [agentCacheDir()] : []), ...extraWrite];
   return {
     enabled: true,
     // Never fall back to running unsandboxed.
     failIfUnavailable: true,
     allowUnsandboxedCommands: false,
     autoAllowBashIfSandboxed: true,
-    ...(registries
-      ? { network: { allowedDomains: PACKAGE_REGISTRIES }, filesystem: { allowWrite: [agentCacheDir()] } }
-      : {})
+    ...(registries ? { network: { allowedDomains: PACKAGE_REGISTRIES } } : {}),
+    ...(allowWrite.length ? { filesystem: { allowWrite } } : {})
   };
 }
 

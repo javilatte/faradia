@@ -75,7 +75,7 @@ function setSidebar(open) {
   document.getElementById('app-window')?.classList.toggle('sidebar-hidden', !open);
   document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', String(open));
   try {
-    localStorage.setItem('optimia:sidebar', open ? '1' : '0');
+    localStorage.setItem('faradia:sidebar', open ? '1' : '0');
   } catch {
     /* no persistence */
   }
@@ -115,12 +115,12 @@ async function boot() {
   connectEvents();
   document
     .getElementById('glance-button')
-    ?.addEventListener('click', () => window.open('/glance.html', 'optimia-glance', 'popup,width=420,height=300'));
+    ?.addEventListener('click', () => window.open('/glance.html', 'faradia-glance', 'popup,width=420,height=300'));
   renderNav();
   bindShortcuts();
   let open = true;
   try {
-    open = localStorage.getItem('optimia:sidebar') !== '0';
+    open = localStorage.getItem('faradia:sidebar') !== '0';
   } catch {
     /* no persistence */
   }
@@ -131,7 +131,7 @@ async function boot() {
   try {
     await loadWorkbenches();
   } catch (err) {
-    console.error('optimia: no se pudieron cargar los workbenches', err);
+    console.error('faradia: no se pudieron cargar los workbenches', err);
   }
   showView(viewFromHash(), ctx);
   window.addEventListener('hashchange', () => showView(viewFromHash(), ctx));

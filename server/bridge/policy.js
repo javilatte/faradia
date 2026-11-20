@@ -107,7 +107,7 @@ function ownFilesOnly(segment, cwd, { tracked } = {}) {
   });
 }
 
-const DENY_PREFIX = 'optimia-policy';
+const DENY_PREFIX = 'faradia-policy';
 
 // Message the agent receives (and the runtime recognizes in the tool result).
 function denialMessage(rule) {
@@ -137,10 +137,10 @@ function hookWorks(command) {
   const { spawnSync } = require('child_process');
   const [bin, script] = command.match(/"((?:[^"\\]|\\.)*)"/g).map((q) => JSON.parse(q));
   const res = spawnSync(bin, [script], {
-    input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'rm -rf /tmp/optimia-policy-check' } }),
+    input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'rm -rf /tmp/faradia-policy-check' } }),
     encoding: 'utf8',
     timeout: 10_000,
-    env: { ...process.env, OPTIMIA_APPROVED_COMMANDS: '[]' }
+    env: { ...process.env, FARADIA_APPROVED_COMMANDS: '[]' }
   });
   try {
     return JSON.parse(res.stdout).hookSpecificOutput.permissionDecision === 'deny';

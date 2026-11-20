@@ -31,7 +31,7 @@ test('layered settings: global settings reach the repo and the repo can have its
   await origin.getByRole('button', { name: 'Restablecer' }).click();
   await expect(origin).toHaveText('Igual que en todos los repos');
 
-  const res = await request.get('/api/settings', { headers: { 'X-Optimia-Token': 'e2e-token' } });
+  const res = await request.get('/api/settings', { headers: { 'X-Faradia-Token': 'e2e-token' } });
   const s = await res.json();
   expect(s.preferences.globalInstructions).toBe('Commits en Conventional Commits.');
   expect(s.preferences.projectInstructions).toBe('Tests con node:test.');

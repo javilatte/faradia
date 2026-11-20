@@ -12,7 +12,7 @@ const { sendJson, readJsonBody } = require('./util');
 //   POST /api/fs/delete {path}       POST /api/fs/undo {undo}       POST /api/fs/open {path, reveal}
 //   GET  /api/fs/trash               POST /api/fs/trash/restore {id} POST /api/fs/trash/purge {ids?}
 
-// What is served raw can never run anything on optimia's origin (an .svg or .html with scripts from
+// What is served raw can never run anything on faradia's origin (an .svg or .html with scripts from
 // the repo): sandbox CSP and no sniffing.
 const RAW_HEADERS = {
   'Content-Security-Policy':

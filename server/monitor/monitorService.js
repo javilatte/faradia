@@ -20,6 +20,12 @@ const { loadTasks } = require('../store/taskStore');
 const REFRESH_DEBOUNCE_MS = 400;
 const WORKTREE_SYNC_MS = 5000;
 const RECENT_WATCH_EVENTS = 200;
+// On macOS every recursive fs.watch shares one FSEvents stream that libuv restarts whenever a
+// watcher is added or closed: changes made in that moment produce no event. A while after any
+// watcher change, each repo's git status is read again and the files that changed without an
+// event are reported as activity, so secrets and other signals are not missed.
+const CATCH_UP_MS = 1000;
+const MAX_CATCH_UP_FILES = 2000;
 
 class MonitorService extends EventEmitter {
   constructor({ getRepos, debounceMs = 300 } = {}) {
@@ -29,6 +35,49 @@ class MonitorService extends EventEmitter {
     this.repos = new Map(); // projectId -> entry
     this.watchEvents = []; // latest plane 2 events
     this.worktreeTimer = null;
+    this.catchUpTimer = null;
+  }
+
+  watchersChanged() {
+    clearTimeout(this.catchUpTimer);
+    this.catchUpTimer = setTimeout(() => {
+      for (const entry of this.repos.values()) if (entry.git) this.scheduleRefresh(entry);
+    }, CATCH_UP_MS);
+    this.catchUpTimer.unref?.();
+  }
+
+  // Files git reports as changed whose size or date differ from what was last seen (by an event or
+  // an earlier status). The first status of a repo is only the baseline.
+  unseenChanges(entry) {
+    const next = new Map();
+    const missed = [];
+    for (const f of (entry.state?.files || []).slice(0, MAX_CATCH_UP_FILES)) {
+      if (f.status === 'deleted' || !f.path) continue;
+      let stat;
+      try {
+        stat = fs.statSync(path.join(entry.path, f.path));
+      } catch {
+        continue;
+      }
+      if (!stat.isFile()) continue;
+      const key = `${stat.size}:${stat.mtimeMs}`;
+      next.set(f.path, key);
+      if (entry.seen && entry.seen.get(f.path) !== key) missed.push(f.path);
+    }
+    entry.seen = next;
+    return missed;
+  }
+
+  markSeen(entry, paths) {
+    if (!entry.seen) return;
+    for (const rel of paths) {
+      try {
+        const stat = fs.statSync(path.join(entry.path, rel));
+        if (stat.isFile()) entry.seen.set(rel, `${stat.size}:${stat.mtimeMs}`);
+      } catch {
+        entry.seen.delete(rel);
+      }
+    }
   }
 
   async start() {
@@ -79,11 +128,13 @@ class MonitorService extends EventEmitter {
     entry.watcher = new TreeWatcher(entry.path, { extraDirs, debounceMs: this.debounceMs, watchGitMeta: entry.git });
     entry.watcher.on('change', (batch) => this.onChange(entry, batch));
     await entry.watcher.start();
+    this.watchersChanged();
   }
 
   onChange(entry, { paths, git }) {
     const at = new Date().toISOString();
     if (paths.length) {
+      this.markSeen(entry, paths);
       entry.lastActivity = at;
       this.emit('activity', { projectId: entry.projectId, name: entry.name, paths, at });
       for (const rel of paths) if (entry.matches(rel)) this.recordWatchEvent(entry, rel, at);
@@ -138,6 +189,12 @@ class MonitorService extends EventEmitter {
     try {
       const previous = entry.state;
       entry.state = await getRepoState(entry.path);
+      const missed = this.unseenChanges(entry);
+      if (missed.length) {
+        const at = new Date().toISOString();
+        entry.lastActivity = at;
+        this.emit('activity', { projectId: entry.projectId, name: entry.name, paths: missed, at, catchUp: true });
+      }
       this.emit('state', {
         projectId: entry.projectId,
         name: entry.name,
@@ -169,6 +226,7 @@ class MonitorService extends EventEmitter {
       for (const [taskId, wt] of entry.worktrees) {
         if (!live.has(taskId)) {
           wt.watcher.close();
+          this.watchersChanged();
           clearTimeout(wt.timer);
           entry.worktrees.delete(taskId);
         }
@@ -185,6 +243,7 @@ class MonitorService extends EventEmitter {
         });
         entry.worktrees.set(taskId, wt);
         await wt.watcher.start();
+        this.watchersChanged();
         await this.refreshWorktree(entry, taskId, wt);
       }
     }
@@ -254,6 +313,7 @@ class MonitorService extends EventEmitter {
 
   stop() {
     clearInterval(this.worktreeTimer);
+    clearTimeout(this.catchUpTimer);
     for (const entry of this.repos.values()) this.stopEntry(entry);
     this.repos.clear();
   }

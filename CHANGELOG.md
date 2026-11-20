@@ -2,6 +2,60 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.0.0] - 2026-11-20
+
+**optimia is now Faradia.** Same app, new name: there were already other things called Optimia.
+Create quality code by automating your processes; multiply your productivity without losing the
+reins of your work.
+
+### Changed
+- New name, logo and npm package: `npm i -g faradia`, command `faradia`. The `@javilatte/optimia`
+  package keeps getting updates for a few more months: it installs Faradia and runs it as `optimia`,
+  with a notice to switch.
+- On first run, Faradia moves `~/.config/optimia` and `~/.local/share/optimia` to their `faradia`
+  folders, and each repo's `.optimia` to `.faradia` when the repo is opened, pointing its tasks'
+  worktrees at the new place. The `OPTIMIA_*` environment variables and the browser's preferences
+  keep working. The what's new tour tells about the change.
+- Task worktrees are created in Faradia's data folder, outside the repo, so the repo's linters,
+  formatters, test runners and watchers do not see them; the JSON state in `.faradia` is written
+  the way Prettier formats it.
+
+### Added
+- **Dictation in the chat**: a microphone next to the message box. The text lands in the box, never
+  sent on its own; Esc cancels. It is transcribed on the computer, with no accounts or payments, by
+  Faradia's own engine, outside the browser: macOS's speech recognition on a Mac (a small Swift
+  helper that CI builds and ships in the package) and Whisper elsewhere, native on every core (it
+  installs itself the first time, about 110 MB, while the browser transcribes). Whisper chooses
+  between Spanish and English in the same pass that transcribes, and uses large-v3-turbo when it
+  runs fast enough on the computer and small when not. Settings › Dictado.
+- **Code map**: with CodeGraph on, the repo's wiki gets a *Mapa del código* page taken from its
+  index without a model (the pieces used from most other files and which area depends on which),
+  refreshed after every task. *Conocer este repo* and the wiki agent start from it.
+
+### Fixed
+- Two Faradia instances starting at once no longer clash saving `workbenches.json`.
+- Findings of a test run on real repos (koa, click, zustand): a clear message and an automatic
+  resume when Claude runs out of usage without a local model; retries keep the conversation and the
+  user's answers, which every later stage and the Verifier take into account; the verification kit
+  ends up in `.claude/skills/`; the Verifier installs missing dependencies; agent questions are
+  shown whole; file lists show names first; tables, path pickers and the welcome sheet fit and are
+  translated.
+
+## [2.4.0] - 2026-11-19
+
+Inspired by Lauren Tan's talk "Turn slop into gold" and her plugin [pstack](https://github.com/cursor/plugins/tree/main/pstack) (MIT): trust in agents comes from checks and evidence, not from more prose.
+
+### Added
+- **Corrections become checks**: a new *Corrección* task type turns a mistake agents keep making into the highest check that works (architecture, types, a lint rule whose message names the fix, a test; docs only for judgment calls), proves it fails on the real past mistake and keeps a rule ↔ enforcer table in the repo's `CLAUDE.md` or `AGENTS.md`. It can be started from the mode selector, a suggestion ("no vuelvas a…"), a finished task (*Evitar que se repita…*) or a proposal of the comments pass.
+- **Verification evidence**: optimia records every command the Verifier runs, with its result, from the session's own stream (not from what the agent says), plus the screenshots or videos it saves in a folder outside the worktree. The card lists them, and an "OK" with no command run, or with tests that failed, becomes *unverified*.
+- **Comments pass**: a new optional stage between implementation and verification, run by Comment Sicko, removes the comments a task added to narrate code or excuse a workaround, and turns the constraints they defended into proposals for a check.
+- **Principles per agent**: each agent works with the pstack principles of its stage (the Planner with foundational thinking and subtract before you add, the Debugger with fix root causes and attack the premise, the Verifier with prove it works…) and names in its report the one that changed a decision. They can be chosen per agent or turned off in Settings › Agents.
+- **Verification kit** task type: gives the repo a scripted way to run the real app and prove features, with a feature map, which the Verifier then uses.
+- Built-in pstack skills (Lauren Tan, MIT): correct, tdd, blast-radius, interrogate, arena, architect, how, why, in-your-own-words, no-comments, benchmark-checklist, create-verification-skill and maintain-verification-skill.
+
+### Fixed
+- The archive did not show how the verification ended.
+
 ## [2.3.0] - 2026-11-19
 
 ### Added

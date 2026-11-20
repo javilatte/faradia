@@ -16,8 +16,8 @@ const sel = {
   commit: null, // { short, subject } of the open commit
   path: null,
   mode: 'head',
-  layout: localStorage.getItem('optimia:diff-layout') || 'inline',
-  full: localStorage.getItem('optimia:diff-full') === '1'
+  layout: localStorage.getItem('faradia:diff-layout') || 'inline',
+  full: localStorage.getItem('faradia:diff-full') === '1'
 };
 let root = null;
 let monitorRepos = [];
@@ -37,7 +37,7 @@ export function openChanges({ projectId, taskId = null, path = null, ref = null,
 }
 
 // For the project's classic scripts (task cards): open a commit.
-window.optimiaOpenCommit = (projectId, ref) => openChanges({ projectId, ref });
+window.faradiaOpenCommit = (projectId, ref) => openChanges({ projectId, ref });
 
 function leaveCommit() {
   sel.ref = null;
@@ -186,7 +186,7 @@ function renderToolbar(repo) {
       sel.layout,
       (v) => {
         sel.layout = v;
-        localStorage.setItem('optimia:diff-layout', v);
+        localStorage.setItem('faradia:diff-layout', v);
         render();
       },
       'Disposición'
@@ -199,7 +199,7 @@ function renderToolbar(repo) {
       sel.full ? 'full' : 'ctx',
       (v) => {
         sel.full = v === 'full';
-        localStorage.setItem('optimia:diff-full', sel.full ? '1' : '0');
+        localStorage.setItem('faradia:diff-full', sel.full ? '1' : '0');
         refresh();
       },
       'Contexto'
@@ -463,7 +463,7 @@ registerView('changes', {
 });
 
 // The repo opened in the sidebar is the one shown here as well.
-window.addEventListener('optimia:project-changed', (e) => {
+window.addEventListener('faradia:project-changed', (e) => {
   sel.projectId = e.detail.projectId;
   sel.taskId = null;
   sel.ref = null;

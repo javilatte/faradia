@@ -4,6 +4,23 @@ const catalog = require('../agents/catalog');
 const stageMap = require('../agents/stageMap');
 const { STAGES, TASK_TYPES } = require('../bridge/taskStages');
 const { sendJson, readJsonBody } = require('./util');
+const { pstackPrinciples, frontmatterDescription } = require('../skills/library');
+const { loadSettings } = require('../store/settingsStore');
+const path = require('path');
+
+// pstack's principles, for the agent editor: id, a readable name and when it applies.
+let principleList = null;
+function principleCatalog() {
+  if (!principleList) {
+    const dir = path.join(__dirname, '..', '..', 'vendor', 'pstack', 'principles');
+    principleList = pstackPrinciples().map((id) => ({
+      id,
+      name: id.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+      description: frontmatterDescription(path.join(dir, id, 'SKILL.md'))
+    }));
+  }
+  return principleList;
+}
 
 // Agent routes of a project (project settings win over global ones):
 //   GET    /api/agents                          effective catalog, stages, task types and stage->agent map
@@ -29,11 +46,13 @@ function catalogView(projectRoot) {
       ])
     ),
     claudeModels: catalog.CLAUDE_MODELS,
-    efforts: catalog.EFFORTS
+    efforts: catalog.EFFORTS,
+    principles: principleCatalog(),
+    principlesEnabled: loadSettings(projectRoot).principles?.enabled !== false
   };
 }
 
-const PICK = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled', 'prompt'];
+const PICK = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled', 'prompt', 'principles'];
 const pick = (body) => Object.fromEntries(PICK.filter((k) => body[k] !== undefined).map((k) => [k, body[k]]));
 
 async function handleAgentRoutes(req, res, url, projectRoot) {

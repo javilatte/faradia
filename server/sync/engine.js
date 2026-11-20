@@ -11,13 +11,13 @@ const portable = require('../config/portable');
 const envelope = require('./envelope');
 const targets = require('./targets');
 
-// Keeps optimia's global configuration (settings, keys, agents, stages, notices: what
+// Keeps faradia's global configuration (settings, keys, agents, stages, notices: what
 // portable.exportConfig gathers) the same on every computer of the user. Every few minutes, and
 // after a change, it compares three things: this computer's configuration, the copy in the target
 // and what both looked like after the last sync.
 //   only this computer changed   → upload
 //   only the copy changed        → apply it here (import makes a backup first)
-//   both changed                 → the newest wins; the other is kept in ~/.config/optimia/backups
+//   both changed                 → the newest wins; the other is kept in ~/.config/faradia/backups
 // Repos, workbenches and tasks stay on each computer: they depend on its paths.
 
 const INTERVAL = 3 * 60 * 1000;
@@ -48,7 +48,7 @@ function saveState(state) {
 
 function localSnapshot() {
   const config = portable.exportConfig({ includeSecrets: true });
-  const { exportedAt, optimiaVersion, ...content } = config;
+  const { exportedAt, faradiaVersion, ...content } = config;
   const hash = crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex');
   return { config, hash };
 }
@@ -81,7 +81,7 @@ function keepCopy(config, why) {
   const root = path.join(configDir(), 'backups');
   const dir = path.join(root, `${new Date().toISOString().replace(/[:.]/g, '-')}-${why}`);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'optimia-config.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
+  fs.writeFileSync(path.join(dir, 'faradia-config.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
   const mine = fs
     .readdirSync(root)
     .filter((n) => /-sync-[a-z]+$/.test(n))
@@ -157,7 +157,7 @@ function createSync({ log = () => {}, onChange = () => {} } = {}) {
     } else {
       const remoteChanged = stampOf(remote) !== state.lastRemoteStamp;
       const localChanged = local.hash !== state.lastHash;
-      // A copy this version cannot apply (another version of optimia, a damaged file) is kept
+      // A copy this version cannot apply (another version of Faradia, a damaged file) is kept
       // aside and stops blocking: this computer's changes go up again from the next change on.
       let unusable = null;
       let config = null;
@@ -172,7 +172,7 @@ function createSync({ log = () => {}, onChange = () => {} } = {}) {
       }
       if (unusable) {
         keepCopy(config, 'sync-unreadable');
-        problem = `la copia de ${remote.machine || 'otro equipo'} no se pudo aplicar (${unusable}); quedó guardada en ~/.config/optimia/backups`;
+        problem = `la copia de ${remote.machine || 'otro equipo'} no se pudo aplicar (${unusable}); quedó guardada en ~/.config/faradia/backups`;
         next = { lastRemoteStamp: stampOf(remote) };
         action = 'unusable';
         if (localChanged) {
@@ -181,7 +181,7 @@ function createSync({ log = () => {}, onChange = () => {} } = {}) {
         }
       } else if (remoteChanged) {
         const remoteHash = (() => {
-          const { exportedAt, optimiaVersion, ...content } = config;
+          const { exportedAt, faradiaVersion, ...content } = config;
           return crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex');
         })();
         if (remoteHash === local.hash) {

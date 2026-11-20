@@ -3,7 +3,7 @@
 // Agents panel: task cards, stages, permissions, commit and merge.
 
 function dismissedAgentsKey(chatId) {
-  return `optimia:dismissed-agents:${chatId}`;
+  return `faradia:dismissed-agents:${chatId}`;
 }
 function loadDismissedAgents(chatId) {
   try {
@@ -171,6 +171,9 @@ const STAGE_LABELS = {
   implement: 'Implementación',
   'write-tests': 'Tests',
   write: 'Redacción',
+  tidy: 'Comentarios',
+  correct: 'Corrección',
+  'verification-kit': 'Kit de verificación',
   verify: 'Verificación',
   audit: 'Auditoría',
   review: 'Revisión',
@@ -300,6 +303,8 @@ const TASK_TYPE_LABEL = {
   tests: 'Tests',
   documentation: 'Docs',
   audit: 'Auditoría',
+  correction: 'Corrección',
+  'verification-kit': 'Kit de verificación',
   custom: 'Agente propio',
   onboard: 'Conocer el repo'
 };
@@ -381,29 +386,230 @@ function stripVerdict(text) {
   return text.replace(/^\s*VEREDICTO:.*$/gim, '').trim();
 }
 
-// The verifier's verdict: one short line; the reason when expanded.
-function renderVerification(task) {
+// The verifier's verdict: one short line; the reason when expanded. Below, the evidence Faradia
+// recorded (the commands it saw run and the captures), so the review is of evidence, not of words.
+function renderVerification(taskId, task) {
   if (!task.verification) return null;
   const el = document.createElement('div');
   const v = task.verification;
   el.className = `verification ${v.ok ? 'ok' : v.unverified ? 'unverified' : 'fail'}`;
+  const evidence = renderEvidence(taskId, v.evidence);
   if (v.ok) {
-    el.textContent = '✓ Verificación superada';
+    const line = document.createElement('span');
+    line.className = 'verification-line';
+    line.textContent = '✓ Verificación superada';
+    el.appendChild(line);
+    if (evidence) el.appendChild(evidence);
     return el;
   }
   const reason = v.line.replace(/^\s*VEREDICTO:\s*(FALLA|SIN VERIFICAR)\s*(motivo:)?\s*/i, '').trim();
   const details = document.createElement('details');
   const summary = document.createElement('summary');
-  summary.textContent = v.unverified
-    ? '! Sin verificar: no se pudieron ejecutar las comprobaciones en este equipo'
-    : '✗ La verificación encontró problemas';
+  summary.textContent = v.contradicted
+    ? '! Sin verificar: lo que se ejecutó no respalda el «OK» del agente'
+    : v.unverified
+      ? '! Sin verificar: no se pudieron ejecutar las comprobaciones en este equipo'
+      : '✗ La verificación encontró problemas';
   details.appendChild(summary);
   const body = document.createElement('div');
   body.className = 'verification-reason';
   paintMarkdown(body, reason || task.verification.line);
   details.appendChild(body);
   el.appendChild(details);
+  if (evidence) el.appendChild(evidence);
   return el;
+}
+
+function plural(n, one, many) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+// "Evidencia: 5 comprobaciones (1 con fallos), 1 captura", loaded when opened. The details element
+// keeps its open state across the board's re-renders.
+const openEvidence = new Set();
+function renderEvidence(taskId, summary) {
+  if (!summary) return null;
+  const details = document.createElement('details');
+  details.className = 'evidence';
+  const head = document.createElement('summary');
+  const parts = [plural(summary.checks, 'comprobación', 'comprobaciones')];
+  if (summary.failed) parts[0] += ` (${summary.failed} con fallos)`;
+  if (summary.images) parts.push(plural(summary.images, 'captura', 'capturas'));
+  head.textContent = `Evidencia: ${parts.join(', ')}`;
+  details.appendChild(head);
+  const body = document.createElement('div');
+  body.className = 'evidence-body';
+  details.appendChild(body);
+  const load = () => {
+    body.textContent = 'Cargando…';
+    fetch(apiPath(`/api/tasks/${taskId}/evidence`))
+      .then((r) => r.json())
+      .then((data) =>
+        fillEvidence(taskId, body, (data.runs || []).find((r) => r.run === summary.run) || data.runs?.at(-1))
+      )
+      .catch(() => {
+        body.textContent = 'No se pudo cargar la evidencia.';
+      });
+  };
+  details.addEventListener('toggle', () => {
+    if (details.open) {
+      openEvidence.add(taskId);
+      load();
+    } else openEvidence.delete(taskId);
+  });
+  if (openEvidence.has(taskId)) {
+    details.open = true;
+    load();
+  }
+  return details;
+}
+
+function fillEvidence(taskId, body, run) {
+  body.textContent = '';
+  if (!run) {
+    body.textContent = 'No hay evidencia de esta verificación.';
+    return;
+  }
+  if (!run.checks.length) {
+    const none = document.createElement('p');
+    none.className = 'muted';
+    none.textContent = 'El agente no ejecutó ningún comando.';
+    body.appendChild(none);
+  }
+  for (const c of run.checks) {
+    const item = document.createElement('details');
+    const expected = c.expectedFailure && c.ok === false;
+    item.className = `evidence-check ${c.ok === true ? 'ok' : expected ? 'expected' : c.ok === false ? 'fail' : 'denied'}`;
+    const line = document.createElement('summary');
+    const mark = document.createElement('span');
+    mark.className = 'evidence-mark';
+    mark.textContent = c.ok === true ? '✓' : expected ? '⊘' : c.ok === false ? '✗' : '–';
+    mark.title =
+      c.ok === true
+        ? c.expectedFailure
+          ? 'Debía fallar y terminó bien'
+          : 'Terminó bien'
+        : expected
+          ? 'Falló a propósito: demuestra que la comprobación detecta el error'
+          : c.ok === false
+            ? c.failedInOutput
+              ? 'Falló según su salida (el código de salida se perdió en una tubería)'
+              : `Falló${c.exitCode ? ` (código ${c.exitCode})` : ''}`
+            : 'Bloqueado: no se ejecutó';
+    const cmd = document.createElement('code');
+    cmd.textContent = c.command;
+    const time = document.createElement('small');
+    time.textContent = c.ms >= 1000 ? `${(c.ms / 1000).toFixed(1)} s` : `${c.ms} ms`;
+    line.append(mark, cmd, time);
+    const out = document.createElement('pre');
+    out.textContent = c.output || '(sin salida)';
+    item.append(line, out);
+    body.appendChild(item);
+  }
+  if (run.images.length) {
+    const gallery = document.createElement('div');
+    gallery.className = 'evidence-media';
+    for (const name of run.images) {
+      const src = apiPath(`/api/tasks/${taskId}/evidence/media?name=${encodeURIComponent(name)}`);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'evidence-thumb';
+      btn.title = name;
+      const media = /\.(mp4|webm)$/i.test(name) ? document.createElement('video') : document.createElement('img');
+      media.src = src;
+      if (media.tagName === 'IMG') media.alt = name;
+      else media.muted = true;
+      btn.appendChild(media);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEvidenceMedia(name, src);
+      });
+      gallery.appendChild(btn);
+    }
+    body.appendChild(gallery);
+  }
+}
+
+function openEvidenceMedia(name, src) {
+  const overlay = document.createElement('div');
+  overlay.className = 'file-preview-overlay';
+  const panel = document.createElement('div');
+  panel.className = 'file-preview';
+  const head = document.createElement('div');
+  head.className = 'file-preview-head';
+  const title = document.createElement('span');
+  title.textContent = name;
+  head.append(title, actionButton('Cerrar', { onClick: () => overlay.remove() }));
+  const body = document.createElement('div');
+  body.className = 'file-preview-body evidence-full';
+  const media = /\.(mp4|webm)$/i.test(name) ? document.createElement('video') : document.createElement('img');
+  media.src = src;
+  if (media.tagName === 'VIDEO') media.controls = true;
+  else media.alt = name;
+  body.appendChild(media);
+  panel.append(head, body);
+  overlay.appendChild(panel);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+}
+
+const CORRECTION_LEVEL_LABEL = {
+  arquitectura: 'arquitectura',
+  tipos: 'tipos',
+  lint: 'regla de lint',
+  test: 'test',
+  docs: 'documentación'
+};
+
+// What a correction left in the repo: the level of the check and the rule.
+function renderCorrection(task) {
+  if (!task.correction) return null;
+  const el = document.createElement('div');
+  el.className = `correction-chip level-${task.correction.level}`;
+  const level = document.createElement('strong');
+  level.textContent = `Comprobación: ${CORRECTION_LEVEL_LABEL[task.correction.level] || task.correction.level}`;
+  el.appendChild(level);
+  if (task.correction.rule) {
+    const rule = document.createElement('span');
+    rule.textContent = task.correction.rule;
+    el.appendChild(rule);
+  }
+  if (task.correction.level === 'docs') {
+    el.title = 'Solo documentación: nada falla si un agente la ignora.';
+  }
+  return el;
+}
+
+// Constraints the comments stage found defended by a comment: each one can become a correction.
+function renderRuleProposals(task) {
+  const list = task.ruleProposals || [];
+  if (!list.length) return null;
+  const box = document.createElement('div');
+  box.className = 'rule-proposals';
+  const title = document.createElement('div');
+  title.className = 'task-meta';
+  title.textContent = 'Reglas que defendía un comentario: mejor una comprobación que un comentario.';
+  box.appendChild(title);
+  for (const p of list) {
+    const row = document.createElement('div');
+    row.className = 'rule-proposal';
+    const text = document.createElement('span');
+    text.textContent = p.check ? `${p.rule} → ${p.check}` : p.rule;
+    row.append(
+      text,
+      actionButton('Crear corrección', {
+        onClick: () =>
+          prefillTask(
+            'correction',
+            `${p.rule}${p.check ? `\n\nComprobación propuesta: ${p.check}` : ''}\n\n(Viene de la tarea «${task.title}»).`
+          )
+      })
+    );
+    box.appendChild(row);
+  }
+  return box;
 }
 
 function renderAnswerForm(taskId, stage) {
@@ -934,8 +1140,16 @@ async function mergeTask(taskId) {
 function renderReadyActions(taskId, task) {
   const row = document.createElement('div');
   row.className = 'task-actions';
-  if (task && ['coding', 'bugfix', 'tests'].includes(task.type)) {
+  if (task && ['coding', 'bugfix', 'tests', 'correction'].includes(task.type)) {
     row.appendChild(actionButton('Verificar otra vez', { onClick: () => runTaskStage(taskId, { stage: 'verify' }) }));
+  }
+  // Something the agents got wrong and should not repeat: better a check than one more instruction.
+  if (task && task.type !== 'correction') {
+    row.appendChild(
+      actionButton('Evitar que se repita…', {
+        onClick: () => prefillTask('correction', `En la tarea «${task.title}» el agente se equivocó: `)
+      })
+    );
   }
   row.appendChild(actionButton('Revisión final', { onClick: () => runTaskStage(taskId, { stage: 'review' }) }));
   if (!task?.lastCommit || task.uncommitted) {
@@ -959,6 +1173,9 @@ function renderOrb(state) {
   return row;
 }
 
+const FILES_SHOWN = 6;
+const expandedFileLists = new Set();
+
 function renderTaskWorkspace(taskId, task) {
   const box = document.createElement('div');
   box.className = 'task-workspace';
@@ -976,14 +1193,26 @@ function renderTaskWorkspace(taskId, task) {
     title.className = 'task-meta';
     title.textContent = 'Ficheros generados (incluidos los ignorados por git):';
     box.appendChild(title);
-    for (const rel of files) {
+    // The file name first (what tells the files apart), its folder after, dimmed. A long list
+    // shows the first ones and folds the rest.
+    const shown = expandedFileLists.has(taskId) ? files : files.slice(0, FILES_SHOWN);
+    for (const rel of shown) {
       const row = document.createElement('div');
       row.className = 'task-file';
       const name = document.createElement('button');
       name.type = 'button';
       name.className = 'task-file-name marquee-text';
-      name.textContent = rel;
-      name.title = 'Abrir con la aplicacion del sistema';
+      const slash = rel.lastIndexOf('/');
+      const base = document.createElement('span');
+      base.textContent = rel.slice(slash + 1);
+      name.appendChild(base);
+      if (slash > 0) {
+        const dir = document.createElement('span');
+        dir.className = 'task-file-dir';
+        dir.textContent = ` ${rel.slice(0, slash)}`;
+        name.appendChild(dir);
+      }
+      name.title = `${rel}\nAbrir con la aplicacion del sistema`;
       name.addEventListener('click', (e) => {
         e.stopPropagation();
         openTaskFile(taskId, rel, false);
@@ -992,6 +1221,18 @@ function renderTaskWorkspace(taskId, task) {
       row.appendChild(actionButton('Ver', { onClick: () => openFilePreview(taskId, rel) }));
       row.appendChild(actionButton('Carpeta', { onClick: () => openTaskFile(taskId, rel, true) }));
       box.appendChild(row);
+    }
+    if (files.length > FILES_SHOWN) {
+      const more = expandedFileLists.has(taskId);
+      const toggle = actionButton(more ? 'Mostrar menos' : `Mostrar ${files.length - FILES_SHOWN} más`, {
+        onClick: () => {
+          if (more) expandedFileLists.delete(taskId);
+          else expandedFileLists.add(taskId);
+          renderTasks();
+        }
+      });
+      toggle.classList.add('button-link');
+      box.appendChild(toggle);
     }
   }
   const running = task.status === 'in_progress';
@@ -1097,8 +1338,12 @@ function buildTaskCard(taskId, task, lastStep) {
   if (pipeline) card.appendChild(pipeline);
   const blocked = renderBlockedCommands(taskId, task);
   if (blocked) card.appendChild(blocked);
-  const verification = renderVerification(task);
+  const verification = renderVerification(taskId, task);
   if (verification) card.appendChild(verification);
+  const correction = renderCorrection(task);
+  if (correction) card.appendChild(correction);
+  const proposals = ready ? renderRuleProposals(task) : null;
+  if (proposals) card.appendChild(proposals);
 
   // While the activity feed is on the card, it says what the agent is doing better than one line.
   const feedShown = task.status === 'in_progress' && activityCount(taskId) > 0;
@@ -1115,12 +1360,15 @@ function buildTaskCard(taskId, task, lastStep) {
 
   const answerStage = task.status === 'awaiting_input' ? QUESTION_STAGE[task.pendingQuestion?.kind] : null;
   const question = answerStage ? task.pendingQuestion.text : null;
-  const raw = question || (ready || task.status === 'pending' ? task.output : null);
+  // A correction's report is the correction (with its proof), not the verification after it.
+  const report = task.type === 'correction' && task.stageOutputs?.correct ? task.stageOutputs.correct : task.output;
+  const raw = question || (ready || task.status === 'pending' ? report : null);
   // The verdict is already shown above (renderVerification): not repeated in the report.
   const text = raw && !question && task.verification ? stripVerdict(raw) : raw;
   if (text && text.trim()) {
     const output = document.createElement('div');
-    output.className = 'task-output';
+    // A question is read in full: the numbered questions are usually at its end.
+    output.className = question ? 'task-output question' : 'task-output';
     paintMarkdown(output, text);
     card.appendChild(output);
   }
@@ -1188,10 +1436,10 @@ function buildDoneCard(taskId, task) {
   }
   const row = document.createElement('div');
   row.className = 'task-actions';
-  if (task.lastCommit && window.optimiaOpenCommit) {
+  if (task.lastCommit && window.faradiaOpenCommit) {
     row.appendChild(
       actionButton('Ver cambios', {
-        onClick: () => window.optimiaOpenCommit(currentProjectId || defaultProjectId, task.lastCommit)
+        onClick: () => window.faradiaOpenCommit(currentProjectId || defaultProjectId, task.lastCommit)
       })
     );
   }
@@ -1298,8 +1546,8 @@ function renderTasks() {
   if (done.length) {
     const group = document.createElement('details');
     group.className = 'done-group';
-    group.open = localStorage.getItem('optimia:done-open') === '1';
-    group.addEventListener('toggle', () => localStorage.setItem('optimia:done-open', group.open ? '1' : '0'));
+    group.open = localStorage.getItem('faradia:done-open') === '1';
+    group.addEventListener('toggle', () => localStorage.setItem('faradia:done-open', group.open ? '1' : '0'));
     const summary = document.createElement('summary');
     summary.textContent = `Hechas (${done.length})`;
     group.appendChild(summary);

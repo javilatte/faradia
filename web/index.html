@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>optimia</title>
+    <title>Faradia</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" />
@@ -17,7 +17,7 @@
     <div class="app-window" id="app-window">
       <aside class="sidebar" id="sidebar" aria-label="Barra lateral">
         <div class="sidebar-top">
-          <img class="app-logo" src="logo.svg" alt="Optimia" width="147" height="36" />
+          <img class="app-logo" src="logo.svg" alt="Faradia" width="152" height="31" />
           <div class="wb-switcher" id="wb-switcher"></div>
         </div>
         <div class="sidebar-scroll">
@@ -173,8 +173,37 @@
                 </button>
                 <input type="file" id="attach-input" multiple hidden />
                 <textarea id="chat-input" rows="1" placeholder="Envía un mensaje o arrastra ficheros"></textarea>
+                <button
+                  type="button"
+                  class="icon-button voice-button"
+                  id="voice-button"
+                  data-state="idle"
+                  title="Dictar un mensaje (el audio no sale de tu equipo)"
+                  aria-label="Dictar"
+                  aria-pressed="false"
+                >
+                  <svg
+                    class="voice-icon-mic"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="9" y="3" width="6" height="11" rx="3" />
+                    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
+                  </svg>
+                  <svg class="voice-icon-stop" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+                    <rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor" />
+                  </svg>
+                </button>
                 <button class="send-button" id="send-button" disabled>Enviar</button>
               </div>
+              <div class="voice-status" id="voice-status" role="status" aria-live="polite" hidden></div>
               <div class="chat-meta-row">
                 <label class="meta-field">
                   <span class="muted">Modo</span>
@@ -208,7 +237,7 @@
                     id="task-branch-input"
                     list="task-branch-options"
                     placeholder="nueva automática"
-                    title="Vacío = rama nueva optimia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama)."
+                    title="Vacío = rama nueva faradia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama)."
                     spellcheck="false"
                   />
                   <datalist id="task-branch-options"></datalist>
@@ -277,7 +306,7 @@
     <div class="modal-overlay" id="settings-overlay" hidden>
       <div class="modal">
         <nav class="settings-nav">
-          <div class="settings-nav-group">optimia</div>
+          <div class="settings-nav-group">Faradia</div>
           <button class="settings-nav-item" data-pane="general">General</button>
           <button class="settings-nav-item" data-pane="sync">Sincronización</button>
           <div class="settings-nav-group">IA</div>
@@ -288,6 +317,7 @@
           <button class="settings-nav-item" data-pane="monitor">Avisos y vigilancia</button>
           <div class="settings-nav-group">Preferencias</div>
           <button class="settings-nav-item" data-pane="appearance">Apariencia</button>
+          <button class="settings-nav-item" data-pane="voice">Dictado</button>
           <button class="settings-nav-item" data-pane="instructions">Instrucciones</button>
           <button class="settings-nav-item" data-pane="memory">Memoria</button>
           <button class="settings-nav-item" data-pane="nogo">Prohibido</button>
@@ -428,6 +458,63 @@
               </div>
             </section>
 
+            <section class="settings-pane" data-pane="voice" hidden>
+              <p class="muted settings-help">
+                Pulsa el micrófono junto al cuadro de mensaje y habla: el texto aparece en el cuadro para que lo revises
+                antes de enviarlo.
+              </p>
+              <div class="settings-field">
+                <label class="check-row">
+                  <input type="checkbox" id="setting-voice-enabled" />
+                  <span>Botón de dictado en el chat</span>
+                </label>
+              </div>
+              <div class="settings-field voice-only">
+                <label for="setting-voice-engine">Dónde se transcribe</label>
+                <select id="setting-voice-engine">
+                  <option value="auto">Faradia (recomendado)</option>
+                  <option value="whisper">Whisper en Faradia</option>
+                  <option value="browser">Navegador</option>
+                </select>
+                <span class="muted">
+                  Siempre en este equipo, fuera del navegador. En macOS usa el reconocimiento de voz del sistema; en
+                  Linux y Windows, Whisper, que se instala solo la primera vez (unos 110 MB) y aprovecha todos los
+                  núcleos del procesador.
+                </span>
+                <span class="muted" id="voice-engine-status" role="status" hidden></span>
+              </div>
+              <div class="settings-field voice-only">
+                <label for="setting-voice-model">Modelo</label>
+                <select id="setting-voice-model">
+                  <option value="auto">Automático (recomendado)</option>
+                  <option value="turbo">large-v3-turbo · 760 MB · con GPU</option>
+                  <option value="small">small · 250 MB</option>
+                  <option value="base">base · 77 MB · el más ligero</option>
+                </select>
+                <span class="muted">
+                  Whisper funciona en tu equipo: el audio no sale de él y no hay cuentas, APIs ni pagos. El modelo se
+                  descarga una vez, la primera vez que dictas. Automático usa large-v3-turbo, que transcribe muy bien
+                  español e inglés, cuando va rápido en tu equipo, y small cuando no.
+                </span>
+              </div>
+              <div class="settings-field voice-only">
+                <label for="setting-voice-language">Idioma en que hablas</label>
+                <select id="setting-voice-language">
+                  <option value="es-en">Español o inglés (lo detecta)</option>
+                  <option value="detect">Cualquiera (lo detecta)</option>
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                  <option value="ca">Català</option>
+                  <option value="eu">Euskara</option>
+                  <option value="gl">Galego</option>
+                  <option value="pt">Português</option>
+                  <option value="fr">Français</option>
+                  <option value="it">Italiano</option>
+                  <option value="de">Deutsch</option>
+                </select>
+              </div>
+            </section>
+
             <section class="settings-pane" data-pane="instructions" hidden>
               <div id="instructions-migration-banner" class="migration-banner" hidden></div>
               <div class="settings-field">
@@ -457,7 +544,7 @@
               <div class="settings-field">
                 <label for="setting-memory"
                   >Conocimiento de este repo que el chat y los agentes reciben en cada sesión: comandos, estructura,
-                  convenciones y trampas (se guarda en .optimia/memory.md)</label
+                  convenciones y trampas (se guarda en .faradia/memory.md)</label
                 >
                 <div class="onboard-row">
                   <button type="button" id="onboard-button" class="primary">Conocer este repo…</button>
@@ -521,7 +608,7 @@
             <section class="settings-pane" data-pane="registro" hidden>
               <div id="issues-pane"></div>
               <div class="settings-field">
-                <label for="log-filter">Eventos del proyecto (.optimia/logs/optimia.log)</label>
+                <label for="log-filter">Eventos del proyecto (.faradia/logs/faradia.log)</label>
                 <div class="log-toolbar">
                   <input
                     type="text"
@@ -598,6 +685,7 @@
     <script src="js/project/issues.js"></script>
     <script src="js/project/archive.js"></script>
     <script src="js/project/settings.js"></script>
+    <script src="js/project/voice.js"></script>
     <script src="js/project/switch.js"></script>
     <script src="js/project/main.js"></script>
     <script src="terminal.js"></script>

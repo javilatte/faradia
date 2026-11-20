@@ -1,6 +1,6 @@
 'use strict';
 
-// Development tool: starts optimia as in the e2e tests and saves screenshots.
+// Development tool: starts Faradia as in the e2e tests and saves screenshots.
 //   node test/e2e/tools/screenshot.js <output-dir> [route#view ...]
 const path = require('path');
 const { spawn } = require('child_process');

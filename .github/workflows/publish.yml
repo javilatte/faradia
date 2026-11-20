@@ -26,12 +26,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # macOS's speech recognition helper for dictation, built here so it ships inside the package and
+  # no user (or maintainer) has to compile it.
+  apple-voice:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+      - run: scripts/build-apple-voice.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: faradia-transcribe
+          path: server/voice/apple/bin/faradia-transcribe
+          retention-days: 1
+
   publish:
+    needs: apple-voice
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: faradia-transcribe
+          path: server/voice/apple/bin
+      # Artifacts lose the executable bit.
+      - run: chmod 755 server/voice/apple/bin/faradia-transcribe
 
       - uses: actions/setup-node@v4
         with:
@@ -62,7 +85,28 @@ jobs:
         run: npm run test:bats
 
       - name: Show the package contents
-        run: npm pack --dry-run
+        run: |
+          npm pack --dry-run 2>&1 | tee pack.txt
+          grep -q 'server/voice/apple/bin/faradia-transcribe' pack.txt \
+            || { echo "::error::the macOS dictation helper is not in the package"; exit 1; }
 
-      - name: Publish
-        run: npm publish --access public
+      # A version already on npm (published by hand) is skipped, so the release still goes green.
+      - name: Publish faradia
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "faradia@$version" version >/dev/null 2>&1; then
+            echo "faradia@$version is already on npm"
+          else
+            npm publish --access public
+          fi
+
+      # The old package, now a thin wrapper that installs and runs Faradia (packages/optimia).
+      - name: Publish @javilatte/optimia
+        working-directory: packages/optimia
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "@javilatte/optimia@$version" version >/dev/null 2>&1; then
+            echo "@javilatte/optimia@$version is already on npm"
+          else
+            npm publish --access public
+          fi

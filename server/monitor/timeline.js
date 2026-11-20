@@ -8,7 +8,7 @@ const { dataDir } = require('../store/globalPaths');
 const { loadPrefs } = require('../store/globalPrefs');
 
 // Timeline: chronological feed of what happens in the watched repos. Stored in
-// ~/.local/share/optimia/timeline/events.jsonl (rotated at 5 MB, like the log). Entry kinds:
+// ~/.local/share/faradia/timeline/events.jsonl (rotated at 5 MB, like the log). Entry kinds:
 //   files    files that changed (batched per repo/worktree in short windows)
 //   commit   new commit in a repo
 //   branch   branch switch

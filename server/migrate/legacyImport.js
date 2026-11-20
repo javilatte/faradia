@@ -12,9 +12,9 @@ const { claudeSettingsPath, syncClaudeSettings } = require('../bridge/claudeSett
  * is explicitly called, so the Settings UI (Fase 8) can show a diff first.
  */
 function readLegacyDefaults(projectRoot) {
-  const optimiaDir = path.join(projectRoot, '.optimia');
-  const systemPromptFile = path.join(optimiaDir, 'system-prompt.md');
-  const securityFile = path.join(optimiaDir, 'security.md');
+  const faradiaDir = path.join(projectRoot, '.faradia');
+  const systemPromptFile = path.join(faradiaDir, 'system-prompt.md');
+  const securityFile = path.join(faradiaDir, 'security.md');
   const claudeFile = claudeSettingsPath(projectRoot);
 
   const instructions = fs.existsSync(systemPromptFile) ? fs.readFileSync(systemPromptFile, 'utf8') : null;

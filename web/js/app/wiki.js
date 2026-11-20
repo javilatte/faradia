@@ -10,7 +10,7 @@ import { currentProjectId } from './workbenches.js';
 import { renderMarkdown } from './markdown.js';
 
 const sel = {
-  scope: localStorage.getItem('optimia:wiki-scope') === 'personal' ? 'personal' : 'project',
+  scope: localStorage.getItem('faradia:wiki-scope') === 'personal' ? 'personal' : 'project',
   page: 'index.md',
   mode: 'read', // read | edit | map
   query: ''
@@ -144,7 +144,7 @@ function header() {
             onclick: () => {
               if (sel.scope === value) return;
               sel.scope = value;
-              localStorage.setItem('optimia:wiki-scope', value);
+              localStorage.setItem('faradia:wiki-scope', value);
               sel.page = 'index.md';
               results = null;
               sel.query = '';
@@ -215,7 +215,7 @@ async function startBuild() {
     builds.set(projectId, { running: true });
     window.clearActivity?.(`wiki:${projectId}`);
     render();
-    await api.post('/api/wiki/build', { projectId, lang: window.optimiaLang?.current || 'es' });
+    await api.post('/api/wiki/build', { projectId, lang: window.faradiaLang?.current || 'es' });
   } catch (err) {
     builds.delete(projectId);
     render();
@@ -563,7 +563,7 @@ on('wiki_build_event', (msg) => {
     reloadTimer = setTimeout(() => load().catch(() => {}), 400);
   }
 });
-window.addEventListener('optimia:project-changed', () => {
+window.addEventListener('faradia:project-changed', () => {
   if (sel.scope !== 'project') return;
   sel.page = 'index.md';
   results = null;

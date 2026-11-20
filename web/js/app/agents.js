@@ -9,12 +9,13 @@ import { currentProjectId } from './workbenches.js';
 let data = null;
 let localModels = [];
 // Scope shared with the rest of Settings ("Todos los repos" / "Solo este repo").
-let scope = window.optimiaSettingsScope === 'project' ? 'project' : 'global';
-window.addEventListener('optimia:settings-scope', (e) => {
+let scope = window.faradiaSettingsScope === 'project' ? 'project' : 'global';
+window.addEventListener('faradia:settings-scope', (e) => {
   scope = e.detail === 'project' ? 'project' : 'global';
   render();
 });
 const openPrompts = new Set();
+const openPrinciples = new Set();
 
 const url = (rest = '') => projectApi(currentProjectId(), `/agents${rest}`);
 const ENGINE_LABEL = { claude: 'Claude', local: 'IA local' };
@@ -55,10 +56,47 @@ function render() {
   const mine = data.agents.filter((a) => a.source !== 'ecc');
   host.append(
     renderPipelines(),
+    renderPrinciplesSwitch(),
     h('h3', { class: 'wb-h' }, 'Agentes'),
     ...mine.map(renderAgent),
     renderNewAgent(),
     renderEccLibrary(data.agents.filter((a) => a.source === 'ecc'))
+  );
+}
+
+// pstack's engineering principles (Lauren Tan, MIT) in each agent's prompt: on for every repo or
+// off; which ones each agent gets is chosen on its card.
+function renderPrinciplesSwitch() {
+  if (!data.principles?.length) return null;
+  return h(
+    'div',
+    { class: 'settings-field principles-switch' },
+    h(
+      'label',
+      { class: 'inline-row' },
+      h('input', {
+        type: 'checkbox',
+        id: 'principles-enabled',
+        checked: data.principlesEnabled,
+        onchange: (e) =>
+          mutate(
+            async () => {
+              await api.patch(projectApi(currentProjectId(), '/settings'), {
+                scope: 'global',
+                principles: { enabled: e.target.checked }
+              });
+              return { principlesEnabled: e.target.checked };
+            },
+            e.target.checked ? 'Principios activados' : 'Principios desactivados'
+          )
+      }),
+      'Principios de ingeniería'
+    ),
+    h(
+      'span',
+      { class: 'muted' },
+      'Cada agente recibe los principios de pstack (Lauren Tan, MIT) que encajan con su etapa —demostrar que funciona, arreglar la causa raíz, restar antes de sumar…— y dice en su informe cuál cambió una decisión. Igual en todos los repos.'
+    )
   );
 }
 
@@ -83,7 +121,7 @@ function renderEccLibrary(list) {
     h(
       'p',
       { class: 'muted agents-help' },
-      'De Everything Claude Code (licencia MIT), incluidos en optimia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.'
+      'De Everything Claude Code (licencia MIT), incluidos en faradia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.'
     ),
     h('input', {
       type: 'search',
@@ -279,6 +317,9 @@ function renderAgent(agent) {
     )
   );
 
+  const principles = renderAgentPrinciples(agent, draft);
+  if (principles) card.append(principles);
+
   const promptOpen = openPrompts.has(agent.id);
   if (promptOpen) {
     card.append(
@@ -359,6 +400,60 @@ function renderAgent(agent) {
     )
   );
   return card;
+}
+
+// The principles an agent gets: a summary line and, opened, one checkbox per principle.
+function renderAgentPrinciples(agent, draft) {
+  if (!data.principles?.length || agent.source === 'ecc') return null;
+  const chosen = new Set(agent.principles || []);
+  const names = data.principles.filter((p) => chosen.has(p.id)).map((p) => p.name);
+  const isOpen = openPrinciples.has(agent.id);
+  const box = h('div', { class: `agent-principles${data.principlesEnabled ? '' : ' off'}` });
+  box.append(
+    h(
+      'div',
+      { class: 'agent-principles-head' },
+      h('span', { class: 'muted' }, names.length ? `Principios: ${names.join(', ')}` : 'Sin principios'),
+      h(
+        'button',
+        {
+          class: 'button-link',
+          'aria-expanded': String(isOpen),
+          onclick: () => {
+            if (isOpen) openPrinciples.delete(agent.id);
+            else openPrinciples.add(agent.id);
+            render();
+          }
+        },
+        isOpen ? 'Ocultar' : 'Elegir…'
+      )
+    )
+  );
+  if (isOpen) {
+    box.append(
+      h(
+        'div',
+        { class: 'agent-principles-grid' },
+        data.principles.map((p) =>
+          h(
+            'label',
+            { title: p.description },
+            h('input', {
+              type: 'checkbox',
+              checked: chosen.has(p.id),
+              onchange: (e) => {
+                if (e.target.checked) chosen.add(p.id);
+                else chosen.delete(p.id);
+                draft.save({ principles: data.principles.map((x) => x.id).filter((id) => chosen.has(id)) });
+              }
+            }),
+            p.name
+          )
+        )
+      )
+    );
+  }
+  return box;
 }
 
 function renderNewAgent() {

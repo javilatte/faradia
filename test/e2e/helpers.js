@@ -6,7 +6,7 @@ const path = require('path');
 
 // Temporary folder of this run: serve.js writes it to a fixed file per port.
 function e2eTmp(port = 47321) {
-  return fs.readFileSync(path.join(os.tmpdir(), `optimia-e2e-current-${port}.txt`), 'utf8').trim();
+  return fs.readFileSync(path.join(os.tmpdir(), `faradia-e2e-current-${port}.txt`), 'utf8').trim();
 }
 
 // Calls recorded by the fake claude.

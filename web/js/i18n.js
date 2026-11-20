@@ -1,4 +1,17 @@
 'use strict';
+
+// optimia is now Faradia: the preferences this browser kept under the old name are carried over
+// (once; the old keys are left as they were).
+try {
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith('optimia:')) continue;
+    const next = `faradia:${key.slice('optimia:'.length)}`;
+    if (localStorage.getItem(next) === null) localStorage.setItem(next, localStorage.getItem(key));
+  }
+} catch {
+  /* no storage */
+}
 /* global window, document, navigator, localStorage, location, Node, MutationObserver */
 
 // Interface language. Settings › Appearance › Language picks Spanish, English or Automatic (the
@@ -8,7 +21,7 @@
 // (chat messages, reports, pages, inputs) is never touched.
 
 (function () {
-  const KEY = 'optimia:lang';
+  const KEY = 'faradia:lang';
   function choice() {
     try {
       return localStorage.getItem(KEY) || 'auto';
@@ -23,7 +36,7 @@
   }
 
   const lang = resolve(choice());
-  window.optimiaLang = {
+  window.faradiaLang = {
     current: lang,
     // Locale for dates and numbers, in the interface's language.
     locale: lang === 'en' ? 'en-US' : 'es-ES',
@@ -41,7 +54,7 @@
   window.t = (text) => text;
   if (lang !== 'en') return;
 
-  const dict = window.OPTIMIA_I18N_EN || { exact: {}, patterns: [] };
+  const dict = window.FARADIA_I18N_EN || { exact: {}, patterns: [] };
   const exact = new Map(Object.entries(dict.exact));
   const patterns = dict.patterns.map(([re, out]) => [new RegExp(re), out]);
 

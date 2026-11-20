@@ -5,7 +5,7 @@ const { getWatchlist, setWatchlist } = require('../monitor/watchlists');
 const { sendJson, readJsonBody } = require('./util');
 
 // Supervision routes (read-only on the repos, except the plane 2 watchlist, which lives in
-// optimia's configuration):
+// faradia's configuration):
 //   GET /api/monitor/state                                  every watched repo
 //   GET /api/monitor/diff?projectId&taskId?&path?&mode&context&ref
 //   GET /api/monitor/commits?projectId&limit&skip

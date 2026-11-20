@@ -6,10 +6,10 @@ const https = require('https');
 const { configDir } = require('../store/globalPaths');
 const pkg = require('../../package.json');
 
-// Is there a newer optimia? Asks the public npm registry (where optimia is
+// Is there a newer Faradia? Asks the public npm registry (where Faradia is
 // installed from) at most once a day and caches the answer in
-// ~/.config/optimia/update-check.json. The request carries nothing about the user.
-// Disabled from Settings (updates.check) or with OPTIMIA_NO_UPDATE_CHECK=1.
+// ~/.config/faradia/update-check.json. The request carries nothing about the user.
+// Disabled from Settings (updates.check) or with FARADIA_NO_UPDATE_CHECK=1.
 
 const REGISTRY_URL = `https://registry.npmjs.org/${pkg.name.replace('/', '%2f')}/latest`;
 const RELEASES_URL = 'https://github.com/javilatte/optimia/releases';
@@ -41,7 +41,7 @@ function compareVersions(a, b) {
 
 function fetchLatest(url = REGISTRY_URL, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { accept: 'application/json', 'user-agent': 'optimia' } }, (res) => {
+    const req = https.get(url, { headers: { accept: 'application/json', 'user-agent': 'faradia' } }, (res) => {
       if (res.statusCode !== 200) {
         res.resume();
         reject(new Error(`el registro respondió ${res.statusCode}`));
@@ -94,7 +94,7 @@ function view(latest, checkedAt, error) {
  * asks right away). `enabled: false` makes no request at all.
  */
 async function checkForUpdate({ enabled = true, force = false, fetcher = fetchLatest, now = Date.now() } = {}) {
-  if (!enabled || process.env.OPTIMIA_NO_UPDATE_CHECK === '1') return { ...view(null, null, null), disabled: true };
+  if (!enabled || process.env.FARADIA_NO_UPDATE_CHECK === '1') return { ...view(null, null, null), disabled: true };
   const cache = readCache();
   if (!force && cache?.checkedAt && now - Date.parse(cache.checkedAt) < DAY) {
     return view(cache.latest, cache.checkedAt, cache.error);

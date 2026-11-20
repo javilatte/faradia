@@ -1,4 +1,4 @@
-// "What's new": a short, optional tour in a sheet. On the first run it shows how optimia works and
+// "What's new": a short, optional tour in a sheet. On the first run it shows how Faradia works and
 // helps connect an AI; after an update, only what changed since the version the user last saw.
 // Nothing to download: a few cards of text with small inline icons. Esc or "Saltar" closes it.
 
@@ -17,7 +17,13 @@ const ICONS = {
   swap: 'M4 8h13l-4-4M20 16H7l4 4',
   list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
   archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
-  cloud: 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18zM12 12v4M10 14l2-2 2 2'
+  cloud: 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18zM12 12v4M10 14l2-2 2 2',
+  check: 'M4 4h16v16H4zM8 12l3 3 5-6',
+  lock: 'M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3',
+  eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  scissors: 'M6 6a2 2 0 1 0 0 .01M6 18a2 2 0 1 0 0 .01M8 7l12 10M8 17L20 7',
+  mic: 'M9 3h6v11H9zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7',
+  map: 'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14'
 };
 
 function icon(name) {
@@ -83,13 +89,13 @@ const INTRO = [
   {
     icon: 'plug',
     title: 'Conecta una IA y listo',
-    text: 'Con una basta. Si Claude se queda sin uso, optimia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.',
+    text: 'Con una basta. Si Claude se queda sin uso, Faradia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.',
     extra: connectCard
   },
   {
     icon: 'chat',
     title: 'Pide en el chat',
-    text: 'Mientras escribes, optimia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.'
+    text: 'Mientras escribes, Faradia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.'
   },
   {
     icon: 'agents',
@@ -111,12 +117,64 @@ const INTRO = [
 // What changed in each version (newest last). Only versions newer than the one seen are shown.
 const NEWS = [
   {
+    version: '3.0.0',
+    cards: [
+      {
+        icon: 'spark',
+        title: 'optimia ahora es Faradia',
+        text: 'Crea código de calidad automatizando tus procesos y multiplica tu productividad sin perder las riendas de tu trabajo. Es la misma app con otro nombre (ya había otras cosas llamadas Optimia): tus ajustes, agentes y repos se han movido solos.'
+      },
+      {
+        icon: 'plug',
+        title: 'Instala el paquete faradia',
+        text: 'A partir de ahora: npm i -g faradia, y arráncalo con faradia. El paquete optimia seguirá actualizándose unos meses más y abre Faradia, pero dejará de hacerlo.'
+      },
+      {
+        icon: 'mic',
+        title: 'Habla en vez de escribir',
+        text: 'Pulsa el micrófono junto al cuadro de mensaje y dicta en español o en inglés: el texto aparece en el cuadro para que lo revises antes de enviarlo. Se transcribe en tu equipo, sin cuentas ni pagos: en un Mac con el reconocimiento de voz de macOS y en Linux y Windows con Whisper.',
+        action: { label: 'Ajustes del dictado…', run: () => openPane('voice') }
+      },
+      {
+        icon: 'map',
+        title: 'Mapa del código',
+        text: 'Con CodeGraph activado, la wiki del repo tiene un mapa del código: las piezas más usadas y qué zona depende de cuál. Se actualiza solo después de cada tarea, y «Conocer este repo» y la wiki parten de él en vez de leer el repo a ciegas.'
+      }
+    ]
+  },
+  {
+    version: '2.4.0',
+    cards: [
+      {
+        icon: 'lock',
+        title: 'Que no vuelva a pasar',
+        text: 'Cuando un agente se equivoque, crea una tarea de Corrección: el error se convierte en una comprobación que falla (arquitectura, tipos, lint o test) y se demuestra con el error real. Mejor que una línea más en las instrucciones.'
+      },
+      {
+        icon: 'eye',
+        title: 'Evidencia, no palabras',
+        text: 'La verificación guarda cada comando que ejecutó el agente con su resultado y sus capturas. Si dice «OK» pero los tests fallaron, Faradia no se lo cree.'
+      },
+      {
+        icon: 'scissors',
+        title: 'Sin comentarios de apaño',
+        text: 'Una pasada nueva quita los comentarios que narran el código o justifican un parche, y propone una comprobación para cada regla que defendían.'
+      },
+      {
+        icon: 'check',
+        title: 'Principios en cada agente',
+        text: 'Los agentes trabajan con los principios de pstack de Lauren Tan (demostrar que funciona, arreglar la causa raíz, restar antes de sumar…) y dicen cuál cambió una decisión.',
+        action: { label: 'Ver los agentes…', run: () => openPane('agents') }
+      }
+    ]
+  },
+  {
     version: '2.3.0',
     cards: [
       {
         icon: 'spark',
         title: 'Sugerencias mientras escribes',
-        text: 'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.'
+        text: 'faradia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.'
       },
       {
         icon: 'shield',
@@ -225,13 +283,13 @@ export function showTour({ cards, title }) {
 }
 
 export function showIntroTour() {
-  showTour({ cards: INTRO, title: 'Así funciona optimia' });
+  showTour({ cards: INTRO, title: 'Así funciona faradia' });
 }
 
 /** After an update: the news since the version last seen, once. */
 export function maybeShowNews(status) {
   const cards = newsSince(status.tourSeen, status.version);
-  if (cards.length) showTour({ cards, title: `Novedades de optimia ${status.version}` });
+  if (cards.length) showTour({ cards, title: `Novedades de Faradia ${status.version}` });
   else if (status.tourSeen !== status.version) api.post('/api/config/tour').catch(() => {});
 }
 
@@ -239,6 +297,6 @@ export function showAllNews(version) {
   const cards = newsSince(null, version);
   showTour({
     cards: cards.length ? cards : INTRO,
-    title: cards.length ? `Novedades de optimia ${version}` : 'Así funciona optimia'
+    title: cards.length ? `Novedades de Faradia ${version}` : 'Así funciona faradia'
   });
 }

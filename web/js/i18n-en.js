@@ -1,13 +1,104 @@
 'use strict';
 /* global window */
 
-// English for optimia's interface. The Spanish text is the key: the interface is written in
+// English for faradia's interface. The Spanish text is the key: the interface is written in
 // Spanish and i18n.js swaps the visible text when the language is English.
-window.OPTIMIA_I18N_EN = {
+window.FARADIA_I18N_EN = {
   exact: {
+    'Dictar un mensaje (el audio no sale de tu equipo)': 'Dictate a message (the audio never leaves your computer)',
+    Dictar: 'Dictate',
+    'Terminar el dictado': 'Finish dictation',
+    'Transcribiendo…': 'Transcribing…',
+    Dictado: 'Dictation',
+    'Pulsa el micrófono junto al cuadro de mensaje y habla: el texto aparece en el cuadro para que lo revises antes de enviarlo.':
+      'Click the microphone next to the message box and speak: the text appears in the box so you can review it before sending.',
+    'Botón de dictado en el chat': 'Dictation button in the chat',
+    'Whisper funciona en tu equipo: el audio no sale de él y no hay cuentas, APIs ni pagos. El modelo se descarga una vez, la primera vez que dictas. Automático usa large-v3-turbo, que transcribe muy bien español e inglés, cuando va rápido en tu equipo, y small cuando no.':
+      'Whisper runs on your computer: the audio never leaves it and there are no accounts, APIs or payments. The model is downloaded once, the first time you dictate. Automatic uses large-v3-turbo, which transcribes Spanish and English very well, when it runs fast on your computer, and small when it does not.',
+    'Dónde se transcribe': 'Where it is transcribed',
+    'Faradia (recomendado)': 'Faradia (recommended)',
+    'Whisper en Faradia': 'Whisper in Faradia',
+    Navegador: 'Browser',
+    'Siempre en este equipo, fuera del navegador. En macOS usa el reconocimiento de voz del sistema; en Linux y Windows, Whisper, que se instala solo la primera vez (unos 110 MB) y aprovecha todos los núcleos del procesador.':
+      "Always on this computer, outside the browser. On macOS it uses the system's speech recognition; on Linux and Windows, Whisper, which installs itself the first time (about 110 MB) and uses every processor core.",
+    'En este Mac dicta el reconocimiento de voz de macOS, sin conexión.':
+      "On this Mac, macOS's speech recognition takes dictation, offline.",
+    'En este Mac dictará el reconocimiento de voz de macOS; la primera vez macOS pide permiso.':
+      "On this Mac, macOS's speech recognition will take dictation; the first time macOS asks for permission.",
+    'Whisper se está instalando…': 'Whisper is being installed…',
+    'Se está instalando el motor de voz de Faradia (solo la primera vez): los próximos dictados irán más rápido y con más precisión':
+      "Faradia's voice engine is being installed (only the first time): the next dictations will be faster and more accurate",
+    'Automático (recomendado)': 'Automatic (recommended)',
+    'large-v3-turbo · 760 MB · con GPU': 'large-v3-turbo · 760 MB · with a GPU',
+    'base · 77 MB · el más ligero': 'base · 77 MB · the lightest',
+    'Español o inglés (lo detecta)': 'Spanish or English (detected)',
+    'Cualquiera (lo detecta)': 'Any (detected)',
+    'Idioma en que hablas': 'Language you speak',
+    'No se oyó nada: comprueba el micrófono e inténtalo otra vez':
+      'Nothing was heard: check the microphone and try again',
+    'No se entendió nada: prueba a hablar más cerca del micrófono':
+      'Nothing was understood: try speaking closer to the microphone',
+    'Este navegador no deja usar el micrófono aquí': 'This browser does not allow using the microphone here',
+    'Sin permiso para usar el micrófono: permítelo en el candado de la barra de direcciones':
+      'No permission to use the microphone: allow it from the lock in the address bar',
+    'No se encontró ningún micrófono': 'No microphone was found',
+    'Otra aplicación está usando el micrófono': 'Another application is using the microphone',
+    'optimia ahora es Faradia': 'optimia is now Faradia',
+    'Crea código de calidad automatizando tus procesos y multiplica tu productividad sin perder las riendas de tu trabajo. Es la misma app con otro nombre (ya había otras cosas llamadas Optimia): tus ajustes, agentes y repos se han movido solos.':
+      'Create quality code by automating your processes and multiply your productivity without losing the reins of your work. It is the same app with a new name (there were already other things called Optimia): your settings, agents and repos moved over by themselves.',
+    'Instala el paquete faradia': 'Install the Faradia package',
+    'Habla en vez de escribir': 'Speak instead of typing',
+    'Mapa del código': 'Code map',
+    'Pulsa el micrófono junto al cuadro de mensaje y dicta en español o en inglés: el texto aparece en el cuadro para que lo revises antes de enviarlo. Se transcribe en tu equipo, sin cuentas ni pagos: en un Mac con el reconocimiento de voz de macOS y en Linux y Windows con Whisper.':
+      'Click the microphone next to the message box and dictate in Spanish or English: the text appears in the box so you can review it before sending. It is transcribed on your computer, with no accounts or payments: on a Mac with macOS speech recognition and on Linux and Windows with Whisper.',
+    'Ajustes del dictado…': 'Dictation settings…',
+    'Con CodeGraph activado, la wiki del repo tiene un mapa del código: las piezas más usadas y qué zona depende de cuál. Se actualiza solo después de cada tarea, y «Conocer este repo» y la wiki parten de él en vez de leer el repo a ciegas.':
+      "With CodeGraph on, the repo's wiki has a code map: the most used pieces and which area depends on which. It updates itself after every task, and “Learn this repo” and the wiki start from it instead of reading the repo blind.",
+    'A partir de ahora: npm i -g faradia, y arráncalo con faradia. El paquete optimia seguirá actualizándose unos meses más y abre Faradia, pero dejará de hacerlo.':
+      'From now on: npm i -g faradia, and start it with faradia. The optimia package will keep updating for a few more months and opens Faradia, but it will stop.',
+    'Mostrar menos': 'Show less',
+    '! Sin verificar: lo que se ejecutó no respalda el «OK» del agente':
+      "! Not verified: what ran does not back the agent's “OK”",
+    'Debía fallar y terminó bien': 'It should have failed and it finished fine',
+    'Falló a propósito: demuestra que la comprobación detecta el error':
+      'Failed on purpose: it shows the check catches the mistake',
+    'Falló según su salida (el código de salida se perdió en una tubería)':
+      'Failed according to its output (a pipe lost the exit code)',
+    'regla de lint': 'lint rule',
+    arquitectura: 'architecture',
+    tipos: 'types',
+    documentación: 'documentation',
+    'Convierte un error que se repite en una comprobación que lo impide (arquitectura, tipos, lint o test).':
+      'Turns a repeated mistake into a check that prevents it (architecture, types, lint or test).',
+    'Quita los comentarios que narran o justifican un apaño en los cambios de la tarea y propone una comprobación en su lugar.':
+      "Removes the comments that narrate or excuse a workaround in the task's changes and proposes a check instead.",
+    Comentarios: 'Comments',
+    Corrección: 'Correction',
+    'Kit de verificación': 'Verification kit',
+    Cazacomentarios: 'Comment hunter',
+    Corrector: 'Corrector',
+    'Crear corrección': 'Create correction',
+    'Evitar que se repita…': 'Stop it happening again…',
+    'Reglas que defendía un comentario: mejor una comprobación que un comentario.':
+      'Rules a comment was defending: a check is better than a comment.',
+    'Principios de ingeniería': 'Engineering principles',
+    'Cada agente recibe los principios de pstack (Lauren Tan, MIT) que encajan con su etapa —demostrar que funciona, arreglar la causa raíz, restar antes de sumar…— y dice en su informe cuál cambió una decisión. Igual en todos los repos.':
+      'Each agent gets the pstack principles (Lauren Tan, MIT) that fit its stage (prove it works, fix root causes, subtract before you add…) and says in its report which one changed a decision. The same in every repo.',
+    'Principios activados': 'Principles on',
+    'Principios desactivados': 'Principles off',
+    'Sin principios': 'No principles',
+    Ocultar: 'Hide',
+    'El agente no ejecutó ningún comando.': 'The agent ran no command.',
+    'No hay evidencia de esta verificación.': 'There is no evidence for this verification.',
+    'No se pudo cargar la evidencia.': 'The evidence could not be loaded.',
+    '(sin salida)': '(no output)',
+    'Terminó bien': 'Finished fine',
+    'Bloqueado: no se ejecutó': 'Blocked: it did not run',
+    'Solo documentación: nada falla si un agente la ignora.':
+      'Documentation only: nothing fails if an agent ignores it.',
     'Siguió con otro modelo (Claude se quedó sin uso)': 'Went on with another model (Claude ran out of usage)',
-    'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/optimia/backups':
-      "another computer's copy could not be applied; it was kept in ~/.config/optimia/backups",
+    'la copia de otro equipo no se pudo aplicar; quedó guardada en ~/.config/faradia/backups':
+      "another computer's copy could not be applied; it was kept in ~/.config/faradia/backups",
     'Una carpeta que ya sincronices entre tus equipos: Google Drive para escritorio, Dropbox, iCloud, Syncthing… En los demás equipos elige la misma.':
       'A folder you already sync between your computers: Google Drive for desktop, Dropbox, iCloud, Syncthing… Pick the same one on your other computers.',
     'Cifra la copia en este equipo antes de guardarla en la carpeta. Usa la misma en todos tus equipos. Si la olvidas, la copia no se puede recuperar (tu configuración local no se pierde).':
@@ -23,8 +114,8 @@ window.OPTIMIA_I18N_EN = {
     'Configurar la IA local…': 'Set up local AI…',
     'Configura un modelo local en Ajustes › IA local para seguir sin esperar.':
       'Set up a local model in Settings › Local AI to go on without waiting.',
-    'Con una basta. Si Claude se queda sin uso, optimia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
-      'One is enough. If Claude runs out of usage, optimia goes on with your local model without losing the conversation, and goes back to Claude when it resets.',
+    'Con una basta. Si Claude se queda sin uso, Faradia sigue con tu modelo local sin perder la conversación, y vuelve a Claude cuando se renueva.':
+      'One is enough. If Claude runs out of usage, Faradia goes on with your local model without losing the conversation, and goes back to Claude when it resets.',
     'Se abrió una terminal con «claude auth login». Completa el inicio de sesión ahí y pulsa Actualizar.':
       'A terminal opened with “claude auth login”. Finish signing in there and click Refresh.',
     'Tu configuración en todos tus equipos': 'Your configuration on all your computers',
@@ -45,8 +136,8 @@ window.OPTIMIA_I18N_EN = {
     'Última comprobación': 'Last check',
     'Último cambio': 'Last change',
     nunca: 'never',
-    'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/optimia/backups.':
-      'It checks every few minutes and right after each change. If two computers change at once the newest wins, and the other is kept in ~/.config/optimia/backups.',
+    'Se comprueba cada pocos minutos y justo después de cada cambio. Si hay cambios en dos equipos a la vez gana el más reciente, y el otro se guarda en ~/.config/faradia/backups.':
+      'It checks every few minutes and right after each change. If two computers change at once the newest wins, and the other is kept in ~/.config/faradia/backups.',
     'Sincronizar ahora': 'Sync now',
     'Sincronizando…': 'Syncing…',
     Desactivar: 'Turn off',
@@ -162,7 +253,11 @@ window.OPTIMIA_I18N_EN = {
     'Añadir un repo…': 'Add a repo…',
     Bajo: 'Low',
     'Barra lateral': 'Sidebar',
-    'Bienvenido a optimia 2': 'Welcome to optimia 2',
+    'Bienvenido a faradia': 'Welcome to faradia',
+    'faradia-config-….json, exportado desde Ajustes › General':
+      'faradia-config-….json, exported from Settings › General',
+    'Puedes importarla o exportarla cuando quieras desde Ajustes › General.':
+      'You can import or export it whenever you want from Settings › General.',
     'Borrados grandes': 'Large deletes',
     'Buscar agentes de ECC': 'Search ECC agents',
     'Buscar agentes de ECC (react, security, go…)': 'Search ECC agents (react, security, go…)',
@@ -218,8 +313,8 @@ window.OPTIMIA_I18N_EN = {
     Cuenta: 'Account',
     Código: 'Code',
     'Cómo actualizar…': 'How to update…',
-    'De Everything Claude Code (licencia MIT), incluidos en optimia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.':
-      'From Everything Claude Code (MIT licence), bundled with optimia. Turn them on to have them in the mode selector, or type @ in the chat to call any of them. Your agents already follow the method of their ECC counterpart.',
+    'De Everything Claude Code (licencia MIT), incluidos en faradia. Actívalos para tenerlos en el selector de modo, o escribe @ en el chat para llamar a cualquiera. Tus agentes ya siguen el método de su equivalente de ECC.':
+      'From Everything Claude Code (MIT licence), bundled with faradia. Turn them on to have them in the mode selector, or type @ in the chat to call any of them. Your agents already follow the method of their ECC counterpart.',
     'Deja que un agente lo estudie (comandos, estructura, convenciones) para que el chat y los agentes trabajen aquí sin redescubrirlo.':
       'Let an agent study it (commands, structure, conventions) so the chat and the agents work here without rediscovering it.',
     'Desactivado: los agentes trabajan sin sandbox (riesgo)': 'Off: agents work without a sandbox (risky)',
@@ -314,7 +409,7 @@ window.OPTIMIA_I18N_EN = {
     Siguiente: 'Next',
     Empezar: 'Get started',
     Saltar: 'Skip',
-    'Así funciona optimia': 'How optimia works',
+    'Así funciona faradia': 'How Faradia works',
     'Sin sesión': 'Signed out',
     'Iniciar sesión…': 'Sign in…',
     'Conectar…': 'Connect…',
@@ -323,8 +418,8 @@ window.OPTIMIA_I18N_EN = {
     'Ollama o LM Studio': 'Ollama or LM Studio',
     'Conecta una IA y listo': 'Connect an AI and you are set',
     'Pide en el chat': 'Ask in the chat',
-    'Mientras escribes, optimia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.':
-      'As you type, optimia suggests the skill, agent or task type that fits. Tab to use it. @ calls an agent and / a skill.',
+    'Mientras escribes, Faradia te sugiere la skill, el agente o el tipo de tarea que encaja. Tab para usarla. Con @ llamas a un agente y con / a una skill.':
+      'As you type, Faradia suggests the skill, agent or task type that fits. Tab to use it. @ calls an agent and / a skill.',
     'Los agentes trabajan aparte': 'Agents work on the side',
     'Cada tarea va en su propio worktree: un agente planifica, otro implementa y otro verifica. Tu rama no se toca hasta que tú haces el commit o la PR.':
       'Each task runs in its own worktree: one agent plans, another implements and another verifies. Your branch is untouched until you make the commit or the PR.',
@@ -335,8 +430,8 @@ window.OPTIMIA_I18N_EN = {
     'En Wiki, «Generar desde el repo» documenta el proyecto, y tras cada tarea los agentes apuntan lo que aprendieron. Todo se ajusta en Ajustes cuando quieras.':
       'In Wiki, "Generate from the repo" documents the project, and after each task the agents write down what they learned. Everything can be adjusted in Settings whenever you want.',
     'Sugerencias mientras escribes': 'Suggestions while you type',
-    'optimia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.':
-      'optimia proposes the skill, agent or task type that fits your message. Tab to accept it, Esc to dismiss it.',
+    'faradia propone la skill, el agente o el tipo de tarea que encaja con tu mensaje. Tab para aceptarla, Esc para descartarla.':
+      'faradia proposes the skill, agent or task type that fits your message. Tab to accept it, Esc to dismiss it.',
     'Permisos en el chat, no en la terminal': 'Permissions in the chat, not in the terminal',
     'Cuando el agente necesita permiso, lo pide con una tarjeta en la conversación. En modo automático solo pregunta lo arriesgado.':
       'When the agent needs permission, it asks with a card in the conversation. In automatic mode it only asks what is risky.',
@@ -362,7 +457,7 @@ window.OPTIMIA_I18N_EN = {
     'El agente quiere editar un notebook': 'The agent wants to edit a notebook',
     'El agente quiere abrir una página web': 'The agent wants to open a web page',
     'El agente quiere buscar en la web': 'The agent wants to search the web',
-    'De optimia': 'From optimia',
+    'De faradia': 'From faradia',
     'De ECC': 'From ECC',
     Siempre: 'Always',
     Todas: 'All',
@@ -375,17 +470,17 @@ window.OPTIMIA_I18N_EN = {
     'Restaurar la selección recomendada': 'Restore the recommended selection',
     'Desactivar todas': 'Turn all off',
     '¿En qué trabajamos hoy?': 'What are we working on today?',
-    'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que optimia vigila tus repos; el historial anterior está en Commits.':
-      'No activity with these filters yet. Changes, commits and agents show up here from the moment optimia watches your repos; earlier history is under Commits.',
+    'Aún no hay actividad con estos filtros. Aquí aparecen los cambios, commits y agentes desde que Faradia vigila tus repos; el historial anterior está en Commits.':
+      'No activity with these filters yet. Changes, commits and agents show up here from the moment Faradia watches your repos; earlier history is under Commits.',
     '¿Cómo está organizado este repo y por dónde empiezo?': 'How is this repo organized and where do I start?',
     'Busca bugs probables en el código que más cambia': 'Look for likely bugs in the code that changes the most',
     'Revisa la seguridad de la autenticación': 'Review the security of the authentication',
     'Pregunta lo que quieras o encarga una tarea a los agentes. Escribe @ para llamar a un agente y / para usar una skill.':
       'Ask anything or give the agents a task. Type @ to call an agent and / to use a skill.',
-    'Skills de optimia y de ECC': 'optimia and ECC skills',
+    'Skills de Faradia y de ECC': 'faradia and ECC skills',
     'Skills propias de este repo (.claude/skills/)': "This repo's own skills (.claude/skills/)",
-    'Este repo no tiene skills propias. Las de optimia y las de ECC están arriba.':
-      "This repo has no skills of its own. optimia's and ECC's are above.",
+    'Este repo no tiene skills propias. Las de Faradia y las de ECC están arriba.':
+      "This repo has no skills of its own. faradia's and ECC's are above.",
     'Problemas detectados': 'Problems found',
     'Ningún problema registrado. Si algo falla, aparecerá aquí agrupado por tipo.':
       'No problems recorded. If something fails, it shows up here grouped by kind.',
@@ -407,7 +502,7 @@ window.OPTIMIA_I18N_EN = {
       'This repo has no remote: the task is merged locally or stays on its branch.',
     'Estudiando el repo. Cuando termine, revisa la memoria propuesta en su tarjeta y guárdala.':
       'Studying the repo. When it finishes, review the proposed memory on its card and save it.',
-    'Eventos del proyecto (.optimia/logs/optimia.log)': 'Project events (.optimia/logs/optimia.log)',
+    'Eventos del proyecto (.faradia/logs/faradia.log)': 'Project events (.faradia/logs/faradia.log)',
     'Exportar configuración…': 'Export configuration…',
     'Exportar conocimiento…': 'Export knowledge…',
     Falló: 'Failed',
@@ -479,8 +574,8 @@ window.OPTIMIA_I18N_EN = {
       'Tasks do not take images yet. Remove them or switch the mode to Chat.',
     'Lista de vigilancia guardada': 'Watchlist saved',
     'Listas para revisar': 'Ready for review',
-    'Lo borrado desde optimia se guarda aquí hasta que vacías la papelera.':
-      'What you delete from optimia stays here until you empty the trash.',
+    'Lo borrado desde Faradia se guarda aquí hasta que vacías la papelera.':
+      'What you delete from Faradia stays here until you empty the trash.',
     'Los agentes ejecutan sus comandos en el sandbox del sistema de Claude Code: solo pueden escribir dentro del worktree de su tarea. ':
       "Agents run their commands in Claude Code's OS sandbox: they can only write inside their task's worktree. ",
     'Los cambios se aplican a todos los repos, salvo a los que tengan su propio valor.':
@@ -613,14 +708,14 @@ window.OPTIMIA_I18N_EN = {
     'Se conserva tu versión (es más reciente)': 'Your version is kept (it is newer)',
     'Seguridad de los agentes': "Agents' security",
     'Sesión activa.': 'Signed in.',
-    'Si ya usas optimia en otro equipo, importa tu configuración: instrucciones, agentes, modelos y avisos para todos tus repos.':
-      'If you already use optimia on another machine, import your configuration: instructions, agents, models and signals for all your repos.',
+    'Si ya usas Faradia en otro equipo, importa tu configuración: instrucciones, agentes, modelos y avisos para todos tus repos.':
+      'If you already use Faradia on another machine, import your configuration: instructions, agents, models and signals for all your repos.',
     'Sin cambios': 'No changes',
     'Sin gh (o sin sesión): se sube la rama y se abre GitHub para crear la PR. Con «gh auth login» se crea desde aquí.':
       'Without gh (or signed out): the branch is pushed and GitHub opens to create the PR. With «gh auth login» it is created from here.',
     'Sin previsualización. Usa "Abrir con el sistema".': 'No preview. Use "Open with the system".',
-    'Sin sandbox, solo las reglas de optimia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).':
-      "Without the sandbox, only optimia's rules stop an agent, and a determined agent can get around them (with a script, for example).",
+    'Sin sandbox, solo las reglas de Faradia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).':
+      "Without the sandbox, only faradia's rules stop an agent, and a determined agent can get around them (with a script, for example).",
     'Sin stage': 'Not staged',
     'Sin tareas': 'No tasks',
     Sistema: 'System',
@@ -633,7 +728,7 @@ window.OPTIMIA_I18N_EN = {
     'Subir cambios': 'Push changes',
     'Subir cambios y actualizar PR': 'Push changes and update PR',
     'Subir rama y abrir PR': 'Push branch and open PR',
-    'Suelta tu configuración de optimia para importarla': 'Drop your optimia configuration to import it',
+    'Suelta tu configuración de Faradia para importarla': 'Drop your Faradia configuration to import it',
     Supervisión: 'Supervision',
     'También se aplican las instrucciones de todos los repos': 'The instructions for every repo apply too',
     'También se aplican las prohibiciones de todos los repos': 'The prohibitions for every repo apply too',
@@ -663,8 +758,8 @@ window.OPTIMIA_I18N_EN = {
     'Usar en todos los repos': 'Use in every repo',
     'Vacia la conversación actual': 'Clears the current conversation',
     'Vaciar papelera': 'Empty trash',
-    'Vacío = rama nueva optimia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama).':
-      'Empty = new branch optimia/task-xxxx. A new name creates that branch; an existing branch adds the task to it (several tasks on one branch).',
+    'Vacío = rama nueva faradia/task-xxxx. Un nombre nuevo crea esa rama; una rama existente suma la tarea a ella (varias tareas en una rama).':
+      'Empty = new branch faradia/task-xxxx. A new name creates that branch; an existing branch adds the task to it (several tasks on one branch).',
     'Ver PR': 'View PR',
     'Ver cambios': 'View changes',
     'Ver en vivo': 'Watch live',
@@ -742,6 +837,35 @@ window.OPTIMIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    [
+      '^Escuchando · (\\d+:\\d\\d) · pulsa el micrófono para terminar o Esc para cancelar$',
+      'Listening · $1 · click the microphone to finish or Esc to cancel'
+    ],
+    [
+      '^Descargando el modelo de voz \\((.+), solo la primera vez\\)… (\\d+) %$',
+      'Downloading the voice model ($1, only the first time)… $2%'
+    ],
+    ['^Preparando el modelo de voz… (\\d+) %$', 'Preparing the voice model… $1%'],
+    ['^Se usa Whisper: (.+)\\.$', 'Whisper is used: $1.'],
+    ['^Whisper está instalado \\((\\d+) hilos: modelo (.+)\\)\\.$', 'Whisper is installed ($1 threads: $2 model).'],
+    ['^No se pudo instalar Whisper: (.+)$', 'Whisper could not be installed: $1'],
+    [
+      '^No se pudo instalar el motor de voz de Faradia \\((.+)\\); se transcribe en el navegador$',
+      "Faradia's voice engine could not be installed ($1); the browser transcribes"
+    ],
+    ['^No se pudo transcribir: (.+)$', 'Could not transcribe: $1'],
+    ['^No se pudo abrir el micrófono: (.+)$', 'Could not open the microphone: $1'],
+    ['^Mostrar (\\d+) más$', 'Show $1 more'],
+    ['^Evidencia: (\\d+) comprobaci(?:ón|ones)$', 'Evidence: $1 check(s)'],
+    ['^Evidencia: (\\d+) comprobaci(?:ón|ones) \\((\\d+) con fallos\\)$', 'Evidence: $1 check(s) ($2 failing)'],
+    ['^Evidencia: (\\d+) comprobaci(?:ón|ones), (\\d+) capturas?$', 'Evidence: $1 check(s), $2 capture(s)'],
+    [
+      '^Evidencia: (\\d+) comprobaci(?:ón|ones) \\((\\d+) con fallos\\), (\\d+) capturas?$',
+      'Evidence: $1 check(s) ($2 failing), $3 capture(s)'
+    ],
+    ['^Comprobación: (.+)$', 'Check: $1'],
+    ['^Principios: (.+)$', 'Principles: $1'],
+    ['^En la tarea «(.+)» el agente se equivocó: $', 'In the task “$1” the agent got it wrong: '],
     ['^Usar /(.+)$', 'Use /$1'],
     ['^Encargar a @(.+)$', 'Hand to @$1'],
     ['^Tarea: (.+)$', 'Task: $1'],
@@ -760,7 +884,7 @@ window.OPTIMIA_I18N_EN = {
     ['^(\\d+) tareas$', '$1 tasks'],
     ['^Verificación: (.+)$', 'Verification: $1'],
     ['^(\\d+) pasos$', '$1 steps'],
-    ['^Novedades de optimia (.+)$', "What's new in optimia $1"],
+    ['^Novedades de Faradia (.+)$', "What's new in Faradia $1"],
     ['^Una tarea: (.+)$', 'A task: $1'],
     ['^El agente quiere usar (.+)$', 'The agent wants to use $1'],
     ['^Activas \\((\\d+)\\)$', 'On ($1)'],
@@ -775,8 +899,8 @@ window.OPTIMIA_I18N_EN = {
       "ECC's $1 agents are in Settings › Agents and are called with @ in the chat."
     ],
     [
-      '^Las skills de optimia y de ECC valen para todos los repos; las propias, solo para (.+)\\.$',
-      "optimia's and ECC's skills apply to every repo; the repo's own, only to $1."
+      '^Las skills de Faradia y de ECC valen para todos los repos; las propias, solo para (.+)\\.$',
+      "faradia's and ECC's skills apply to every repo; the repo's own, only to $1."
     ],
     [
       '^(\\d+) incidencias de (\\d+) tipos, en todos los repos\\. Se guardan solo en este equipo, sin claves ni el texto de tus mensajes\\.$',
@@ -878,8 +1002,8 @@ window.OPTIMIA_I18N_EN = {
     ],
     ['^No se pudo sincronizar: (.+)$', 'Could not sync: $1'],
     [
-      '^la copia de (.+) no se pudo aplicar \\((.+)\\); quedó guardada en ~/\\.config/optimia/backups$',
-      'the copy from $1 could not be applied ($2); it was kept in ~/.config/optimia/backups'
+      '^la copia de (.+) no se pudo aplicar \\((.+)\\); quedó guardada en ~/\\.config/faradia/backups$',
+      'the copy from $1 could not be applied ($2); it was kept in ~/.config/faradia/backups'
     ],
     ['^No se pudo (.+): (.+)$', 'Could not $1: $2'],
     ['^(.+) \\(ECC\\)$', '$1 (ECC)'],
@@ -887,7 +1011,7 @@ window.OPTIMIA_I18N_EN = {
     ['^y (\\d+) más: búscalos\\.$', 'and $1 more: search for them.'],
     ['^y (\\d+) más$', 'and $1 more'],
     ['^Hay una versión nueva: (.+)\\.$', 'A new version is out: $1.'],
-    ['^optimia (.+) está disponible$', 'optimia $1 is available'],
+    ['^Faradia (.+) está disponible$', 'faradia $1 is available'],
     ['^(.+) \\(no está en este workbench\\)$', '$1 (not in this workbench)'],
     ['^(\\d+) ficheros sin commitear y sin tocar desde hace (\\d+) min$', '$1 uncommitted files untouched for $2 min'],
     ['^Modelo de (.+)$', 'Model of $1'],

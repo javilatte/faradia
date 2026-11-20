@@ -53,7 +53,7 @@ export async function loadWorkbenches() {
 }
 
 // Last repo opened in each workbench: switching workbench takes you back to it.
-const LAST_REPO_KEY = 'optimia:last-repo';
+const LAST_REPO_KEY = 'faradia:last-repo';
 function lastRepos() {
   try {
     return JSON.parse(localStorage.getItem(LAST_REPO_KEY)) || {};
@@ -75,7 +75,7 @@ function rememberRepo(projectId) {
 // current view. Falls back to a reload if the project view is not loaded.
 export function openProject(projectId) {
   if (!projectId || projectId === currentProjectId()) return;
-  if (typeof window.optimiaSwitchProject !== 'function') {
+  if (typeof window.faradiaSwitchProject !== 'function') {
     const params = new URLSearchParams(location.search);
     params.set('p', projectId);
     location.href = `${location.pathname}?${params}${location.hash}`;
@@ -83,11 +83,11 @@ export function openProject(projectId) {
   }
   state.currentProjectId = projectId;
   renderSwitcher();
-  window.optimiaSwitchProject(projectId);
+  window.faradiaSwitchProject(projectId);
 }
 
 // The project view changed repo (also with the browser's back and forward buttons).
-window.addEventListener('optimia:project-changed', (e) => {
+window.addEventListener('faradia:project-changed', (e) => {
   state.currentProjectId = e.detail.projectId;
   rememberRepo(e.detail.projectId);
   renderSwitcher();
@@ -116,7 +116,7 @@ async function addPaths(workbenchId, paths, initGit = false) {
   } catch (err) {
     if (err.code !== 'not_git' || initGit) throw err;
     const ok = window.confirm(
-      `${err.data.path} no es un repositorio git.\n\n¿Crear el repo ahí? optimia ejecuta git init y hace un commit inicial vacío, que necesitan las tareas de los agentes.`
+      `${err.data.path} no es un repositorio git.\n\n¿Crear el repo ahí? Faradia ejecuta git init y hace un commit inicial vacío, que necesitan las tareas de los agentes.`
     );
     if (!ok) throw new Error('No se añadió: la carpeta no es un repo git.');
     return addPaths(workbenchId, paths, true);

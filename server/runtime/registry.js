@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { createProjectRuntime } = require('./projectRuntime');
 
 // Stable project id: it does not depend on the order projects open in or on the folder name, only
-// on its real path, so it survives optimia restarts.
+// on its real path, so it survives Faradia restarts.
 function projectIdFor(root) {
   const real = fs.realpathSync(root);
   return crypto.createHash('sha1').update(real).digest('hex').slice(0, 12);

@@ -248,3 +248,39 @@ test('isTransient: ignores atomic writes and editor files, not regular ones', ()
     assert.equal(isTransient(p), true, p);
   for (const p of ['README.md', 'src/tmp/a.js', 'notes.tmp', 'docs/api.md']) assert.equal(isTransient(p), false, p);
 });
+
+test('MonitorService: a change whose event was lost is reported after the watchers change', async (t) => {
+  const cfg = mkTmpDir('mon-catchup');
+  const prev = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = cfg;
+  t.after(() => {
+    process.env.XDG_CONFIG_HOME = prev;
+    rmTmpDir(cfg);
+  });
+  const { MonitorService } = require('../../server/monitor/monitorService');
+  const { dir } = makeRepo(t);
+  const mon = new MonitorService({ getRepos: () => [{ projectId: 'p1', name: 'r', path: dir }], debounceMs: 80 });
+  t.after(() => mon.stop());
+  await mon.start();
+  const activity = [];
+  mon.on('activity', (e) => activity.push(e));
+
+  // A change seen by the watcher is reported once, not again by the catch-up.
+  const seenState = waitFor(mon, 'state');
+  fs.writeFileSync(path.join(dir, 'visto.js'), 'a\n');
+  await seenState;
+  mon.watchersChanged();
+  await waitFor(mon, 'state');
+  assert.deepEqual(
+    activity.map((e) => [e.paths, Boolean(e.catchUp)]),
+    [[['visto.js'], false]]
+  );
+
+  // As macOS does while its FSEvents stream restarts: the change produces no event.
+  mon.entry('p1').watcher.close();
+  fs.writeFileSync(path.join(dir, 'config.js'), "module.exports = { token: 'x' };\n");
+  mon.watchersChanged();
+  await waitFor(mon, 'state');
+  const caught = activity.find((e) => e.catchUp);
+  assert.deepEqual(caught?.paths, ['config.js']);
+});

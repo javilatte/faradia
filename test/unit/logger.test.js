@@ -7,7 +7,7 @@ const path = require('path');
 const { mkTmpDir, rmTmpDir } = require('./helpers');
 const logger = require('../../server/bridge/logger');
 
-test('logger: writes one JSON event per line to .optimia/logs/optimia.log', (t) => {
+test('logger: writes one JSON event per line to .faradia/logs/faradia.log', (t) => {
   const dir = mkTmpDir('logger-lines');
   t.after(() => rmTmpDir(dir));
   logger.initLogger(dir);
@@ -15,7 +15,7 @@ test('logger: writes one JSON event per line to .optimia/logs/optimia.log', (t) 
   logger.warn('task.stage.denied', { taskId: 't1', tool: 'Bash' });
 
   const lines = fs
-    .readFileSync(path.join(dir, '.optimia', 'logs', 'optimia.log'), 'utf8')
+    .readFileSync(path.join(dir, '.faradia', 'logs', 'faradia.log'), 'utf8')
     .trim()
     .split('\n');
   assert.equal(lines.length, 2);
@@ -36,7 +36,7 @@ test('logger: rotates the file at 5 MB', (t) => {
   const dir = mkTmpDir('logger-rotate');
   t.after(() => rmTmpDir(dir));
   logger.initLogger(dir);
-  const file = path.join(dir, '.optimia', 'logs', 'optimia.log');
+  const file = path.join(dir, '.faradia', 'logs', 'faradia.log');
   fs.writeFileSync(file, 'x'.repeat(5 * 1024 * 1024 + 10));
   logger.info('server.start', { url: 'http://127.0.0.1:1' });
   assert.ok(fs.existsSync(`${file}.1`));

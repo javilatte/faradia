@@ -57,13 +57,13 @@ on('signal', ({ signal }) => {
   for (const fn of listeners) fn(signal);
   const key = NOTIFY_KEY[signal.rule];
   if (prefs?.signals.notify[key])
-    notify(`optimia · ${signal.name}`, signal.message, `${signal.projectId}:${signal.rule}:${signal.path || ''}`);
+    notify(`faradia · ${signal.name}`, signal.message, `${signal.projectId}:${signal.rule}:${signal.path || ''}`);
 });
 
 on('timeline_entry', ({ entry }) => {
   if (entry.kind !== 'orphan' || !prefs?.signals.notify.orphan) return;
   notify(
-    `optimia · ${entry.name}`,
+    `faradia · ${entry.name}`,
     `${entry.files} ficheros sin commitear y sin tocar desde hace ${entry.idleMinutes} min`,
     `${entry.projectId}:orphan`
   );

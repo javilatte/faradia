@@ -1,4 +1,4 @@
-// API access from the new views (ES modules). The session lives in the cookie optimia sets when its
+// API access from the new views (ES modules). The session lives in the cookie Faradia sets when its
 // link is opened, so a plain fetch is enough.
 
 export class ApiError extends Error {

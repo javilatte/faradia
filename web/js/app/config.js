@@ -1,6 +1,6 @@
 // Portable configuration and update notices:
 //   - first run: a welcome sheet to import a configuration file or start fresh;
-//   - dropping an optimia configuration file anywhere imports it (after a preview);
+//   - dropping an Faradia configuration file anywhere imports it (after a preview);
 //   - Settings > General: version, update check, export and import;
 //   - a toolbar notice when a newer version is published.
 
@@ -8,7 +8,7 @@ import { api } from './api.js';
 import { h, toast } from './dom.js';
 import { showIntroTour, maybeShowNews, showAllNews } from './tour.js';
 
-const DISMISSED_KEY = 'optimia:update-dismissed';
+const DISMISSED_KEY = 'faradia:update-dismissed';
 const RECHECK_MS = 6 * 60 * 60 * 1000;
 let updateInfo = null;
 
@@ -91,7 +91,7 @@ export async function importFile(file) {
     toast(`${file.name} no es un fichero JSON válido`, { kind: 'error' });
     return;
   }
-  if (config?.format === 'optimia-knowledge') return importKnowledgeFile(file, config);
+  if (config?.format === 'faradia-knowledge') return importKnowledgeFile(file, config);
   let preview;
   try {
     preview = await api.post('/api/config/import', { config, apply: false });
@@ -100,7 +100,7 @@ export async function importFile(file) {
     return;
   }
   const when = preview.exportedAt
-    ? new Date(preview.exportedAt).toLocaleString(window.optimiaLang?.locale || 'es-ES')
+    ? new Date(preview.exportedAt).toLocaleString(window.faradiaLang?.locale || 'es-ES')
     : 'fecha desconocida';
   const nothing =
     !preview.settings.length &&
@@ -114,7 +114,7 @@ export async function importFile(file) {
       h(
         'p',
         { class: 'muted' },
-        `${file.name} · exportada el ${when}${preview.optimiaVersion ? ` con optimia ${preview.optimiaVersion}` : ''}`
+        `${file.name} · exportada el ${when}${preview.faradiaVersion ? ` con faradia ${preview.faradiaVersion}` : ''}`
       ),
       nothing ? h('p', {}, 'Es igual a tu configuración actual: no cambia nada.') : null,
       list('Se sustituye', preview.settings),
@@ -221,7 +221,7 @@ async function importKnowledgeFile(file, bundle) {
   });
 }
 
-// Drop an optimia configuration anywhere in the window. Images keep going to the
+// Drop an Faradia configuration anywhere in the window. Images keep going to the
 // chat composer: only JSON files are taken here.
 function bindDrop() {
   let overlay = null;
@@ -241,7 +241,7 @@ function bindDrop() {
         overlay = h(
           'div',
           { class: 'drop-overlay' },
-          h('div', { class: 'drop-overlay-box' }, 'Suelta tu configuración de optimia para importarla')
+          h('div', { class: 'drop-overlay-box' }, 'Suelta tu configuración de Faradia para importarla')
         );
         document.body.append(overlay);
       }
@@ -276,20 +276,20 @@ function welcome() {
     'div',
     { class: 'dropzone', tabindex: '0', role: 'button', 'aria-label': 'Elegir un fichero de configuración' },
     h('strong', {}, 'Arrastra aquí tu fichero de configuración'),
-    h('span', { class: 'muted' }, 'optimia-config-….json, exportado desde Ajustes › General'),
+    h('span', { class: 'muted' }, 'faradia-config-….json, exportado desde Ajustes › General'),
     h('button', { type: 'button', onclick: pickConfigFile }, 'Elegir fichero…')
   );
   zone.addEventListener('keydown', (e) => {
     if (e.key === ' ' || (e.key === 'Enter' && e.target === zone)) pickConfigFile();
   });
   openSheet({
-    title: 'Bienvenido a optimia 2',
+    title: 'Bienvenido a faradia',
     className: 'welcome-sheet',
     body: [
       h(
         'p',
         {},
-        'Si ya usas optimia en otro equipo, importa tu configuración: instrucciones, agentes, modelos y avisos para todos tus repos.'
+        'Si ya usas Faradia en otro equipo, importa tu configuración: instrucciones, agentes, modelos y avisos para todos tus repos.'
       ),
       zone,
       h('p', { class: 'muted' }, 'Puedes importarla o exportarla cuando quieras desde Ajustes › General.')
@@ -321,11 +321,11 @@ function showUpdateSheet() {
   if (!updateInfo?.updateAvailable) return;
   const command = h('code', { class: 'update-command' }, updateInfo.installCommand);
   openSheet({
-    title: `optimia ${updateInfo.latest} está disponible`,
+    title: `faradia ${updateInfo.latest} está disponible`,
     body: [
       h('p', {}, `Tienes la ${updateInfo.current}. Para actualizar, ejecuta en una terminal:`),
       command,
-      h('p', { class: 'muted' }, 'Después, vuelve a arrancar optimia en tus repos.'),
+      h('p', { class: 'muted' }, 'Después, vuelve a arrancar Faradia en tus repos.'),
       h(
         'p',
         {},
@@ -368,8 +368,8 @@ function renderUpdateButton() {
   const show = Boolean(updateInfo?.updateAvailable) && dismissedVersion() !== updateInfo.latest;
   button.hidden = !show;
   if (show) {
-    button.textContent = `optimia ${updateInfo.latest}`;
-    button.title = `Hay una versión nueva de optimia (${updateInfo.latest}); tienes la ${updateInfo.current}`;
+    button.textContent = `faradia ${updateInfo.latest}`;
+    button.title = `Hay una versión nueva de Faradia (${updateInfo.latest}); tienes la ${updateInfo.current}`;
   }
 }
 
@@ -417,13 +417,13 @@ async function renderGeneralPane() {
     h(
       'div',
       { class: 'settings-field' },
-      h('label', {}, `optimia ${u?.current || ''}`),
+      h('label', {}, `faradia ${u?.current || ''}`),
       h(
         'div',
         { class: 'muted' },
         status,
         u?.checkedAt
-          ? ` Última comprobación: ${new Date(u.checkedAt).toLocaleString(window.optimiaLang?.locale || 'es-ES')}.`
+          ? ` Última comprobación: ${new Date(u.checkedAt).toLocaleString(window.faradiaLang?.locale || 'es-ES')}.`
           : ''
       ),
       h(
@@ -528,7 +528,7 @@ async function renderGeneralPane() {
   );
 }
 
-// Settings › Skills: optimia's built-in skills (always on) and ECC's library (Everything Claude Code,
+// Settings › Skills: faradia's built-in skills (always on) and ECC's library (Everything Claude Code,
 // MIT), as grouped lists in the style of macOS System Settings: one row per skill with its name, a
 // one-line description and a switch.
 let eccFilter = '';
@@ -571,7 +571,7 @@ function renderEccField() {
   function paint(st) {
     const builtin = st.builtin || [];
     const sections = [
-      h('h3', { class: 'group-title' }, 'De optimia'),
+      h('h3', { class: 'group-title' }, 'De faradia'),
       h(
         'p',
         { class: 'group-help' },
@@ -802,7 +802,7 @@ function renderSecurityField(sandbox) {
       ? h(
           'div',
           { class: 'error-text' },
-          'Sin sandbox, solo las reglas de optimia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).'
+          'Sin sandbox, solo las reglas de Faradia frenan a un agente, y un agente decidido puede esquivarlas (por ejemplo, con un script).'
         )
       : h(
           'label',
@@ -819,7 +819,7 @@ function renderSecurityField(sandbox) {
 
 // ---------- boot ----------
 
-// Settings › Skills: optimia's built-in skills and the ECC library, above the repo's own.
+// Settings › Skills: faradia's built-in skills and the ECC library, above the repo's own.
 function renderSkillsLibrary() {
   const host = document.getElementById('skills-library');
   if (host) host.replaceChildren(renderEccField());

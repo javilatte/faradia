@@ -8,7 +8,7 @@ const { FsError, resolveRepoPath } = require('./explorer');
 
 // File operations requested by the user (never by the monitor): rename, copy, move and delete. None
 // overwrites anything and all can be undone:
-//   - delete moves to optimia's trash (~/.local/share/optimia/trash), with a manifest to restore; nothing is really removed until the trash is emptied;
+//   - delete moves to faradia's trash (~/.local/share/faradia/trash), with a manifest to restore; nothing is really removed until the trash is emptied;
 //   - every operation returns its inverse operation (`undo`) for the Undo button.
 
 function trashDir() {
@@ -110,7 +110,7 @@ function copy(root, rel, destDir) {
   return { path: dest.rel, undo: { op: 'trash', path: dest.rel } };
 }
 
-/** Deletes by moving to optimia's trash. Returns the id of the trash item. */
+/** Deletes by moving to faradia's trash. Returns the id of the trash item. */
 function trash(root, rel, { projectId } = {}) {
   const src = resolveRepoPath(root, rel, { allowRoot: false });
   const id = crypto.randomUUID();

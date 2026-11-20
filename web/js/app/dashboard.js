@@ -15,7 +15,7 @@ const repos = new Map(); // projectId -> monitor snapshot
 const metrics = new Map(); // projectId -> metrics (24 h activity, agent sessions)
 let signals = [];
 let root = null;
-let compact = localStorage.getItem('optimia:dashboard-compact') === '1';
+let compact = localStorage.getItem('faradia:dashboard-compact') === '1';
 let tick = null;
 
 async function load() {
@@ -265,7 +265,7 @@ function render() {
 
 function setCompact(value) {
   compact = value;
-  localStorage.setItem('optimia:dashboard-compact', value ? '1' : '0');
+  localStorage.setItem('faradia:dashboard-compact', value ? '1' : '0');
   render();
 }
 

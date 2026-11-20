@@ -5,12 +5,19 @@ const globals = require('globals');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'vendor/**', 'test-results/**', 'playwright-report/**', '.optimia/**', '.codegraph/**']
+    ignores: ['node_modules/**', 'vendor/**', 'test-results/**', 'playwright-report/**', '.faradia/**', '.codegraph/**']
   },
   js.configs.recommended,
   {
     // Node: server, launcher, MCP server and tests (CommonJS)
-    files: ['server/**/*.js', 'bin/**', 'test/**/*.js', '*.config.js', 'test/e2e/fixtures/bin/claude'],
+    files: [
+      'server/**/*.js',
+      'bin/**',
+      'packages/*/bin/**',
+      'test/**/*.js',
+      '*.config.js',
+      'test/e2e/fixtures/bin/claude'
+    ],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'commonjs',
@@ -45,6 +52,19 @@ module.exports = [
       globals: { ...globals.browser }
     },
     rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none', ignoreRestSiblings: true }]
+    }
+  },
+  {
+    // The dictation worker: a module worker of its own (see web/js/project/voice.js).
+    files: ['web/js/project/voice-worker.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
+      globals: { ...globals.worker }
+    },
+    rules: {
+      'no-undef': 'error',
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none', ignoreRestSiblings: true }]
     }
   }

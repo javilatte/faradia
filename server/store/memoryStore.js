@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 function memoryPath(projectRoot) {
-  return path.join(projectRoot, '.optimia', 'memory.md');
+  return path.join(projectRoot, '.faradia', 'memory.md');
 }
 
 function loadMemory(projectRoot) {
@@ -14,7 +14,7 @@ function loadMemory(projectRoot) {
 }
 
 function saveMemory(projectRoot, content) {
-  const dir = path.join(projectRoot, '.optimia');
+  const dir = path.join(projectRoot, '.faradia');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(memoryPath(projectRoot), content);
 }

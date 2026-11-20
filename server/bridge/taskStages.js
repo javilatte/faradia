@@ -7,12 +7,15 @@ const path = require('path');
 // stage left changes and on the phase the agent itself marked with update_task_progress (blocked =
 // it needs details from the user).
 //
-// coding:        plan -> implement -> verify -> (ready_to_test)
-// bugfix:        diagnose -> implement -> verify -> (ready_to_test)
-// tests:         plan -> write-tests -> verify -> (ready_to_test)
+// coding:        plan -> implement -> tidy -> verify -> (ready_to_test)
+// bugfix:        diagnose -> implement -> tidy -> verify -> (ready_to_test)
+// tests:         plan -> write-tests -> tidy -> verify -> (ready_to_test)
+// correction:    correct -> verify -> (ready_to_test): a repeated mistake becomes a check that fails
+// verification-kit: verification-kit -> (ready_to_test): the repo's verify skill and feature map
 // documentation: research -> (awaiting_input: mode, format, target) -> write -> (ready_to_test)
 // audit:         audit -> (ready_to_test, report only)
 // custom:        custom (one stage with a custom agent)
+// tidy (comments) and verify are optional: they are skipped when their agent is turned off.
 // review, commit and describe (PR or Jira description) are started by hand once the task is ready
 // for review.
 
@@ -23,6 +26,9 @@ const STAGES = {
   implement: { phase: 'implement', access: 'edit', agent: 'implementer', label: 'Implementación', asks: true },
   'write-tests': { phase: 'implement', access: 'edit', agent: 'test-writer', label: 'Tests', asks: true },
   write: { phase: 'implement', access: 'edit', agent: 'doc-writer', label: 'Redacción' },
+  tidy: { phase: 'implement', access: 'edit', agent: 'comment-sicko', label: 'Comentarios', optional: true },
+  correct: { phase: 'implement', access: 'edit', agent: 'corrector', label: 'Corrección', asks: true },
+  'verification-kit': { phase: 'implement', access: 'edit', agent: 'verifier', label: 'Kit de verificación' },
   verify: { phase: 'test', access: 'edit', agent: 'verifier', label: 'Verificación', optional: true },
   audit: { phase: 'test', access: 'read', agent: 'auditor', label: 'Auditoría', asks: true },
   review: { phase: 'test', access: 'read', agent: 'reviewer', label: 'Revisión', manual: true },
@@ -33,9 +39,11 @@ const STAGES = {
 };
 
 const TASK_TYPES = {
-  coding: { label: 'Código', pipeline: ['plan', 'implement', 'verify'] },
-  bugfix: { label: 'Bug', pipeline: ['diagnose', 'implement', 'verify'] },
-  tests: { label: 'Tests', pipeline: ['plan', 'write-tests', 'verify'] },
+  coding: { label: 'Código', pipeline: ['plan', 'implement', 'tidy', 'verify'] },
+  bugfix: { label: 'Bug', pipeline: ['diagnose', 'implement', 'tidy', 'verify'] },
+  tests: { label: 'Tests', pipeline: ['plan', 'write-tests', 'tidy', 'verify'] },
+  correction: { label: 'Corrección', pipeline: ['correct', 'verify'] },
+  'verification-kit': { label: 'Kit de verificación', pipeline: ['verification-kit'] },
   documentation: { label: 'Documentación', pipeline: ['research', 'write'] },
   audit: { label: 'Auditoría', pipeline: ['audit'], reportOnly: true },
   custom: { label: 'Agente propio', pipeline: ['custom'] },
@@ -134,8 +142,11 @@ function approvalRule(tool, command) {
 // Claude Code asks for approval for any redirection to /dev/null even when a rule matches, so a
 // stage that uses one gets stuck with no way to approve it from the card. Every stage is asked to
 // avoid it.
-const SHELL_RULE =
-  'Al ejecutar comandos no uses redirecciones a /dev/null (2>/dev/null ni >/dev/null): para silenciar errores usa 2>&1.';
+const SHELL_RULE = [
+  'Al ejecutar comandos no uses redirecciones a /dev/null (2>/dev/null ni >/dev/null): para silenciar errores usa 2>&1.',
+  // Claude Code's sandbox shows placeholders of the user's dotfiles in the working folder.
+  'Si git status muestra sin seguimiento ficheros como .bashrc, .gitconfig, .profile, .zshrc, .mcp.json, .vscode o .claude/ que no has creado tú, son del sandbox: ignóralos y no los menciones.'
+].join('\n');
 
 function firstStage(type) {
   return pipelineOf(type)[0];
@@ -209,7 +220,7 @@ function canRun(task, stage, { answer, docOptions } = {}) {
 }
 
 function buildWritePrompt(task, { mode, format, targetPath, template }, research) {
-  const goal = task.instruction || task.title;
+  const goal = requestWithDecisions(task, 'write');
   const tpl = template ? ` Usa la plantilla ${template} como base de estructura y estilo.` : '';
   const fmtNote =
     format === 'docx'
@@ -310,7 +321,7 @@ function parseDescription(text, target) {
 const AUTONOMY_RULE =
   'Trabaja de forma autónoma: decide tú los detalles razonables y anótalos en tu respuesta. Para solo si falta concreción o contexto que no puedas deducir del repo. Si una acción queda bloqueada por seguridad, no te detengas: sigue por otro camino y, si era imprescindible, di al final qué necesitabas y para qué (el usuario puede permitirla desde la tarjeta).';
 
-// optimia's instructions are in Spanish; the user's request may not be. Agents follow the language
+// faradia's instructions are in Spanish; the user's request may not be. Agents follow the language
 // of the prompt around them, so the request's language is detected and stated explicitly, in it.
 const ES_WORDS = new Set(
   'de la que el en los las del para con una por como pero más este esta sin hay cuando todo también ya muy son al lo se no si sus le ha'.split(
@@ -337,7 +348,7 @@ function requestLanguage(text) {
 
 function languageRule(task) {
   return requestLanguage(`${task.title || ''}\n${task.instruction || ''}`) === 'en'
-    ? "LANGUAGE: the user's request is in English. Write everything you produce in English: what you say while you work, your report, your questions, commit messages and pull request texts. These instructions are in Spanish only because they are optimia's."
+    ? "LANGUAGE: the user's request is in English. Write everything you produce in English: what you say while you work, your report, your questions, commit messages and pull request texts. These instructions are in Spanish only because they are faradia's."
     : 'Idioma: escribe todo lo que produzcas (lo que cuentas mientras trabajas, el informe, las preguntas, los mensajes de commit y de PR) en español, el idioma del encargo.';
 }
 
@@ -355,8 +366,30 @@ function previousOutput(task, stage) {
   return idx > 0 ? out(pipeline[idx - 1]) : '';
 }
 
-function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}) {
+// The bundled skills reach a session through --add-dir (ecc/library.js), not the worktree: a prompt
+// that sends the agent to read one gives its absolute path. pstack's skills cannot be invoked with
+// the Skill tool (disable-model-invocation), so they are read and followed.
+// Where the verification kit stage writes the skill; Faradia moves it to .claude/skills/ after the
+// stage (moveVerificationKit), because Claude Code does not let a session write in .claude/.
+const KIT_STAGING = '.faradia-kit';
+
+function skillFile(skillsDir, name) {
+  return skillsDir ? path.join(skillsDir, name, 'SKILL.md') : `la skill ${name} (/${name})`;
+}
+
+// The request plus what the user decided when an agent asked: every later stage works (and the
+// Verifier judges) against both, the decisions winning.
+function requestWithDecisions(task, stage) {
   const goal = task.instruction || task.title;
+  const decisions = (task.answers || []).filter((a) => a.stage !== stage);
+  if (!decisions.length) return goal;
+  return `${goal}\n\nDecisiones del usuario durante la tarea, al responder a los agentes (mandan sobre el encargo si lo contradicen):\n${decisions
+    .map((a) => `- ${a.text}`)
+    .join('\n')}`;
+}
+
+function buildStageBody(task, stage, { docOptions, agent, describeOptions, evidenceDir, skillsDir, codeMap } = {}) {
+  const goal = requestWithDecisions(task, stage);
   const out = (s) => (task.stageOutputs && task.stageOutputs[s]) || '';
   switch (stage) {
     case 'plan':
@@ -402,14 +435,50 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}
       ]
         .filter(Boolean)
         .join('\n\n');
+    case 'tidy':
+      return [
+        'Etapa de LIMPIEZA DE COMENTARIOS de los cambios de este worktree.',
+        `Encargo original:\n${goal}`,
+        'Alcance: solo las líneas que añadió esta tarea (git diff HEAD, incluidos los ficheros nuevos sin seguimiento). No toques comentarios que ya estaban en el repo.',
+        `Lee ${skillFile(skillsDir, 'no-comments')} como referencia; aquí tú eres Comment Sicko y no hay subagentes: haz tú mismo la pasada. Borra los comentarios que narran el código, los que justifican un apaño y el código comentado. Respeta las excepciones de tu método (licencias, comportamiento impuesto por algo externo, contratos de API pública, prettier-ignore) y las convenciones de comentarios que el repo pida expresamente en sus instrucciones.`,
+        'No cambies el código de la aplicación. Si un comentario defendía una restricción («no quitar», «IMPORTANT», «no cambiar sin…»), no la codifiques tú: bórralo solo si la restricción no es real y, en cualquier caso, propón cómo hacerla cumplir con una línea exactamente así por cada una:\nPROPUESTA: <la regla> → <la comprobación que la haría cumplir: tipo, lint, test o arquitectura>',
+        'No hagas git commit ni git push.',
+        'Termina con el número de comentarios borrados, los que has dejado y por qué, y las líneas PROPUESTA. Si no hay ninguna restricción que proponer, no escribas ninguna línea PROPUESTA.'
+      ].join('\n\n');
+    case 'correct':
+      return [
+        'Etapa de CORRECCION. Un agente ha cometido un error que el usuario no quiere volver a ver; haz que el siguiente agente no pueda repetirlo.',
+        `Lo que pide el usuario:\n${goal}`,
+        `Lee y sigue ${skillFile(skillsDir, 'correct')}, limitado a este error (no busques otras clases de errores). Elige el nivel más alto que funcione: 1) arquitectura (que el camino incorrecto no exista), 2) tipos, 3) una regla de lint o un check de CI cuyo mensaje diga qué usar en su lugar, 4) un test de comportamiento, 5) documentación o instrucciones, solo si es una cuestión de criterio. Si el patrón ya es habitual en el repo, que la comprobación falle solo con usos nuevos o arregla los existentes si son pocos.`,
+        'Demuestra que la comprobación funciona: ejecútala sobre el error real (reintrodúcelo un momento o usa el commit donde ocurrió) y muestra el comando y su salida fallando; después, que pasa con el código correcto. Deja el repo sin el error reintroducido.',
+        'Mantén en el CLAUDE.md o AGENTS.md del repo (el que exista; si no hay ninguno, crea CLAUDE.md) una tabla de reglas con dos columnas: la regla y qué la hace cumplir. Añade esta.',
+        ASK_RULE('implement'),
+        'No hagas git commit ni git push.',
+        'Termina con una línea exactamente "NIVEL: arquitectura", "NIVEL: tipos", "NIVEL: lint", "NIVEL: test" o "NIVEL: docs" seguida de la regla en pocas palabras, y explica por qué no sirvió un nivel más alto.'
+      ].join('\n\n');
+    case 'verification-kit':
+      return [
+        'Etapa de KIT DE VERIFICACION. Vas a dar a este repo una forma guionizada de probar la aplicación de verdad.',
+        `Indicaciones del usuario:\n${goal}`,
+        `Lee y sigue ${skillFile(skillsDir, 'create-verification-skill')}. No hay nadie a quien preguntar durante la entrevista: deduce las respuestas del repo y anota las suposiciones en la skill.`,
+        `Claude Code no deja escribir en .claude/ desde una tarea: crea la skill en ${KIT_STAGING}/verify-<app>/ de este worktree (con su SKILL.md y su mapa de funciones) en lugar de .cursor/skills o .claude/skills, y escribe sus rutas como si ya estuviera en .claude/skills/verify-<app>/. Al terminar, Faradia la mueve a .claude/skills/. Ejecútala al menos una vez para demostrar que arranca la aplicación y comprueba una función.`,
+        'No hagas git commit ni git push.'
+      ].join('\n\n');
     case 'verify':
       return [
         'Etapa de VERIFICACION de los cambios de este worktree (git diff HEAD).',
         `Encargo original:\n${goal}`,
-        'Ejecuta los tests, el lint y la compilacion que tenga el proyecto. Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
+        'Ejecuta los tests, el lint y la compilacion que tenga el proyecto, completos y no solo los ficheros nuevos. Si faltan dependencias, instálalas primero con el gestor del proyecto (npm ci, pnpm install, uv sync, pip install -e ., bundle install…). Si algo falla por estos cambios y el arreglo es pequeno y evidente, arreglalo; si no, no lo toques y explica el fallo.',
+        'Si el repo tiene una skill de verificación (.claude/skills/verify-*/SKILL.md), úsala para probar en la aplicación real lo que cambió esta tarea.',
+        'faradia guarda como evidencia cada comando que ejecutes y su resultado: ejecuta las comprobaciones de verdad, una por comando, en vez de describirlas. Si ejecutas algo que debe fallar a propósito (por ejemplo, para demostrar que una comprobación detecta el error), termina ese comando con el comentario "# se espera que falle"; si no, su fallo cuenta como un fallo de la verificación.',
+        evidenceDir
+          ? `Si el cambio se ve en una interfaz y puedes capturarla (por ejemplo con Playwright), guarda las capturas o vídeos como evidencia en ${evidenceDir} (PNG, JPG, WEBP, GIF o MP4), con nombres que digan qué muestran.`
+          : null,
         'No hagas git commit ni git push.',
         'Termina tu respuesta con una línea exactamente "VEREDICTO: OK" si todo pasa, "VEREDICTO: FALLA" seguido del motivo si algo falla por estos cambios, o "VEREDICTO: SIN VERIFICAR" seguido de lo que falta si no has podido ejecutar las comprobaciones (herramientas, versión del lenguaje o servicios que no hay en este equipo).'
-      ].join('\n\n');
+      ]
+        .filter(Boolean)
+        .join('\n\n');
     case 'review':
       return [
         'Etapa de REVISION FINAL. No modifiques ficheros.',
@@ -422,7 +491,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}
         'Etapa de PREPARAR COMMIT. No ejecutes git add, git commit ni git push.',
         'Revisa los cambios staged (git diff --cached --stat y git diff --cached) y el estilo de los ultimos commits (git log --oneline -10).',
         'Propon un mensaje en formato Conventional Commits: tipo(ambito): resumen en minusculas, imperativo, sin punto final y de 72 caracteres como mucho; si hace falta, un cuerpo breve tras una línea en blanco. Sigue el idioma de los commits anteriores del repo. No anadas líneas Co-Authored-By ni firmas de agente.',
-        'Termina SIEMPRE con una línea exacta "MENSAJE: <primera línea del commit>", que optimia usa para rellenar el campo de commit.'
+        'Termina SIEMPRE con una línea exacta "MENSAJE: <primera línea del commit>", que Faradia usa para rellenar el campo de commit.'
       ].join('\n\n');
     case 'describe':
       return buildDescribePrompt(task, describeOptions || {});
@@ -441,6 +510,9 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}
         'Vas a escribir la memoria de este repositorio: el conocimiento que el chat y todos los agentes reciben en cada sesión para trabajar aquí sin redescubrirlo. Si ya hay una memoria (la tienes en el system prompt), mejórala: conserva lo que siga siendo cierto y útil.',
         `Indicaciones del usuario:\n${goal}`,
         'Investiga leyendo los ficheros (manifiestos, README, configuración de CI, scripts, estructura de carpetas) y el historial (git log --oneline -30). Puedes ejecutar comandos de solo lectura y, si son rápidos, comprobar que el comando de tests funciona.',
+        codeMap
+          ? `Punto de partida para «## Estructura»: el mapa del código que Faradia sacó del índice de CodeGraph (las piezas más usadas y qué zona depende de cuál). Compruébalo leyendo el código; no lo copies entero:\n\n${codeMap}`
+          : null,
         [
           'Responde SOLO con el markdown completo de la memoria, sin preámbulo, con estos apartados (omite los que no apliquen):',
           '## Qué es — una o dos frases.',
@@ -449,9 +521,11 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions } = {}
           '## Convenciones — estilo de código, idioma, mensajes de commit (según el historial), cómo se escriben los tests.',
           '## Cuidado con — trampas, ficheros generados, cosas que no se deben tocar.',
           'Sé concreto y breve (unas 60 líneas como mucho): es contexto que se paga en cada sesión.',
-          'Escribe solo conocimiento estable del repo. No incluyas nada de esta sesión: estás en un worktree temporal de optimia en una rama de tarea (optimia/task-…), y esa ruta y esa rama no son del repo. La rama principal sí. Tampoco repitas las instrucciones que ya recibes en el system prompt.'
+          'Escribe solo conocimiento estable del repo. No incluyas nada de esta sesión: estás en un worktree temporal de Faradia en una rama de tarea (faradia/task-…), y esa ruta y esa rama no son del repo. La rama principal sí. Tampoco repitas las instrucciones que ya recibes en el system prompt.'
         ].join('\n')
-      ].join('\n\n');
+      ]
+        .filter(Boolean)
+        .join('\n\n');
     case 'audit':
       return [
         'Etapa de AUDITORIA. No modifiques ficheros.',
@@ -479,6 +553,7 @@ function answerPrompt(answer, stage) {
       diagnose: 'Continua el diagnóstico con esta respuesta y termina con la causa raíz y el arreglo propuesto.',
       implement: 'Continua la implementación y termina cuando el cambio este completo.',
       'write-tests': 'Continua con los tests y termina cuando esten escritos y ejecutados.',
+      correct: 'Continua la corrección con esta respuesta y termina con la línea NIVEL.',
       audit: 'Continua la auditoría con esta respuesta y termina con el informe.'
     }[stage] || 'Continua y termina tu etapa.';
   return `Respuesta del usuario a tus preguntas:\n${answer.trim()}\n\n${tail}`;
@@ -493,6 +568,76 @@ function parseVerdict(text) {
   return { ok: kind === 'OK', unverified: kind === 'SIN VERIFICAR', line: m[0].trim() };
 }
 
+// "NIVEL: lint no-console en src" at the end of a correction: the level of the check it added.
+const CORRECTION_LEVELS = ['arquitectura', 'tipos', 'lint', 'test', 'docs'];
+function parseCorrection(text) {
+  const matches = [...String(text || '').matchAll(/^\s*\**NIVEL:\**\s*([a-záéíóú]+)\b[ \t:—–-]*(.*)$/gim)];
+  const m = matches[matches.length - 1];
+  if (!m) return null;
+  const level = m[1].toLowerCase().replace('architecture', 'arquitectura');
+  if (!CORRECTION_LEVELS.includes(level)) return null;
+  return { level, rule: m[2].trim().slice(0, 200) };
+}
+
+// "PROPUESTA: <rule> → <check>" lines of the comments stage: constraints a comment defended that a
+// check should enforce. Each one can become a correction task.
+const NO_PROPOSAL = /^\W*(ninguna|ninguno|nada|no hay|none|n\/a)\b/i;
+function parseRuleProposals(text) {
+  const out = [];
+  for (const m of String(text || '').matchAll(/^\s*[-*]?\s*\**PROPUESTA:\**\s*(.+)$/gim)) {
+    const [rule, check] = m[1].split(/\s*(?:→|->)\s*/);
+    // "PROPUESTA: ninguna" is a report that there is nothing to propose.
+    if (!rule || !rule.trim() || NO_PROPOSAL.test(rule)) continue;
+    out.push({ rule: rule.trim().slice(0, 300), check: (check || '').trim().slice(0, 300) });
+  }
+  return out.slice(0, 10);
+}
+
+// What Faradia saw the verifier run contradicts its "OK": no command at all, or the last check that
+// looks like tests, lint or a build failed. The verdict becomes "unverified" with the reason.
+// A command is a check when one of its steps starts with a test runner, a linter, a type checker or a
+// build: what follows (`node -e "...test..."`, a grep) is not looked at, so a script the agent runs
+// to show something fails on purpose does not count.
+const CHECK_STEP =
+  /^(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:test|lint|build|check|typecheck|type-check|ci|verify)\b|npx\s+(?:--?\S+\s+)*(?:jest|vitest|mocha|eslint|tsc|playwright|prettier\s+--check|biome|ava|tap)\b|node\s+--test\b|deno\s+(?:test|lint|check)\b|(?:jest|vitest|mocha|eslint|tsc|pytest|py\.test|tox|nox|ruff|mypy|pyright|flake8|rspec|rubocop|phpunit|pest|bats|playwright|ctest|swift\s+test|dotnet\s+(?:test|build))\b|python3?\s+-m\s+(?:pytest|unittest|mypy|ruff)\b|cargo\s+(?:test|build|check|clippy|nextest)\b|go\s+(?:test|vet|build)\b|make(?:\s+(?:test|check|lint|build|ci|all))?\s*$|mvn\b|\.\/gradlew\b|gradle\b|bundle\s+exec\s+(?:rspec|rake|rubocop)\b)/;
+function isCheckCommand(command) {
+  return String(command || '')
+    .split(/&&|\|\||;|\n|\|/)
+    .map((step) =>
+      step
+        .trim()
+        .replace(/^(?:\w+=\S*\s+)+/, '')
+        .replace(/^(?:cd\s+\S+|time|timeout\s+\S+)\s*/, '')
+    )
+    .some((step) => CHECK_STEP.test(step));
+}
+/\b(test|tests|lint|eslint|build|check|tsc|typecheck|pytest|vitest|jest|mocha|cargo|go\s+(?:test|vet|build)|mvn|gradle|make|ruff|mypy|rspec|phpunit|bats|playwright)\b/i;
+function crossCheckVerdict(verdict, evidence) {
+  if (!verdict || !verdict.ok || !evidence) return verdict;
+  const checks = evidence.checks || [];
+  if (!checks.length) {
+    return {
+      ok: false,
+      unverified: true,
+      contradicted: true,
+      line: 'VEREDICTO: SIN VERIFICAR (dice OK, pero no ejecutó ninguna comprobación)'
+    };
+  }
+  const lastByCommand = new Map();
+  for (const c of checks) if (!c.expectedFailure && isCheckCommand(c.command)) lastByCommand.set(c.command, c);
+  const failed = [...lastByCommand.values()].find((c) => c.ok === false);
+  if (failed) {
+    const cmd = failed.command.length > 80 ? `${failed.command.slice(0, 77)}...` : failed.command;
+    return {
+      ok: false,
+      unverified: true,
+      contradicted: true,
+      line: `VEREDICTO: SIN VERIFICAR (dice OK, pero \`${cmd}\` falló)`
+    };
+  }
+  return verdict;
+}
+
 // Message proposed by the "Preparar commit" stage (its last "MENSAJE: ..." line).
 function parseCommitSuggestion(text) {
   const matches = [...String(text || '').matchAll(/^\s*\**MENSAJE:\**\s*`?([^`\n]+?)`?\s*$/gim)];
@@ -502,7 +647,15 @@ function parseCommitSuggestion(text) {
 
 // Default message when no commit was prepared: conventional type from the task type and the title
 // starting in lower case.
-const COMMIT_TYPE = { coding: 'feat', bugfix: 'fix', tests: 'test', documentation: 'docs', audit: 'chore' };
+const COMMIT_TYPE = {
+  coding: 'feat',
+  bugfix: 'fix',
+  tests: 'test',
+  documentation: 'docs',
+  audit: 'chore',
+  correction: 'fix',
+  'verification-kit': 'test'
+};
 function defaultCommitMessage(task) {
   const type = COMMIT_TYPE[task.type] || 'feat';
   const title = String(task.title || '')
@@ -523,7 +676,7 @@ function defaultCommitMessage(task) {
 function decideAfterStage(
   task,
   stage,
-  { text = '', hasChanges = false, phaseStatus, isError = false, skip = [], agent, describeTarget } = {}
+  { text = '', hasChanges = false, phaseStatus, isError = false, skip = [], agent, describeTarget, evidence } = {}
 ) {
   const stageOutputs = { ...(task.stageOutputs || {}), [stage]: text };
   const base = { stage, stageOutputs, output: text, pendingQuestion: null, pendingPermission: null, error: null };
@@ -574,11 +727,33 @@ function decideAfterStage(
     });
   }
   if (stage === 'verify') {
-    const verdict = parseVerdict(text);
+    const verdict = crossCheckVerdict(parseVerdict(text), evidence);
+    const summary = evidence
+      ? {
+          checks: (evidence.checks || []).length,
+          failed: (evidence.checks || []).filter((c) => c.ok === false).length,
+          images: (evidence.images || []).length,
+          run: evidence.run
+        }
+      : null;
     return done({
       status: 'ready_to_test',
-      verification: verdict ? { ...verdict, at: new Date().toISOString() } : null
+      verification: verdict
+        ? { ...verdict, at: new Date().toISOString(), ...(summary ? { evidence: summary } : {}) }
+        : null
     });
+  }
+  // The comments stage may leave nothing to change: that is a pass, not an error.
+  if (stage === 'tidy') {
+    const proposals = parseRuleProposals(text);
+    const patch = proposals.length ? { ruleProposals: proposals } : {};
+    if (following) return done({ status: 'pending', ...patch }, following);
+    return done({ status: 'ready_to_test', ...patch });
+  }
+  if (stage === 'correct' && hasChanges) {
+    const correction = parseCorrection(text);
+    if (following) return done({ status: 'pending', correction }, following);
+    return done({ status: 'ready_to_test', correction });
   }
   if (stage === 'write') return done({ status: 'ready_to_test' });
   if (stage === 'audit' || reportOnly) {
@@ -626,5 +801,10 @@ module.exports = {
   buildStagePrompt,
   answerPrompt,
   parseVerdict,
+  parseCorrection,
+  parseRuleProposals,
+  crossCheckVerdict,
+  isCheckCommand,
+  KIT_STAGING,
   decideAfterStage
 };

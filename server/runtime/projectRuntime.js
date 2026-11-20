@@ -4,8 +4,9 @@
 // server creates one runtime per open project (see server/index.js) and passes it sendToClients to
 // broadcast over the shared WebSocket.
 
+const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
-const { limitHit, markClaudeBlocked, fallbackEngine, claudeBlockedUntil } = require('../ai/fallback');
+const { limitHit, markClaudeBlocked, fallbackEngine, claudeBlockedUntil, limitMessage } = require('../ai/fallback');
 const path = require('path');
 const crypto = require('crypto');
 const { parseDenial, approvedCommands } = require('../bridge/policy');
@@ -30,12 +31,27 @@ function relPath(base, p) {
   return path.isAbsolute(p) ? path.relative(base, p) : p;
 }
 const { ensureGitGuardHooks } = require('../bridge/gitGuard');
-const { syncClaudeSettings, optimiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
+const { syncClaudeSettings, faradiaClaudeSettingsPath } = require('../bridge/claudeSettingsSync');
 const { sandboxProblem, agentCacheEnv } = require('../bridge/sandbox');
 const { enqueueWikiUpdate } = require('../knowledge/wikiUpdater');
 const { adoptPendingMemory } = require('../knowledge/bundle');
 const { loadAttachments, attachmentsPrompt } = require('../bridge/attachments');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
+const evidence = require('../bridge/evidence');
+const { buildRepoMap, renderRepoMap } = require('../knowledge/repoMap');
+
+// "Conocer este repo" starts from the code map when the repo has a CodeGraph index (repoMap.js).
+function codeMapFor(projectRoot) {
+  try {
+    const map = buildRepoMap(projectRoot);
+    return map ? renderRepoMap(map) : null;
+  } catch {
+    return null;
+  }
+}
+const { migrateRepo } = require('../migrate/rename');
+const { transcriptExists } = require('../bridge/claudeTranscripts');
+const { KIT_STAGING } = require('../bridge/taskStages');
 const {
   STAGE_PHASE,
   firstStage,
@@ -54,18 +70,18 @@ const { createApp } = require('./projectApp');
 
 // Written when the project opens: --mcp-config needs this file before any session starts, so
 // create_task and update_task_progress reach the server over HTTP (the MCP server is a child of
-// `claude`, not of optimia; see server/mcp/tasksServer.js).
+// `claude`, not of Faradia; see server/mcp/tasksServer.js).
 function writeMcpConfig(projectRoot, { port, projectId, token }) {
-  const dir = path.join(projectRoot, '.optimia');
+  const dir = path.join(projectRoot, '.faradia');
   fs.mkdirSync(dir, { recursive: true });
-  const env = { OPTIMIA_PORT: String(port), OPTIMIA_PROJECT: projectId };
-  if (token) env.OPTIMIA_TOKEN = token;
+  const env = { FARADIA_PORT: String(port), FARADIA_PROJECT: projectId };
+  if (token) env.FARADIA_TOKEN = token;
   // Expanded by Claude Code from the session's environment: set for task sessions, empty in the chat.
-  env.OPTIMIA_TASK_ID = '${OPTIMIA_TASK_ID:-}';
+  env.FARADIA_TASK_ID = '${FARADIA_TASK_ID:-}';
   const config = {
     mcpServers: {
-      'optimia-tasks': {
-        // The same node that runs optimia: with nvm or other version managers, "node" may not be on
+      'faradia-tasks': {
+        // The same node that runs faradia: with nvm or other version managers, "node" may not be on
         // the claude process's PATH and the MCP server would not start.
         command: process.execPath,
         args: [path.join(__dirname, '..', 'mcp', 'tasksServer.js')],
@@ -73,24 +89,24 @@ function writeMcpConfig(projectRoot, { port, projectId, token }) {
       }
     }
   };
-  fs.writeFileSync(path.join(dir, 'mcp.json'), JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
+  writeJsonFile(path.join(dir, 'mcp.json'), config, { mode: 0o600 });
 }
 
-// The .optimia folder of a repo opened from a workbench must not show up as a git change. It is
+// The .faradia folder of a repo opened from a workbench must not show up as a git change. It is
 // excluded in .git/info/exclude (local, not versioned) instead of touching the user's .gitignore.
 // If it is already ignored, nothing is done.
-function ensureOptimiaExcluded(projectRoot) {
+function ensureFaradiaExcluded(projectRoot) {
   const gitDir = path.join(projectRoot, '.git');
   try {
     if (!fs.statSync(gitDir).isDirectory()) return; // worktree or submodule: .git is a file
     const gitignore = path.join(projectRoot, '.gitignore');
-    const ignored = fs.existsSync(gitignore) && /^\/?\.optimia\/?$/m.test(fs.readFileSync(gitignore, 'utf8'));
+    const ignored = fs.existsSync(gitignore) && /^\/?\.faradia\/?$/m.test(fs.readFileSync(gitignore, 'utf8'));
     if (ignored) return;
     const exclude = path.join(gitDir, 'info', 'exclude');
     const current = fs.existsSync(exclude) ? fs.readFileSync(exclude, 'utf8') : '';
-    if (/^\/?\.optimia\/?$/m.test(current)) return;
+    if (/^\/?\.faradia\/?$/m.test(current)) return;
     fs.mkdirSync(path.dirname(exclude), { recursive: true });
-    fs.appendFileSync(exclude, `${current && !current.endsWith('\n') ? '\n' : ''}/.optimia\n`);
+    fs.appendFileSync(exclude, `${current && !current.endsWith('\n') ? '\n' : ''}/.faradia\n`);
   } catch {
     /* not a git repo or not writable: nothing to exclude */
   }
@@ -107,8 +123,10 @@ function closeLastRun(task, stage, status) {
 }
 
 function createProjectRuntime({ projectId, projectRoot, port, token, sendToClients }) {
-  ensureOptimiaExcluded(projectRoot);
-  // Permissions of optimia's sessions, passed with --settings (nothing in the repo).
+  // The repo's .optimia (from before the name change) becomes .faradia.
+  migrateRepo(projectRoot);
+  ensureFaradiaExcluded(projectRoot);
+  // Permissions of faradia's sessions, passed with --settings (nothing in the repo).
   syncClaudeSettings(projectRoot, loadSettings(projectRoot).preferences.noGo);
   // A memory imported from another machine before this repo existed here.
   try {
@@ -271,18 +289,62 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       return { error: err.message, code: 500 };
     }
 
+    // Claude is out of usage and there is no local model to take over: starting would only fail.
+    const blockedUntil = opts.engine === 'claude' ? claudeBlockedUntil() : 0;
+    // An answer is not taken now (it would be lost): the card keeps it to send later.
+    if (blockedUntil && answer !== undefined) return { error: limitMessage(blockedUntil), code: 503 };
+    if (blockedUntil) {
+      const updated = updateTask(projectRoot, task.id, {
+        status: 'pending',
+        stage,
+        error: limitMessage(blockedUntil),
+        waitingForLimit: true
+      });
+      if (updated) broadcast({ type: 'task_updated', task: updated });
+      resumeAfterLimit(task.id, stage, blockedUntil);
+      return { task: updated };
+    }
+
     // Answering an implementation question resumes the same conversation (the previous stage's
     // session) so the agent keeps its context.
-    const resuming = (answer !== undefined || Boolean(afterSwitch)) && Boolean(task.sessionId);
+    // A stage that stopped on an error (Claude out of usage, a crash) goes on in the same
+    // conversation too, so what it did and the user's answers are not lost.
+    const retryingAfterError =
+      answer === undefined &&
+      !afterSwitch &&
+      task.status === 'pending' &&
+      Boolean(task.error) &&
+      task.stage === stage &&
+      Boolean(task.sessionId) &&
+      transcriptExists(task.sessionId);
+    const resuming = (answer !== undefined || Boolean(afterSwitch) || retryingAfterError) && Boolean(task.sessionId);
     if (resuming) opts.resumeSessionId = task.sessionId;
-    let prompt = buildStagePrompt(task, stage, { docOptions: effectiveDocOptions, agent, describeOptions });
+    // Verification: Faradia keeps what the Verifier runs as evidence, and gives it a folder outside
+    // the worktree for screenshots (evidence.js).
+    let evidenceDir;
+    if (stage === 'verify') {
+      evidenceDir = evidence.evidenceDir(projectRoot, task.id);
+      fs.mkdirSync(evidenceDir, { recursive: true });
+      opts.addDirs = [...(opts.addDirs || []), evidenceDir];
+    }
+    let prompt = buildStagePrompt(task, stage, {
+      docOptions: effectiveDocOptions,
+      agent,
+      describeOptions,
+      evidenceDir,
+      skillsDir: opts.skillsDir,
+      codeMap: stage === 'onboard' ? codeMapFor(projectRoot) : null
+    });
     if (afterSwitch && resuming)
       prompt =
         'Sigue exactamente donde lo dejaste en esta etapa: el modelo anterior se quedó sin uso y ahora continúas tú con todo el historial de arriba. No repitas lo que ya está hecho.';
+    else if (retryingAfterError)
+      prompt = `La etapa se cortó antes de terminar. Sigue exactamente donde lo dejaste, con todo el historial de arriba, y termina la etapa; no repitas lo que ya está hecho.\n\nRecuerda las instrucciones de la etapa:\n\n${prompt}`;
     else if (answer !== undefined)
       prompt = resuming
         ? answerPrompt(answer, stage)
-        : `${prompt}\n\nRespuesta del usuario a tus preguntas:\n${answer.trim()}`;
+        : `${withEarlierAnswers(prompt, task, stage)}\n\nRespuesta del usuario a tus preguntas:\n${answer.trim()}`;
+    else if (!resuming) prompt = withEarlierAnswers(prompt, task, stage);
 
     const approved = Array.isArray(settings.preferences.approvedTools) ? settings.preferences.approvedTools : [];
     opts.extraAllowedTools = [...stageTools(stage, agent), ...approved];
@@ -293,13 +355,15 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     opts.extraEnv = {
       // Package caches in the agents' own folder (see sandbox.js), when they may install packages.
       ...(security.sandbox !== 'off' && security.registries !== false ? agentCacheEnv() : {}),
-      OPTIMIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
-      // optimia's MCP server (a child of this session) reports progress for this task without
+      FARADIA_APPROVED_COMMANDS: JSON.stringify(approvedCommands(approved)),
+      // faradia's MCP server (a child of this session) reports progress for this task without
       // depending on the model passing its id.
-      OPTIMIA_TASK_ID: task.id
+      FARADIA_TASK_ID: task.id,
+      ...(evidenceDir ? { FARADIA_EVIDENCE_DIR: evidenceDir } : {})
     };
     const session = new ClaudeSession(opts);
     session.engine = opts.engine;
+    if (evidenceDir) session._evidence = evidence.createRecorder({ isDenied: (text) => Boolean(parseDenial(text)) });
     taskSessions.set(taskId, session);
     updateTaskPhase(projectRoot, taskId, STAGE_PHASE[stage], 'active');
     log.info('task.stage.start', {
@@ -333,6 +397,15 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         }
       ],
       docOptions: effectiveDocOptions || task.docOptions,
+      // The user's answers are kept: a stage that has to start over still gets them.
+      ...(answer !== undefined
+        ? {
+            answers: [
+              ...(task.answers || []),
+              { stage, text: answer.trim().slice(0, 4000), at: new Date().toISOString() }
+            ]
+          }
+        : {}),
       ...(describeOptions ? { describeTarget: describeOptions.target } : {})
     });
     broadcast({ type: 'task_updated', task: started });
@@ -344,6 +417,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       if (session._switching) return;
       if (switchOnLimit('task', taskId, session, event)) return;
       broadcast({ type: 'task_claude_event', taskId, event });
+      session._evidence?.onEvent(event);
       if (event.type === 'assistant') {
         for (const block of event.message?.content || []) {
           if (block.type === 'tool_use') toolUses.set(block.id, { name: block.name, input: block.input });
@@ -460,6 +534,7 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     session._stageDone = true;
     if (taskSessions.get(taskId) === session) taskSessions.delete(taskId);
     const text = typeof event.result === 'string' ? event.result : '';
+    if (stage === 'verification-kit') moveVerificationKit(worktreeDir);
 
     let hasChanges = false;
     try {
@@ -474,6 +549,17 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
 
     const phaseStatus = (current.phases || []).find((p) => p.key === STAGE_PHASE[stage])?.status;
     const agent = resolveStageAgent(projectRoot, current, stage);
+    let verifyEvidence;
+    if (session._evidence && event.is_error !== true) {
+      try {
+        verifyEvidence = evidence.saveRun(projectRoot, taskId, {
+          checks: session._evidence.checks(),
+          startedAt: session._startedAt || Date.now()
+        });
+      } catch (err) {
+        log.warn('task.evidence_error', { taskId, error: err.message });
+      }
+    }
     const { patch, next } = decideAfterStage(current, stage, {
       text,
       hasChanges,
@@ -481,7 +567,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       isError: event.is_error === true,
       skip: skippedStages(projectRoot),
       agent,
-      describeTarget: current.describeTarget
+      describeTarget: current.describeTarget,
+      evidence: verifyEvidence
     });
     const touched = changedFiles(worktreeDir);
     log.info('file.stage_changes', { taskId, stage, files: touched.slice(0, 200), total: touched.length });
@@ -504,6 +591,12 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
         filesTouched: touched.length,
         costUsd: typeof event.total_cost_usd === 'number' ? event.total_cost_usd : null
       };
+    }
+    if (session._limitUntil && patch.error) {
+      patch.error = limitMessage(session._limitUntil);
+      patch.waitingForLimit = true;
+    } else {
+      patch.waitingForLimit = false;
     }
     const commitDraft =
       patch.status === 'ready_to_test' && !patch.suggestedCommit && !current.suggestedCommit
@@ -536,9 +629,53 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     if (next) {
       const result = runTaskStage(taskId, { stage: next });
       if (result.error) broadcast({ type: 'task_error', taskId, error: result.error });
+    } else if (session._limitUntil && patch.error) {
+      resumeAfterLimit(taskId, stage, session._limitUntil);
     } else if (event.is_error === true) {
       retryOnce(taskId, stage);
     }
+  }
+
+  // A stage that starts over (new conversation) with what the user already answered in it.
+  function withEarlierAnswers(prompt, task, stage) {
+    const earlier = (task.answers || []).filter((a) => a.stage === stage);
+    if (!earlier.length) return prompt;
+    return `${prompt}\n\nEl usuario ya respondió a preguntas de esta etapa (no las repitas; sigue con estas respuestas):\n${earlier
+      .map((a, i) => `${i + 1}. ${a.text}`)
+      .join('\n')}`;
+  }
+
+  // The verification kit is written where a session may write and moved to .claude/skills/ here.
+  function moveVerificationKit(worktreeDir) {
+    const staging = path.join(worktreeDir, KIT_STAGING);
+    if (!fs.existsSync(staging)) return;
+    const target = path.join(worktreeDir, '.claude', 'skills');
+    fs.mkdirSync(target, { recursive: true });
+    for (const name of fs.readdirSync(staging)) {
+      const dest = path.join(target, name);
+      fs.rmSync(dest, { recursive: true, force: true });
+      fs.renameSync(path.join(staging, name), dest);
+    }
+    fs.rmSync(staging, { recursive: true, force: true });
+    log.info('task.verification_kit_moved', { worktreeDir });
+  }
+
+  // Claude out of usage and no local model to go on with: the stage waits and starts again by itself
+  // once the limit resets (while Faradia is running; "Reintentar etapa" works any time).
+  const resumeTimers = new Map();
+  function resumeAfterLimit(taskId, stage, until) {
+    clearTimeout(resumeTimers.get(taskId));
+    const delay = Math.min(Math.max(until - Date.now(), 0) + 60_000, 2 ** 31 - 1);
+    const timer = setTimeout(() => {
+      resumeTimers.delete(taskId);
+      const task = loadTasks(projectRoot).find((t) => t.id === taskId);
+      if (!task || task.status !== 'pending' || task.stage !== stage || !task.waitingForLimit) return;
+      log.info('task.stage.resume_after_limit', { taskId, stage });
+      const result = runTaskStage(taskId, { stage });
+      if (result.error) broadcast({ type: 'task_error', taskId, error: result.error });
+    }, delay);
+    timer.unref?.();
+    resumeTimers.set(taskId, timer);
   }
 
   // A stage that fails (API error, a crash) is repeated once by itself before asking the user.
@@ -578,7 +715,12 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     const to = fallbackEngine(loadSettings(projectRoot));
     log.warn('provider.limit', { scope, id, until: new Date(until).toISOString(), to });
     broadcast({ type: 'provider_switch', scope, id, from: 'claude', to, until });
-    if (!to) return false; // nothing to switch to: the error reaches the user as it is
+    // Nothing to switch to: a task's stage says why it stopped and resumes when Claude is back; the
+    // chat gets the notice above.
+    if (!to) {
+      session._limitUntil = until;
+      return false;
+    }
     session._switching = true;
     if (scope === 'chat') {
       chatSessions.delete(id);
@@ -823,8 +965,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     // (watchForPermissionHandoff) only notifies in that case, it doesn't call this.
     if (terminalSession) return terminalSession;
 
-    const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
-    const settingsPath = optimiaClaudeSettingsPath(projectRoot);
+    const mcpConfigPath = path.join(projectRoot, '.faradia', 'mcp.json');
+    const settingsPath = faradiaClaudeSettingsPath(projectRoot);
     let session;
     try {
       session = new PtySession({ cwd: projectRoot, mcpConfigPath, settingsPath, resumeSessionId });
@@ -862,11 +1004,11 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
     return session;
   }
 
-  // An agent still running when optimia closed no longer exists: its tasks become pending
+  // An agent still running when Faradia closed no longer exists: its tasks become pending
   // (retryable) instead of staying in_progress forever.
   for (const task of loadTasks(projectRoot)) {
     if (task.status === 'in_progress') {
-      updateTask(projectRoot, task.id, { status: 'pending', error: 'interrumpida al reiniciar optimia' });
+      updateTask(projectRoot, task.id, { status: 'pending', error: 'interrumpida al reiniciar faradia' });
     }
   }
 
@@ -1014,4 +1156,4 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
   return { id: projectId, root: projectRoot, app, log, handleWsMessage, dispose };
 }
 
-module.exports = { createProjectRuntime, writeMcpConfig, ensureOptimiaExcluded };
+module.exports = { createProjectRuntime, writeMcpConfig, ensureFaradiaExcluded };

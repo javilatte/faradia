@@ -11,10 +11,10 @@ const { MAPPABLE } = require('../agents/stageMap');
 const { STAGES } = require('../bridge/taskStages');
 const pkg = require('../../package.json');
 
-// Portable configuration: everything global in optimia, in one JSON file the user
+// Portable configuration: everything global in Faradia, in one JSON file the user
 // keeps wherever they want (it is private: it holds their instructions and their
 // agents' prompts) and imports by dropping it on the browser, e.g. when installing
-// optimia on another machine. It contains:
+// Faradia on another machine. It contains:
 //   settings     appearance, model/effort, local AI, global instructions and no-go list
 //   agents       the global agents (their .md files as they are)
 //   stageMap     which agent runs each stage (global)
@@ -25,7 +25,7 @@ const pkg = require('../../package.json');
 // and what belongs to each repo (its memory and overrides). The local AI auth
 // header is a secret: it is only included on request.
 
-const FORMAT = 'optimia-config';
+const FORMAT = 'faradia-config';
 const FORMAT_VERSION = 1;
 const MAX_AGENTS = 100;
 const MAX_TEXT = 50_000;
@@ -76,7 +76,7 @@ function exportConfig({ includeSecrets = false } = {}) {
     format: FORMAT,
     formatVersion: FORMAT_VERSION,
     exportedAt: new Date().toISOString(),
-    optimiaVersion: pkg.version,
+    faradiaVersion: pkg.version,
     secretsIncluded: Boolean(includeSecrets),
     settings,
     agents: globalAgentFiles(),
@@ -105,7 +105,7 @@ function validateAgent(entry, i) {
   if (fields.effort !== undefined && !catalog.EFFORTS.includes(fields.effort)) {
     throw new ConfigError(`agente "${entry.id}": effort no válido`);
   }
-  // Rewritten with optimia's own serializer: known fields only.
+  // Rewritten with faradia's own serializer: known fields only.
   const clean = {};
   for (const k of ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled']) {
     if (fields[k] !== undefined) clean[k] = fields[k];
@@ -116,11 +116,11 @@ function validateAgent(entry, i) {
 /** Checks and normalizes an imported file. Throws ConfigError with a user-facing reason. */
 function validateConfig(raw) {
   if (!raw || typeof raw !== 'object' || raw.format !== FORMAT) {
-    throw new ConfigError('no es un fichero de configuración de optimia');
+    throw new ConfigError('no es un fichero de configuración de faradia');
   }
   if (raw.formatVersion !== FORMAT_VERSION) {
     throw new ConfigError(
-      `formato ${raw.formatVersion} no compatible con esta versión de optimia (${pkg.version}); actualiza optimia`
+      `formato ${raw.formatVersion} no compatible con esta versión de Faradia (${pkg.version}); actualiza faradia`
     );
   }
   const agents = Array.isArray(raw.agents) ? raw.agents : [];
@@ -148,7 +148,7 @@ function validateConfig(raw) {
   }
   return {
     exportedAt: typeof raw.exportedAt === 'string' ? raw.exportedAt : null,
-    optimiaVersion: typeof raw.optimiaVersion === 'string' ? raw.optimiaVersion : null,
+    faradiaVersion: typeof raw.faradiaVersion === 'string' ? raw.faradiaVersion : null,
     secretsIncluded: raw.secretsIncluded === true,
     settings: raw.settings && typeof raw.settings === 'object' ? raw.settings : {},
     agents: normalizedAgents,
@@ -186,7 +186,7 @@ function previewImport(raw) {
   if (cfg.preferences && differs(cfg.preferences, loadPrefs())) changes.push('Avisos y notificaciones');
   return {
     exportedAt: cfg.exportedAt,
-    optimiaVersion: cfg.optimiaVersion,
+    faradiaVersion: cfg.faradiaVersion,
     secretsIncluded: cfg.secretsIncluded,
     settings: changes,
     instructionsPreview: (s.preferences?.instructions || '').slice(0, 600),
@@ -203,12 +203,12 @@ function previewImport(raw) {
 }
 
 // Backup of the global configuration before an import, in
-// ~/.config/optimia/backups/<date>/ (the last 10 are kept).
+// ~/.config/faradia/backups/<date>/ (the last 10 are kept).
 function backupGlobal() {
   const root = path.join(configDir(), 'backups');
   const dir = path.join(root, new Date().toISOString().replace(/[:.]/g, '-'));
   fs.mkdirSync(dir, { recursive: true });
-  writeJson(path.join(dir, 'optimia-config.json'), exportConfig({ includeSecrets: true }));
+  writeJson(path.join(dir, 'faradia-config.json'), exportConfig({ includeSecrets: true }));
   // Copies set aside by sync (…-sync-remote) rotate on their own (sync/engine.js).
   const all = fs
     .readdirSync(root)
@@ -238,6 +238,7 @@ function importConfig(raw) {
     ui: s.ui,
     ai,
     suggestions: s.suggestions,
+    principles: s.principles,
     chat: s.chat,
     tasks: s.tasks,
     wiki: s.wiki,
@@ -260,7 +261,7 @@ function importConfig(raw) {
 
 // ---------- first run ----------
 
-/** First time optimia 2 opens on this machine: nothing global exists yet. */
+/** First time Faradia 2 opens on this machine: nothing global exists yet. */
 function isFirstRun() {
   if (readJson(stateFile(), {}).welcomed) return false;
   return !fs.existsSync(globalSettingsPath()) && globalAgentFiles().length === 0;

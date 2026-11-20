@@ -13,6 +13,8 @@ const {
 } = require('../store/settingsStore');
 const { loadTasks, addTask, updateTask, updateTaskPhase, deleteTask } = require('../store/taskStore');
 const { archiveTask, listArchive, removeArchived, clearArchive } = require('../store/taskArchive');
+const { listRuns, mediaPath, removeEvidence } = require('../bridge/evidence');
+const { serveRaw } = require('../http/fsRoutes');
 const { listChats, loadChat, createChat, updateChatMeta, deleteChat } = require('../store/chatStore');
 const { checkClaudeCapabilities } = require('../bridge/claudeVersion');
 const { syncClaudeSettings } = require('../bridge/claudeSettingsSync');
@@ -96,7 +98,7 @@ function createApp(
     // repo overrides.
     const settingsView = () => {
       const { global, project, effective, overrides } = loadSettingsLayers(projectRoot);
-      // The effective "Prohibido" list is the one optimia's sessions receive.
+      // The effective "Prohibido" list is the one faradia's sessions receive.
       syncClaudeSettings(projectRoot, effective.preferences.noGo);
       return {
         ...effective,
@@ -137,6 +139,8 @@ function createApp(
           security: body.security,
           wiki: body.wiki,
           suggestions: body.suggestions,
+          principles: body.principles,
+          voice: body.voice,
           chat: body.chat,
           tasks: body.tasks
         });
@@ -365,8 +369,25 @@ function createApp(
         log.warn('task.archive_failed', { taskId, error: err.message });
       }
       deleteTask(projectRoot, taskId);
+      removeEvidence(projectRoot, taskId);
       log.info('task.delete', { taskId, branch: task.branch });
       return sendJson(res, 200, { ok: true });
+    }
+
+    // Evidence of the task's verifications (bridge/evidence.js).
+    //   GET /api/tasks/:id/evidence                {runs: [{run, checks, images, ...}]}
+    //   GET /api/tasks/:id/evidence/media?name=    one image or video
+    if (/^\/api\/tasks\/[^/]+\/evidence$/.test(url.pathname) && req.method === 'GET') {
+      const taskId = url.pathname.split('/')[3];
+      if (!loadTasks(projectRoot).some((t) => t.id === taskId)) return sendJson(res, 404, { error: 'task not found' });
+      return sendJson(res, 200, { runs: listRuns(projectRoot, taskId) });
+    }
+    if (/^\/api\/tasks\/[^/]+\/evidence\/media$/.test(url.pathname) && req.method === 'GET') {
+      const taskId = url.pathname.split('/')[3];
+      if (!loadTasks(projectRoot).some((t) => t.id === taskId)) return sendJson(res, 404, { error: 'task not found' });
+      const file = mediaPath(projectRoot, taskId, url.searchParams.get('name'));
+      if (!file) return sendJson(res, 404, { error: 'no existe esa evidencia' });
+      return serveRaw(req, res, file);
     }
 
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/files/preview') && req.method === 'GET') {
@@ -402,7 +423,7 @@ function createApp(
     }
 
     // "Conocer este repo": the memory the agent proposed becomes the repo's memory (the previous
-    // one stays in .optimia/memory.prev.md in case it is needed).
+    // one stays in .faradia/memory.prev.md in case it is needed).
     if (url.pathname.startsWith('/api/tasks/') && url.pathname.endsWith('/apply-memory') && req.method === 'POST') {
       const taskId = url.pathname.split('/')[3];
       const task = loadTasks(projectRoot).find((t) => t.id === taskId);
@@ -412,7 +433,7 @@ function createApp(
       }
       const content = memoryFromOutput(task.output);
       const previous = loadMemory(projectRoot);
-      if (previous.trim()) fs.writeFileSync(path.join(projectRoot, '.optimia', 'memory.prev.md'), previous);
+      if (previous.trim()) fs.writeFileSync(path.join(projectRoot, '.faradia', 'memory.prev.md'), previous);
       saveMemory(projectRoot, content);
       log.info('memory.apply', { taskId, chars: content.length });
       // The study only read the repo: its worktree and branch are no longer needed.

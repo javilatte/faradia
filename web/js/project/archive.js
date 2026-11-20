@@ -33,7 +33,7 @@ function archEl(tag, attrs = {}, ...children) {
 
 function archDate(iso) {
   if (!iso) return '';
-  return new Date(iso).toLocaleString(window.optimiaLang?.locale || 'es-ES', {
+  return new Date(iso).toLocaleString(window.faradiaLang?.locale || 'es-ES', {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',

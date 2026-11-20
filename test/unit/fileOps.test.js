@@ -31,16 +31,16 @@ test('resolveRepoPath: never leaves the repo or touches .git', (t) => {
   assert.throws(() => resolveRepoPath(repo, '../fuera'), /sale del repo/);
   assert.throws(() => resolveRepoPath(repo, 'src/../../fuera'), /sale del repo/);
   assert.throws(() => resolveRepoPath(repo, '.git/config', { mustExist: false }), /\.git/);
-  assert.throws(() => resolveRepoPath(repo, '.optimia/tasks.json', { mustExist: false }), /\.optimia/);
+  assert.throws(() => resolveRepoPath(repo, '.faradia/tasks.json', { mustExist: false }), /\.faradia/);
   assert.throws(() => resolveRepoPath(repo, 'no/existe'), /no existe/);
   assert.throws(() => resolveRepoPath(repo, '', { allowRoot: false }), /raíz/);
   fs.symlinkSync('/etc', path.join(repo, 'etc-link'));
   assert.throws(() => resolveRepoPath(repo, 'etc-link'), /fuera del repo/);
 });
 
-test('listDir and preview: folders first, without .git or .optimia, and preview kinds', (t) => {
+test('listDir and preview: folders first, without .git or .faradia, and preview kinds', (t) => {
   const { repo } = setup(t);
-  fs.mkdirSync(path.join(repo, '.optimia'));
+  fs.mkdirSync(path.join(repo, '.faradia'));
   const { entries } = listDir(repo, '');
   assert.deepEqual(
     entries.map((e) => [e.name, e.dir]),

@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 
 function mkTmpDir(prefix) {
-  return fs.mkdtempSync(path.join(os.tmpdir(), `optimia-${prefix}-`));
+  return fs.mkdtempSync(path.join(os.tmpdir(), `faradia-${prefix}-`));
 }
 
 function rmTmpDir(dir) {

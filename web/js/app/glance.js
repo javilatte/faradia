@@ -59,7 +59,7 @@ function render() {
       )
     );
   }
-  document.title = `optimia · ${[...repos.values()].filter((r) => r.state?.dirty).length} con cambios`;
+  document.title = `faradia · ${[...repos.values()].filter((r) => r.state?.dirty).length} con cambios`;
 }
 
 let queued = false;

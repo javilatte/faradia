@@ -1,6 +1,6 @@
-# optimia: design
+# faradia: design
 
-How optimia 2.x is built: the pieces, how they talk to each other, and the decisions that
+How Faradia 2.x is built: the pieces, how they talk to each other, and the decisions that
 are not obvious from the code.
 
 ## Overview
@@ -34,24 +34,24 @@ The project view picks its project with `?p=<id>`. Switching repos does not relo
 (`web/js/project/switch.js`): it updates `currentProjectId` and `?p=` with
 `history.pushState`, clears the chat and board state and asks again for settings, tasks
 and chats. Every loader checks on return that the repo is still the same, so a slow answer
-of the previous repo is dropped. The module views listen to `optimia:project-changed`.
+of the previous repo is dropped. The module views listen to `faradia:project-changed`.
 Every WebSocket message carries `projectId` and each view filters its own.
 
-optimia leaves no trace in the repo: `.optimia` is excluded in `.git/info/exclude` (the
+Faradia leaves no trace in the repo: `.faradia` is excluded in `.git/info/exclude` (the
 `.gitignore` is not touched), and the Claude Code permissions of its own sessions live in
-`.optimia/claude-settings.json` (chat and terminal) and
-`.optimia/claude-settings-agents.json` (agents), passed with `claude --settings`. The
+`.faradia/claude-settings.json` (chat and terminal) and
+`.faradia/claude-settings-agents.json` (agents), passed with `claude --settings`. The
 project's `.claude/` (team configuration) is never modified, and its `deny` rules still
-add up to optimia's.
+add up to faradia's.
 
 ## Layered settings
 
 So the workflow is the same in every repo while each keeps its own, settings have two
 layers (`server/store/settingsStore.js`):
 
-- **Global**, `~/.config/optimia/settings.json`: appearance, model and effort, local AI,
+- **Global**, `~/.config/faradia/settings.json`: appearance, model and effort, local AI,
   shared instructions, the "Prohibido" list, security (sandbox), wiki and ECC choices.
-- **Repo**, `.optimia/settings.json` (version 2): only the AI fields the repo changes, its
+- **Repo**, `.faradia/settings.json` (version 2): only the AI fields the repo changes, its
   own instructions and prohibitions (added to the global ones) and the permissions
   approved in its tasks.
 
@@ -60,19 +60,19 @@ layers (`server/store/settingsStore.js`):
 an override, `reset` inherits again and `promote` applies it to every repo. Agents and the
 stage map have the same layers (default → global → repo).
 
-Each repo's own knowledge is its memory (`.optimia/memory.md`). The internal `onboard`
+Each repo's own knowledge is its memory (`.faradia/memory.md`). The internal `onboard`
 task ("Conocer este repo") proposes it with a read-only agent; `POST
 /api/tasks/:id/apply-memory` saves it and removes the study's worktree and branch.
 
 ## Agents
 
-- `server/agents/catalog.js`: optimia's agents plus `.md` files with frontmatter, global
-  (`~/.config/optimia/agents`) or per project (`.optimia/agents`), merged field by field:
+- `server/agents/catalog.js`: faradia's agents plus `.md` files with frontmatter, global
+  (`~/.config/faradia/agents`) or per project (`.faradia/agents`), merged field by field:
   default < global < project. ECC's agents are one more base layer (ids `ecc-*`), off
   until needed.
-- optimia's agents keep their ids, stages and access and follow the method of their best
+- faradia's agents keep their ids, stages and access and follow the method of their best
   ECC counterpart (`ECC_METHOD` in the catalog): their prompt is their own role plus that
-  method, and optimia's stage instructions win over it.
+  method, and faradia's stage instructions win over it.
 - `server/bridge/taskStages.js`: the `STAGES` table (access, default agent, whether the
   stage may ask) and `TASK_TYPES` with the pipelines. `decideAfterStage` is a pure
   function: a stage's outcome in, the task patch and the next stage out.
@@ -91,7 +91,7 @@ task ("Conocer este repo") proposes it with a read-only agent; `POST
 ECC (github.com/affaan-m/ECC, MIT) is copied into `vendor/ecc` by `scripts/vendor-ecc.sh`,
 with its licence and source commit. It is not a Claude Code plugin. `server/ecc/library.js`
 exposes its agents to the catalog and copies the skills (and, optionally, the commands) the
-user enabled into `<data>/optimia/ecc/.claude/`; that folder goes to every session with
+user enabled into `<data>/faradia/ecc/.claude/`; that folder goes to every session with
 `--add-dir`, where Claude Code loads them. Each enabled skill adds its description to every
 session's context, hence a default selection of general-purpose skills.
 
@@ -114,20 +114,20 @@ session's context, hence a default selection of general-purpose skills.
 ## Wikis and knowledge
 
 - `server/knowledge/wikiStore.js`: wikis are markdown folders in
-  `<data>/optimia/knowledge/wikis/{personal,projects/<key>}`; `<key>` comes from the git
+  `<data>/faradia/knowledge/wikis/{personal,projects/<key>}`; `<key>` comes from the git
   remote, so a project has the same wiki on every machine. Pages link with `[[Page]]` or
   relative `.md` links; the store resolves them for backlinks, search and the map.
 - `server/knowledge/wikiUpdater.js`: after a committed task or a delivered report, one
   update at a time, the wiki agent edits the wikis from the commit and the task's plan,
   without Bash. It tries the local model first and falls back to a cheap Claude model.
-- `server/knowledge/bundle.js`: the `optimia-knowledge` export (configuration, every wiki,
+- `server/knowledge/bundle.js`: the `faradia-knowledge` export (configuration, every wiki,
   each repo's memory). Items are keyed (wiki key + path, project key) and carry date and
   hash: importing adds what is new, the newer side wins and replaced items are backed up.
   It is the unit a future auto-sync will exchange.
 
 ## Attachments
 
-`server/bridge/attachments.js` stores chat attachments in `.optimia/attachments/<chat>/`.
+`server/bridge/attachments.js` stores chat attachments in `.faradia/attachments/<chat>/`.
 Images travel as image blocks. PDFs are referenced by path and page count, because Claude
 Code's Read tool reads PDFs natively and by page range. DOCX, XLSX, PPTX and ODT text is
 extracted to markdown with a small built-in ZIP reader. Small text files go inline; the
@@ -175,10 +175,10 @@ and `file:line` are kept. Signals are deduplicated for 10 minutes.
   - Commit, push, merge and rebase are never approvable: deny rules plus a git hook enabled
     through environment variables.
   - Read-only stages block the edit tools with `--disallowedTools`.
-  - Task agents use `--strict-mcp-config`: only optimia's MCP server and the repo's
+  - Task agents use `--strict-mcp-config`: only faradia's MCP server and the repo's
     `.mcp.json`, not the user's claude.ai connectors.
 - The explorer resolves every path inside the repo (following symlinks), never touches
-  `.git` or `.optimia`, never overwrites, and serves raw files with a `sandbox` CSP.
+  `.git` or `.faradia`, never overwrites, and serves raw files with a `sandbox` CSP.
 - A task's commit respects `.gitignore`: an ignored file the agent generated only goes in
   if the user ticks it.
 
@@ -200,7 +200,7 @@ The interface follows Apple's Human Interface Guidelines for macOS:
   in `web/styles.css`, with dark, Increase Contrast and Reduce Transparency variants. Text
   contrast is at least 4.5:1, and states never rely on color alone.
 - **Type**: Inter (variable, bundled in `web/fonts`, SIL OFL) with the macOS scale (13 px
-  body, 10 px minimum). The logo is "Optimia" set in Doto, converted to SVG paths.
+  body, 10 px minimum). The logo is "Faradia" set in Doto, converted to SVG paths.
 - **Controls**: `web/macos.css` unifies push buttons (one main button per view), pop-up
   menus, fields, segmented controls and focus rings.
 - **Settings** apply at once, without a Save button.
@@ -208,11 +208,11 @@ The interface follows Apple's Human Interface Guidelines for macOS:
 ## Portable configuration and updates
 
 `server/config/portable.js` exports and imports the global configuration as
-`format: "optimia-config"`, `formatVersion: 1`: global settings, global agents, the stage
+`format: "faradia-config"`, `formatVersion: 1`: global settings, global agents, the stage
 map and signal preferences. Importing validates the file, shows a preview and backs up the
-current one in `~/.config/optimia/backups/` (the last 10). `isFirstRun()` detects a new
+current one in `~/.config/faradia/backups/` (the last 10). `isFirstRun()` detects a new
 install for the welcome sheet.
 
 `server/config/updateCheck.js` asks `registry.npmjs.org` for the latest version at most once
 a day (cached) and compares with semver. The request carries no user data; `updates.check`
-or `OPTIMIA_NO_UPDATE_CHECK=1` turn it off, and the tests always do.
+or `FARADIA_NO_UPDATE_CHECK=1` turn it off, and the tests always do.

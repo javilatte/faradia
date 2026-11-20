@@ -26,5 +26,5 @@ export async function renderMarkdown(el, text) {
 
 // For the classic scripts in web/js/project (not modules): what they painted before this module
 // loaded is painted again now.
-window.optimiaMarkdown = renderMarkdown;
-window.dispatchEvent(new Event('optimia:markdown-ready'));
+window.faradiaMarkdown = renderMarkdown;
+window.dispatchEvent(new Event('faradia:markdown-ready'));

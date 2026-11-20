@@ -14,7 +14,7 @@ const pkg = require('../../package.json');
 // Global routes for the portable configuration and update notices:
 //   GET  /api/config/status                 {firstRun, version}
 //   POST /api/config/welcome                first run done (start with the defaults)
-//   GET  /api/config/export?secrets=1       downloads optimia-config-<date>.json
+//   GET  /api/config/export?secrets=1       downloads faradia-config-<date>.json
 //   POST /api/config/import {config, apply} preview (apply=false) or import
 //   GET  /api/update?force=1                {current, latest, updateAvailable, ...}
 
@@ -46,7 +46,7 @@ async function handleConfigRoutes(req, res, url) {
     const date = new Date().toISOString().slice(0, 10);
     res.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="optimia-config-${date}.json"`,
+      'Content-Disposition': `attachment; filename="faradia-config-${date}.json"`,
       'Cache-Control': 'no-store'
     });
     return res.end(JSON.stringify(config, null, 2) + '\n');
@@ -66,13 +66,13 @@ async function handleConfigRoutes(req, res, url) {
       throw err;
     }
   }
-  // Everything optimia knows (configuration, wikis, memories), to take to another machine.
+  // Everything Faradia knows (configuration, wikis, memories), to take to another machine.
   if (p === '/api/knowledge/export' && req.method === 'GET') {
     const bundle = knowledge.exportKnowledge({ includeSecrets: url.searchParams.get('secrets') === '1' });
     const date = new Date().toISOString().slice(0, 10);
     res.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="optimia-knowledge-${date}.json"`,
+      'Content-Disposition': `attachment; filename="faradia-knowledge-${date}.json"`,
       'Cache-Control': 'no-store'
     });
     return res.end(JSON.stringify(bundle, null, 2) + '\n');
@@ -118,7 +118,7 @@ async function handleConfigRoutes(req, res, url) {
   }
   // Problem report (feedback/issues.js).
   //   GET    /api/issues          {total, groups, signals}
-  //   GET    /api/issues/export   downloads optimia-issues-<date>.json
+  //   GET    /api/issues/export   downloads faradia-issues-<date>.json
   //   POST   /api/issues          {level: 'error'|'signal', event, data} from the page
   //   DELETE /api/issues          empties it
   if (p === '/api/issues' && req.method === 'GET') return sendJson(res, 200, issues.summary());
@@ -126,7 +126,7 @@ async function handleConfigRoutes(req, res, url) {
     const date = new Date().toISOString().slice(0, 10);
     res.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="optimia-issues-${date}.json"`,
+      'Content-Disposition': `attachment; filename="faradia-issues-${date}.json"`,
       'Cache-Control': 'no-store'
     });
     return res.end(JSON.stringify(issues.exportReport(), null, 2) + '\n');

@@ -99,7 +99,7 @@ function toolActivity(block, root) {
           status: t.status || 'pending'
         }))
       };
-    case 'mcp__optimia-tasks__update_task_progress':
+    case 'mcp__faradia-tasks__update_task_progress':
       return {
         kind: 'progress',
         id: block.id,

@@ -1,13 +1,14 @@
 'use strict';
 
+const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
 const path = require('path');
 const { STAGES } = require('../bridge/taskStages');
 const { loadAgents, globalAgentsDir, projectAgentsDir } = require('./catalog');
 
 // Which agent runs each stage. By default, the one in the STAGES table; it can be changed for every
-// project (~/.config/optimia/agents/stages.json) or for one
-// (<project>/.optimia/agents/stages.json). The project wins.
+// project (~/.config/faradia/agents/stages.json) or for one
+// (<project>/.faradia/agents/stages.json). The project wins.
 
 const MAPPABLE = Object.keys(STAGES).filter((s) => STAGES[s].agent);
 
@@ -61,7 +62,7 @@ function saveStageMap(projectRoot, scope, changes) {
     current[stage] = agentId;
   }
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
+  writeJsonFile(file, current);
   return loadStageMap(projectRoot);
 }
 

@@ -4,9 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const { loadMemory } = require('../store/memoryStore');
 const { prepareActiveDir } = require('../ecc/library');
+const { pstackPrinciple } = require('../skills/library');
 const { engineOverride } = require('../ai/fallback');
 const wiki = require('../knowledge/wikiStore');
-const { optimiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
+const { faradiaClaudeSettingsPath, agentClaudeSettingsPath, syncClaudeSettings } = require('./claudeSettingsSync');
 
 const CHAT_TASKS_PROMPT = `## Crear tareas para agentes
 Dispones de la tool MCP "create_task". Usala solo despues de cerrar un plan concreto con el
@@ -36,7 +37,7 @@ o "blocked" si no puedes continuar. No esperes al final para reportar todo de go
  * worktree directory for a dedicated task session). Shared so both paths
  * apply the same local-AI aliasing (see Fase 4) and the same Instructions +
  * Memory system prompt (see Fase 8) — Memory is always read from the main
- * projectRoot's .optimia/memory.md, even for a task session running in a
+ * projectRoot's .faradia/memory.md, even for a task session running in a
  * worktree, since memory is project-wide, not per-worktree.
  *
  * `taskId`: pass it for a task's own session so it can self-report progress
@@ -70,36 +71,57 @@ function engineFor(settings, agent) {
   return override || 'claude';
 }
 
+/**
+ * The pstack principles of an agent (Lauren Tan, MIT; vendor/pstack/principles), with the rule that
+ * makes them visible in its report. Off for every agent with Settings › Agents, or for one agent with
+ * an empty list.
+ */
+function principlesPrompt(settings, agent) {
+  if (!agent || settings.principles?.enabled === false) return '';
+  const texts = (agent.principles || []).map((name) => pstackPrinciple(name)).filter(Boolean);
+  if (!texts.length) return '';
+  return [
+    '## Principios de ingeniería (de pstack, Lauren Tan, licencia MIT)',
+    'Aplica los que correspondan a tu trabajo. En tu informe, nombra cada principio que cambió una decisión y qué decisión cambió; no cites los que no aplicaste.',
+    ...texts.map((t) => t.replace(/^# /, '### '))
+  ].join('\n\n');
+}
+
 function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   const ai = settings.ai;
   const opts = { projectRoot: cwd };
 
-  const mcpConfigPath = path.join(projectRoot, '.optimia', 'mcp.json');
+  const mcpConfigPath = path.join(projectRoot, '.faradia', 'mcp.json');
   if (fs.existsSync(mcpConfigPath)) opts.mcpConfigPath = mcpConfigPath;
-  // optimia's permissions (the global + repo "Prohibido" list), without writing to the repo.
+  // faradia's permissions (the global + repo "Prohibido" list), without writing to the repo.
   // Regenerated on every session: a global change reaches every repo.
   if (Array.isArray(settings.preferences?.noGo)) syncClaudeSettings(projectRoot, settings.preferences.noGo);
-  const settingsPath = taskId ? agentClaudeSettingsPath(projectRoot) : optimiaClaudeSettingsPath(projectRoot);
+  const settingsPath = taskId ? agentClaudeSettingsPath(projectRoot) : faradiaClaudeSettingsPath(projectRoot);
   if (fs.existsSync(settingsPath)) opts.settingsPath = settingsPath;
   if (taskId) {
-    // A task does not inherit the user's claude.ai connectors, only optimia's MCP server and the
+    // A task does not inherit the user's claude.ai connectors, only faradia's MCP server and the
     // repo's .mcp.json (see claudeProcess.js).
     opts.strictMcpConfig = true;
     const projectMcp = path.join(cwd, '.mcp.json');
     if (fs.existsSync(projectMcp)) opts.extraMcpConfigPaths = [projectMcp];
   }
 
-  // optimia's built-in skills plus the ECC skills and commands the user enabled (copied to a folder
+  // faradia's built-in skills plus the ECC skills and commands the user enabled (copied to a folder
   // Claude Code reads with --add-dir).
   try {
     const eccDir = prepareActiveDir(settings.ecc || {});
-    if (eccDir) opts.addDirs = [eccDir];
+    if (eccDir) {
+      opts.addDirs = [eccDir];
+      opts.skillsDir = path.join(eccDir, '.claude', 'skills');
+    }
   } catch {
     /* without them */
   }
 
   const parts = [];
   if (agent?.prompt) parts.push(`## Tu rol: ${agent.name}\n${agent.prompt}`);
+  const principles = principlesPrompt(settings, agent);
+  if (principles) parts.push(principles);
   parts.push(WORK_PACE_PROMPT);
   // Workflow instructions shared by all repos and then this repo's (which win if they contradict
   // the shared ones).
@@ -149,4 +171,4 @@ function buildSessionOptions(settings, cwd, projectRoot = cwd, taskId, agent) {
   return opts;
 }
 
-module.exports = { buildSessionOptions, engineFor };
+module.exports = { buildSessionOptions, engineFor, principlesPrompt };

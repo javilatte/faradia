@@ -1,6 +1,7 @@
 *.tgz
-optimia_*_all/
+faradia_*_all/
 node_modules/
+/.faradia
 /.optimia
 /.codegraph
 /.tokensave
@@ -23,3 +24,6 @@ GEMINI.md
 # Playwright
 test-results/
 playwright-report/
+
+# Built by CI on macOS (scripts/build-apple-voice.sh) and added to the npm package when publishing.
+/server/voice/apple/bin/

@@ -1,5 +1,6 @@
 'use strict';
 
+const { writeJsonFile } = require('../store/jsonFile');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -12,7 +13,7 @@ const zlib = require('zlib');
 //   - DOCX / XLSX / PPTX (and ODT): their text extracted to markdown next to the file;
 //   - small text files: inline in the message; big ones, by path;
 //   - anything else: saved and referenced by path.
-// Stored in <repo>/.optimia/attachments/<chatId>/ (.optimia is excluded from git).
+// Stored in <repo>/.faradia/attachments/<chatId>/ (.faradia is excluded from git).
 
 const MAX_BYTES = 30 * 1024 * 1024;
 const INLINE_MAX_CHARS = 12_000;
@@ -23,7 +24,7 @@ const TEXT_EXT = new Set(
 );
 
 function attachmentsDir(projectRoot, chatId) {
-  return path.join(projectRoot, '.optimia', 'attachments', String(chatId).replace(/[^\w-]/g, '_'));
+  return path.join(projectRoot, '.faradia', 'attachments', String(chatId).replace(/[^\w-]/g, '_'));
 }
 
 function safeName(name) {
@@ -176,7 +177,7 @@ function saveAttachment(projectRoot, chatId, { name, mediaType = '', data }) {
   const out = { id, name: safeName(name), size: buf.length, path: file, mediaType };
   const result = describe(buf, file, ext, out, mediaType);
   // Kept next to the file: the message refers to attachments by id.
-  fs.writeFileSync(path.join(dir, `${id}.json`), JSON.stringify(result));
+  writeJsonFile(path.join(dir, `${id}.json`), result);
   return result;
 }
 

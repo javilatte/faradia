@@ -1,9 +1,9 @@
 ---
 name: frontend-craft
-description: optimia's checklist for interface work. Covers perceived speed (skeletons, optimistic updates, stale-while-revalidate, pre-rendering, BlurHash), keyboard and command UX (command menu, shortcut hints, undo toasts), motion (view transitions, interruptible animations, swipe-to-dismiss sheets, predictive back), touch and layout details (hit slop, safe area insets, one-time code autofill, tabular numbers, balanced headlines, continuous corners, the safe triangle for submenus) and idempotency keys for writes. Use whenever you build, change or review a UI, web or native, and together with /unslop when a screen looks generic or AI-made.
+description: faradia's checklist for interface work. Covers perceived speed (skeletons, optimistic updates, stale-while-revalidate, pre-rendering, BlurHash), keyboard and command UX (command menu, shortcut hints, undo toasts), motion (view transitions, interruptible animations, swipe-to-dismiss sheets, predictive back), touch and layout details (hit slop, safe area insets, one-time code autofill, tabular numbers, balanced headlines, continuous corners, the safe triangle for submenus) and idempotency keys for writes. Use whenever you build, change or review a UI, web or native, and together with /unslop when a screen looks generic or AI-made.
 license: MIT
 metadata:
-  origin: optimia
+  origin: Faradia
 ---
 
 # Frontend craft

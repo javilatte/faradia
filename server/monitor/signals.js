@@ -9,7 +9,7 @@ const { EventEmitter } = require('events');
 const { compileGlobs } = require('./glob');
 const { loadPrefs } = require('../store/globalPrefs');
 
-// Passive signals: optimia neither approves nor blocks anything, it only points out what deserves a
+// Passive signals: Faradia neither approves nor blocks anything, it only points out what deserves a
 // second look. Rules:
 //   largeDelete  many lines or files deleted at once
 //   sensitive    a sensitive file changes (.env, keys, CI, deployment)
@@ -104,7 +104,7 @@ function hasGitleaks() {
 // If gitleaks is installed it is used on top of the built-in rules (it has many more).
 async function gitleaksScan(file) {
   if (!(await hasGitleaks())) return [];
-  const report = path.join(os.tmpdir(), `optimia-gitleaks-${crypto.randomUUID()}.json`);
+  const report = path.join(os.tmpdir(), `faradia-gitleaks-${crypto.randomUUID()}.json`);
   return new Promise((resolve) => {
     execFile(
       'gitleaks',

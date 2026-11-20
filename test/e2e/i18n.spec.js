@@ -32,7 +32,7 @@ test.describe('in an English browser', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
     await expect(page.locator('#send-button')).toHaveText('Enviar');
     // Back to automatic, for the other tests.
-    await page.evaluate(() => localStorage.removeItem('optimia:lang'));
+    await page.evaluate(() => localStorage.removeItem('faradia:lang'));
     expect(errors).toEqual([]);
   });
 });

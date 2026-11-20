@@ -73,7 +73,7 @@ test('localSessionEnv: the account credentials never reach the local server', ()
   );
   assert.equal(env.ANTHROPIC_API_KEY, undefined);
   assert.equal(env.ANTHROPIC_BASE_URL, 'http://127.0.0.1:1234');
-  assert.equal(env.ANTHROPIC_AUTH_TOKEN, 'optimia-local');
+  assert.equal(env.ANTHROPIC_AUTH_TOKEN, 'faradia-local');
   assert.equal(env.ANTHROPIC_SMALL_FAST_MODEL, 'google/gemma-4-12b');
   assert.equal(env.ANTHROPIC_DEFAULT_HAIKU_MODEL, 'google/gemma-4-12b');
   assert.equal(env.PATH, '/bin');
