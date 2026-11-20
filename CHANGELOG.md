@@ -2,6 +2,19 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.0.2] - 2026-11-20
+
+### Fixed
+- Dictation on macOS: macOS killed the speech recognition helper, because it asked the permission
+  for the app that started Faradia (Terminal) and never showed the dialog. The helper is now a small
+  app, Faradia.app, that Faradia opens: macOS asks permission for Faradia once. If macOS cannot
+  open it, Whisper takes over for the rest of the session.
+- Dictation on macOS recognizes the candidate languages one after another: at the same time one
+  came back empty, and Spanish was taken as English. Settings › Dictado says which language macOS
+  could not use and why.
+- Faradia closed with `write EPIPE` when started outside a git repo (the home folder, say): git
+  exited before reading the folders to check. Every write to a child process is guarded now.
+
 ## [3.0.1] - 2026-11-20
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
   "name": "faradia",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Faradia (formerly optimia): create quality code by automating your processes. A local web app to direct and supervise coding agents (Claude Code and local AI) across many repos",
   "license": "MIT",
   "author": "Javier <ai@jagoan.es>",
