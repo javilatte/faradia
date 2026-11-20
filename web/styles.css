@@ -2486,3 +2486,34 @@ select,
 .voice-status[data-kind='error'] {
   color: var(--danger);
 }
+
+/* Agents' faces (web/js/faces.js): beside the task's title; they replace the orb's animation. */
+.task-card .task-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 4px;
+  padding-right: 22px; /* the delete button */
+}
+.task-card .task-head .task-title {
+  margin-bottom: 0;
+  flex: 1;
+}
+.task-card .task-head .agent-face {
+  flex: none;
+}
+/* The avatar is an inline box: without this its line of text makes it taller than the face, which
+   then sits off center. */
+.agent-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.agent-face > span {
+  display: block !important;
+}
+html:not(.no-faces) .task-card:has(.agent-face) .agent-orb .orb {
+  display: none;
+}

@@ -16,6 +16,7 @@ window.addEventListener('faradia:settings-scope', (e) => {
 });
 const openPrompts = new Set();
 const openPrinciples = new Set();
+const openFacePickers = new Set();
 
 const url = (rest = '') => projectApi(currentProjectId(), `/agents${rest}`);
 const ENGINE_LABEL = { claude: 'Claude', local: 'IA local' };
@@ -223,6 +224,99 @@ function modelControl(agent, draft) {
   );
 }
 
+// The agent's face (web/js/faces.js): a button that opens the picker (shape and color; the eyes
+// follow what the agent is doing).
+const FACE_PARTS = [
+  [
+    'shapes',
+    'Forma',
+    { circle: 'Círculo', squircle: 'Redondeada', pill: 'Píldora', blob: 'Mancha', drop: 'Gota', hexagon: 'Hexágono' }
+  ],
+  [
+    'colors',
+    'Color',
+    {
+      slate: 'Pizarra',
+      teal: 'Verde azulado',
+      ocean: 'Océano',
+      plum: 'Ciruela',
+      clay: 'Arcilla',
+      moss: 'Musgo',
+      black: 'Negro'
+    }
+  ]
+];
+
+function faceButton(agent, card) {
+  const face = window.faces?.staticFace(agent.face, { seed: agent.id, size: 32 });
+  if (!face) return null;
+  return h(
+    'button',
+    {
+      type: 'button',
+      class: 'agent-face-btn',
+      title: 'Cambiar la cara',
+      'aria-label': `Cambiar la cara de ${agent.name}`,
+      'aria-expanded': openFacePickers.has(agent.id) ? 'true' : 'false',
+      onclick: () => {
+        if (openFacePickers.has(agent.id)) openFacePickers.delete(agent.id);
+        else openFacePickers.add(agent.id);
+        card.replaceWith(renderAgent(agent));
+      }
+    },
+    face
+  );
+}
+
+// The agent's shape and color: its own, or the ones picked from its id.
+function faceParts(agent) {
+  const parts = String(agent.face || '').split('/');
+  if (parts.length === 2) return parts;
+  const seeded = window.AgentAvatars?.avatarFromSeed(agent.id);
+  return seeded ? [seeded.shape, seeded.color] : ['squircle', 'slate'];
+}
+
+function facePicker(agent, draft) {
+  const box = h('div', { class: 'face-picker', role: 'group', 'aria-label': `Cara de ${agent.name}` });
+  window.faces.load().then(() => {
+    const current = faceParts(agent);
+    box.append(
+      ...FACE_PARTS.map(([, title, names], i) =>
+        h(
+          'div',
+          { class: 'face-picker-row' },
+          h('span', { class: 'face-picker-label' }, title),
+          h(
+            'div',
+            { class: 'face-picker-choices' },
+            Object.entries(names).map(([value, name]) => {
+              const parts = [...current];
+              parts[i] = value;
+              const face = parts.join('/');
+              const selected = current[i] === value;
+              return h(
+                'button',
+                {
+                  type: 'button',
+                  class: `face-choice${selected ? ' selected' : ''}`,
+                  'aria-pressed': selected ? 'true' : 'false',
+                  title: name,
+                  'aria-label': `${title}: ${name}`,
+                  onclick: () => {
+                    if (!selected) draft.save({ face });
+                  }
+                },
+                window.faces.staticFace(face, { size: 30 })
+              );
+            })
+          )
+        )
+      )
+    );
+  });
+  return box;
+}
+
 function renderAgent(agent) {
   const draft = {
     engine: agent.engine,
@@ -250,6 +344,7 @@ function renderAgent(agent) {
           onchange: (e) => mutate(() => api.patch(url(`/${agent.id}`), { scope, enabled: e.target.checked }))
         })
       ),
+      faceButton(agent, card),
       h('strong', {}, agent.name),
       h('span', { class: 'wb-badge' }, agent.source === 'ecc' ? 'ECC' : agent.builtin ? 'por defecto' : 'propio'),
       agent.overriddenIn.length
@@ -262,6 +357,7 @@ function renderAgent(agent) {
     ),
     h('p', { class: 'muted agent-desc' }, agent.description)
   );
+  if (openFacePickers.has(agent.id)) card.append(facePicker(agent, draft));
 
   const engineSelect = h(
     'select',

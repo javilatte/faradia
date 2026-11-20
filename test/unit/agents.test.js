@@ -124,3 +124,21 @@ test('stageMap: a custom task uses its own agent', (t) => {
   assert.equal(stageMap.resolveStageAgent(project, { type: 'custom', agentId: agent.id }, 'custom').id, 'migrador');
   assert.equal(stageMap.resolveStageAgent(project, { type: 'custom', agentId: 'nope' }, 'custom'), null);
 });
+
+test('faces: built-in agents have their own, others are picked in the browser, and a repo can choose', (t) => {
+  const { project, catalog } = setup(t);
+  const { BUILTIN_FACES, isFace } = require('../../server/agents/faces');
+  const byId = () => Object.fromEntries(catalog.loadAgents(project).map((a) => [a.id, a]));
+  const agents = byId();
+  assert.equal(agents.planner.face, BUILTIN_FACES.planner);
+  for (const id of Object.keys(BUILTIN_FACES)) assert.ok(isFace(agents[id].face), id);
+  // Any other agent: null, so the browser picks a look from its id.
+  const ecc = Object.values(agents).find((a) => a.source === 'ecc');
+  assert.equal(ecc.face, null);
+
+  catalog.saveAgent(project, 'project', 'planner', { face: 'drop/#c2410c' });
+  assert.equal(byId().planner.face, 'drop/#c2410c');
+  for (const bad of ['blob/ocean/round/white', 'star/ocean', 'blob/red', '<svg>']) {
+    assert.throws(() => catalog.saveAgent(project, 'project', 'planner', { face: bad }), /cara no válida/, bad);
+  }
+});

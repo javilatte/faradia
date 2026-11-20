@@ -257,7 +257,7 @@ body {
     .agent-new button,
     .account-actions button:not(.icon-button),
     .view-header button:not(.icon-button)
-  ):not(.segmented button) {
+  ):not(.segmented button):not(.agent-face-btn, .face-choice) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -285,7 +285,7 @@ body {
     .wb-modal button:not(.icon-button),
     .fx-actions button,
     .agent-new button
-  ):not(.segmented button):not(.primary):not(:disabled):active {
+  ):not(.segmented button):not(.agent-face-btn, .face-choice):not(.primary):not(:disabled):active {
   background: var(--pressed-bg);
 }
 /* Default button: accent background, one per view */

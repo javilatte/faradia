@@ -185,6 +185,15 @@ is ready. The verifier runs
 the project's tests, lint and build and gives a verdict; disable it to skip that
 stage. Each task card shows which agent and model ran every stage.
 
+**Faces.** Each agent has a face on its task cards, made with
+[agent-avatars](https://github.com/jamesalmeida/agent-avatars) (MIT, bundled with React in
+`web/vendor/agent-avatars`, built by `scripts/vendor-agent-avatars.sh`). Its eyes show what the
+agent is doing: thinking while it plans, searching while it researches, working while it
+changes code, writing, reading while it verifies or reviews, listening when it asks you
+something, happy when the work is ready and sorry when it fails. Each agent has its own shape
+and color; change them in Settings → Agentes (click the face), or turn faces off in Settings →
+Apariencia.
+
 ### Checks and evidence (pstack)
 
 Inspired by Lauren Tan's talk *Turn slop into gold* and her plugin

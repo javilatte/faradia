@@ -2,6 +2,15 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **Agents' faces**: each agent has a face on its task cards, made with agent-avatars (MIT, bundled
+  with React). Its white eyes follow the stage: thinking, searching, working, writing, reading,
+  listening when it asks, happy when the work is ready, sorry when it fails. Built-in agents have
+  their own shape and color; others get one from their id. Settings › Agentes changes them (`face:
+  shape/color` in the agent file); Settings › Apariencia turns them off.
+
 ## [3.0.2] - 2026-11-20
 
 ### Fixed

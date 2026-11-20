@@ -1404,3 +1404,67 @@
     max-height: 35vh;
   }
 }
+
+/* Agents' faces in Settings › Agentes (web/js/faces.js). `button.` so they win over `.agents-pane
+   button`, which pads every button of the pane and would push the face off center. */
+button.agent-face-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+button.agent-face-btn:hover,
+button.agent-face-btn[aria-expanded='true'] {
+  border-color: var(--separator);
+  background: var(--hover-bg);
+}
+button.agent-face-btn:focus-visible,
+button.face-choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.face-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.face-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.face-picker-label {
+  width: 120px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.face-picker-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+button.face-choice {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+button.face-choice:hover {
+  border-color: var(--separator);
+}
+button.face-choice.selected {
+  border-color: var(--accent);
+  background: var(--hover-bg);
+}
