@@ -262,6 +262,16 @@ class TreeWatcher extends EventEmitter {
     this.schedule();
   }
 
+  /**
+   * Watches `rel` (and reports the files already inside) when it exists and is not watched yet: a
+   * folder created while the watcher was starting produced no event. Per-folder mode only (a native
+   * recursive watch sees every folder).
+   */
+  ensureWatched(rel) {
+    if (this.recursive || this.closed || !rel || this.watchers.has(rel)) return Promise.resolve();
+    return this.maybeWatchNewDir(rel);
+  }
+
   async maybeWatchNewDir(rel) {
     const abs = path.join(this.root, rel);
     let stat;
