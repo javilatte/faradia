@@ -1,62 +1,18 @@
 // Faradia's dictation with macOS's own speech recognition (the Speech framework), on the device: the
-// audio never leaves the Mac. CI compiles it (scripts/build-apple-voice.sh) and Faradia runs it once
-// per dictation (appleEngine.js).
+// audio never leaves the Mac. CI compiles it into a small app, Faradia.app (scripts/build-apple-voice.sh),
+// and Faradia opens it once per dictation (appleEngine.js). It has to be an app opened by macOS, not a
+// program Faradia starts: macOS asks for speech recognition permission for the app that runs it, and
+// only shows that dialog to apps.
 //
-//   faradia-transcribe <recording.wav> <locale,locale…>
+//   open -W -n -g --stdout out.json Faradia.app --args <recording.wav> <locale,locale…>
 //
 // With several locales (es-ES,en-US) it recognizes the recording in each and keeps the one Apple is
 // most confident about: the Speech framework does not detect the language by itself. It prints one
 // JSON line: {"ok":true,"text":…,"locale":…,"confidence":…} or {"ok":false,"code":…,"message":…},
 // where code is denied, restricted, unsupported, unavailable or failed.
 
-import Darwin
 import Foundation
 import Speech
-
-// macOS asks the "responsible" app for permission: the one that started Faradia (Terminal, iTerm,
-// VS Code…), and kills the program when that app's Info.plist does not say why it wants speech
-// recognition. So the helper starts itself again as its own responsible
-// process, the way macOS apps launch their helpers: then macOS reads this binary's Info.plist,
-// asks for Faradia, and remembers the answer for it. The call is private API, looked up at run time;
-// without it the helper simply runs as before.
-func runAsOwnResponsibleProcess() {
-  let flag = "FARADIA_TRANSCRIBE_DISCLAIMED"
-  if getenv(flag) != nil { return }
-  typealias Disclaim = @convention(c) (UnsafeMutablePointer<posix_spawnattr_t?>, Int32) -> Int32
-  guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "responsibility_spawnattrs_setdisclaim") else { return }
-  var attr: posix_spawnattr_t?
-  guard posix_spawnattr_init(&attr) == 0 else { return }
-  defer { posix_spawnattr_destroy(&attr) }
-  guard unsafeBitCast(symbol, to: Disclaim.self)(&attr, 1) == 0 else { return }
-
-  var size = UInt32(PATH_MAX)
-  var path = [CChar](repeating: 0, count: Int(size))
-  guard _NSGetExecutablePath(&path, &size) == 0 else { return }
-  setenv(flag, "1", 1)
-  var pid: pid_t = 0
-  guard posix_spawn(&pid, path, nil, &attr, CommandLine.unsafeArgv, environ) == 0 else {
-    unsetenv(flag)
-    return
-  }
-  var status: Int32 = 0
-  while waitpid(pid, &status, 0) == -1 && errno == EINTR {}
-  // Exited: its code. Killed by a signal: the same signal, so Faradia sees what happened.
-  if status & 0x7f == 0 { exit((status >> 8) & 0xff) }
-  signal(status & 0x7f, SIG_DFL)
-  kill(getpid(), status & 0x7f)
-  exit(1)
-}
-
-func emit(_ object: [String: Any]) -> Never {
-  let data = (try? JSONSerialization.data(withJSONObject: object)) ?? Data("{\"ok\":false,\"code\":\"failed\"}".utf8)
-  FileHandle.standardOutput.write(data)
-  FileHandle.standardOutput.write(Data("\n".utf8))
-  exit(object["ok"] as? Bool == true ? 0 : 1)
-}
-
-func fail(_ code: String, _ message: String) -> Never {
-  emit(["ok": false, "code": code, "message": message])
-}
 
 // Asks once: macOS shows its permission dialog the first time and remembers the answer.
 func authorize() -> SFSpeechRecognizerAuthorizationStatus {
@@ -178,6 +134,5 @@ func run() -> Never {
   emit(["ok": true, "text": best.text, "locale": best.locale, "confidence": best.confidence])
 }
 
-runAsOwnResponsibleProcess()
 DispatchQueue.global(qos: .userInitiated).async { run() }
 dispatchMain()

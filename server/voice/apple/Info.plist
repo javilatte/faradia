@@ -6,6 +6,20 @@
   <string>es.jagoan.faradia.transcribe</string>
   <key>CFBundleName</key>
   <string>Faradia</string>
+  <key>CFBundleDisplayName</key>
+  <string>Faradia</string>
+  <key>CFBundleExecutable</key>
+  <string>faradia-transcribe</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <key>LSUIElement</key>
+  <true/>
   <key>NSSpeechRecognitionUsageDescription</key>
   <string>Faradia transcribe lo que dictas en el chat, en este Mac y sin enviarlo a ningún sitio.</string>
 </dict>
