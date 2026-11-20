@@ -2,6 +2,17 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.0.1] - 2026-11-20
+
+### Fixed
+- The monitor watches a watchlist folder created while its file watcher restarts; before, changes
+  inside it went unnoticed until Faradia restarted.
+
+### Changed
+- The repository is now github.com/javilatte/faradia: links in the packages, the README and the
+  update notice point there.
+- Releases publish to npm from CI with Trusted Publishing, with a provenance attestation.
+
 ## [3.0.0] - 2026-11-20
 
 **optimia is now Faradia.** Same app, new name: there were already other things called Optimia.
