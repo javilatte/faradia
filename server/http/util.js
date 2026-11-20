@@ -9,6 +9,7 @@ const WEB_DIR = path.join(__dirname, '..', '..', 'web');
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
@@ -22,6 +23,13 @@ function openInBrowser(url) {
   const cmd = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
   execFile(cmd, [url], () => {}); // best-effort; a failed auto-open is not fatal, the URL is printed either way
 }
+
+// Cross-origin isolation: it lets dictation run Whisper on every CPU core (WebAssembly threads need
+// SharedArrayBuffer). "credentialless" keeps the CDN scripts and outside images loading as before.
+const ISOLATION_HEADERS = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'credentialless'
+};
 
 function serveStatic(req, res) {
   const reqPath = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
@@ -42,7 +50,7 @@ function serveStatic(req, res) {
       return;
     }
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', ...ISOLATION_HEADERS });
     res.end(data);
   });
 }

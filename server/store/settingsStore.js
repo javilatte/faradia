@@ -21,6 +21,11 @@ const { configDir } = require('./globalPaths');
 const THEMES = ['system', 'light', 'dark'];
 const CLOCKS = ['datetime', 'time'];
 const MODES = ['claude', 'local'];
+// Chat dictation (see web/js/project/voice.js).
+const VOICE_MODELS = ['auto', 'turbo', 'small', 'base'];
+// 'local' was the engine's own value before it became the default ('auto').
+const VOICE_ENGINES = ['auto', 'whisper', 'browser'];
+const VOICE_LANGUAGES = ['es-en', 'detect', 'es', 'en', 'ca', 'eu', 'gl', 'pt', 'fr', 'it', 'de'];
 const PROJECT_VERSION = 2;
 
 // Fields of `ai` a repo can override (dotted paths).
@@ -39,6 +44,7 @@ function defaultSettings() {
     suggestions: { mode: 'auto' },
     // pstack's engineering principles in each agent's prompt (see sessionOptions.js).
     principles: { enabled: true },
+    voice: defaultVoice(),
     preferences: {
       instructions: '',
       // Claude Code "deny" patterns, e.g. "Read(**/.env*)" or "Bash(rm -rf *)". Passed to faradia's
@@ -48,6 +54,27 @@ function defaultSettings() {
       // per repo.
       approvedTools: []
     }
+  };
+}
+
+// Dictation in the chat, always on this computer: the audio never leaves it. engine "auto" is
+// Faradia's own engine (voice/localEngine.js), a native process: macOS's speech recognition on a Mac
+// and Whisper elsewhere; "whisper" is Whisper even on a Mac; "browser" runs Whisper in the page;
+// model "auto" is large-v3-turbo when it runs fast enough and small when not; "es-en" detects which
+// of the two languages is spoken.
+function defaultVoice() {
+  return { enabled: true, engine: 'auto', model: 'auto', language: 'es-en' };
+}
+
+function sanitizeVoice(raw) {
+  const d = defaultVoice();
+  const v = raw && typeof raw === 'object' ? raw : {};
+  const pick = (value, list, def) => (list.includes(value) ? value : def);
+  return {
+    enabled: v.enabled !== false,
+    engine: pick(v.engine === 'local' ? 'auto' : v.engine, VOICE_ENGINES, d.engine),
+    model: pick(v.model, VOICE_MODELS, d.model),
+    language: pick(v.language, VOICE_LANGUAGES, d.language)
   };
 }
 
@@ -125,6 +152,7 @@ function sanitizeGlobal(raw) {
     ai,
     suggestions: { mode: ['auto', 'off'].includes(g.suggestions?.mode) ? g.suggestions.mode : d.suggestions.mode },
     principles: { enabled: g.principles?.enabled !== false },
+    voice: sanitizeVoice(g.voice),
     // Chat permissions: 'auto' (Claude Code's auto mode approves what is safe and asks the rest in
     // the chat) or 'ask' (every action that needs permission is asked; read-only commands are not).
     chat: { permissions: ['auto', 'ask'].includes(g.chat?.permissions) ? g.chat.permissions : 'auto' },
@@ -179,6 +207,7 @@ function saveGlobalSettings(patch = {}) {
   next.ecc = { ...current.ecc, ...(patch.ecc || {}) };
   next.suggestions = { ...current.suggestions, ...(patch.suggestions || {}) };
   next.principles = { ...current.principles, ...(patch.principles || {}) };
+  next.voice = { ...current.voice, ...(patch.voice || {}) };
   next.chat = { ...current.chat, ...(patch.chat || {}) };
   next.tasks = { ...current.tasks, ...(patch.tasks || {}) };
   const clean = sanitizeGlobal(next);
@@ -307,6 +336,7 @@ function effectiveFrom(global, project) {
     ecc: global.ecc,
     suggestions: global.suggestions,
     principles: global.principles,
+    voice: global.voice,
     chat: global.chat,
     tasks: global.tasks,
     preferences: {

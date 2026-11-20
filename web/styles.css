@@ -2410,3 +2410,79 @@ select,
 .verification.unverified {
   color: var(--orange-text);
 }
+
+/* Dictation (voice.js): the mic sits beside Send, sized like the attach button; while recording it
+   turns red and its ring follows the voice level. ":root .chat-input-row" outranks macos.css. */
+:root .chat-input-row .voice-button {
+  position: relative;
+  flex: none;
+  align-self: center;
+}
+.voice-button .voice-icon-stop {
+  display: none;
+}
+:root .chat-input-row .voice-button[data-state='recording'],
+:root .chat-input-row .voice-button[data-state='recording']:hover {
+  background: var(--danger);
+  color: #fff;
+}
+.voice-button[data-state='recording'] .voice-icon-mic {
+  display: none;
+}
+.voice-button[data-state='recording'] .voice-icon-stop {
+  display: block;
+}
+.voice-button[data-state='recording']::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 9px;
+  border: 2px solid var(--danger);
+  opacity: calc(0.25 + var(--voice-level, 0) * 0.75);
+  transform: scale(calc(1 + var(--voice-level, 0) * 0.25));
+  transition:
+    transform 80ms linear,
+    opacity 80ms linear;
+  pointer-events: none;
+}
+:root .chat-input-row .voice-button:is([data-state='working'], [data-state='starting']) {
+  cursor: progress;
+  opacity: 1;
+  color: var(--accent);
+}
+.voice-button[data-state='working'] .voice-icon-mic {
+  animation: voice-working 1.1s ease-in-out infinite;
+}
+@keyframes voice-working {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-button[data-state='recording']::before {
+    transform: none;
+    transition: none;
+  }
+  .voice-button[data-state='working'] .voice-icon-mic {
+    animation: none;
+  }
+}
+.voice-status {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+.voice-status[data-kind='recording']::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  vertical-align: 1px;
+}
+.voice-status[data-kind='error'] {
+  color: var(--danger);
+}

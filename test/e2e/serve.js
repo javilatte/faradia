@@ -45,6 +45,9 @@ for (const who of ['AUTHOR', 'COMMITTER']) {
   process.env[`GIT_${who}_NAME`] = 'e2e';
   process.env[`GIT_${who}_EMAIL`] = 'e2e@example.com';
 }
+// Faradia's dictation engine without installing it or downloading models (see voice/localEngine.js);
+// an empty value uses the real one.
+process.env.FARADIA_VOICE_ENGINE_MODULE ??= path.join(__dirname, 'fixtures', 'fake-transformers.mjs');
 // No network in tests: never ask the npm registry for updates.
 process.env.FARADIA_NO_UPDATE_CHECK = '1';
 // Skip the first-run welcome sheet (test/e2e/config.spec.js brings it back on purpose) and the

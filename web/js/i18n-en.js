@@ -5,10 +5,55 @@
 // Spanish and i18n.js swaps the visible text when the language is English.
 window.FARADIA_I18N_EN = {
   exact: {
+    'Dictar un mensaje (el audio no sale de tu equipo)': 'Dictate a message (the audio never leaves your computer)',
+    Dictar: 'Dictate',
+    'Terminar el dictado': 'Finish dictation',
+    'Transcribiendo…': 'Transcribing…',
+    Dictado: 'Dictation',
+    'Pulsa el micrófono junto al cuadro de mensaje y habla: el texto aparece en el cuadro para que lo revises antes de enviarlo.':
+      'Click the microphone next to the message box and speak: the text appears in the box so you can review it before sending.',
+    'Botón de dictado en el chat': 'Dictation button in the chat',
+    'Whisper funciona en tu equipo: el audio no sale de él y no hay cuentas, APIs ni pagos. El modelo se descarga una vez, la primera vez que dictas. Automático usa large-v3-turbo, que transcribe muy bien español e inglés, cuando va rápido en tu equipo, y small cuando no.':
+      'Whisper runs on your computer: the audio never leaves it and there are no accounts, APIs or payments. The model is downloaded once, the first time you dictate. Automatic uses large-v3-turbo, which transcribes Spanish and English very well, when it runs fast on your computer, and small when it does not.',
+    'Dónde se transcribe': 'Where it is transcribed',
+    'Faradia (recomendado)': 'Faradia (recommended)',
+    'Whisper en Faradia': 'Whisper in Faradia',
+    Navegador: 'Browser',
+    'Siempre en este equipo, fuera del navegador. En macOS usa el reconocimiento de voz del sistema; en Linux y Windows, Whisper, que se instala solo la primera vez (unos 110 MB) y aprovecha todos los núcleos del procesador.':
+      "Always on this computer, outside the browser. On macOS it uses the system's speech recognition; on Linux and Windows, Whisper, which installs itself the first time (about 110 MB) and uses every processor core.",
+    'En este Mac dicta el reconocimiento de voz de macOS, sin conexión.':
+      "On this Mac, macOS's speech recognition takes dictation, offline.",
+    'En este Mac dictará el reconocimiento de voz de macOS; la primera vez macOS pide permiso.':
+      "On this Mac, macOS's speech recognition will take dictation; the first time macOS asks for permission.",
+    'Whisper se está instalando…': 'Whisper is being installed…',
+    'Se está instalando el motor de voz de Faradia (solo la primera vez): los próximos dictados irán más rápido y con más precisión':
+      "Faradia's voice engine is being installed (only the first time): the next dictations will be faster and more accurate",
+    'Automático (recomendado)': 'Automatic (recommended)',
+    'large-v3-turbo · 760 MB · con GPU': 'large-v3-turbo · 760 MB · with a GPU',
+    'base · 77 MB · el más ligero': 'base · 77 MB · the lightest',
+    'Español o inglés (lo detecta)': 'Spanish or English (detected)',
+    'Cualquiera (lo detecta)': 'Any (detected)',
+    'Idioma en que hablas': 'Language you speak',
+    'No se oyó nada: comprueba el micrófono e inténtalo otra vez':
+      'Nothing was heard: check the microphone and try again',
+    'No se entendió nada: prueba a hablar más cerca del micrófono':
+      'Nothing was understood: try speaking closer to the microphone',
+    'Este navegador no deja usar el micrófono aquí': 'This browser does not allow using the microphone here',
+    'Sin permiso para usar el micrófono: permítelo en el candado de la barra de direcciones':
+      'No permission to use the microphone: allow it from the lock in the address bar',
+    'No se encontró ningún micrófono': 'No microphone was found',
+    'Otra aplicación está usando el micrófono': 'Another application is using the microphone',
     'optimia ahora es Faradia': 'optimia is now Faradia',
     'Crea código de calidad automatizando tus procesos y multiplica tu productividad sin perder las riendas de tu trabajo. Es la misma app con otro nombre (ya había otras cosas llamadas Optimia): tus ajustes, agentes y repos se han movido solos.':
       'Create quality code by automating your processes and multiply your productivity without losing the reins of your work. It is the same app with a new name (there were already other things called Optimia): your settings, agents and repos moved over by themselves.',
     'Instala el paquete faradia': 'Install the Faradia package',
+    'Habla en vez de escribir': 'Speak instead of typing',
+    'Mapa del código': 'Code map',
+    'Pulsa el micrófono junto al cuadro de mensaje y dicta en español o en inglés: el texto aparece en el cuadro para que lo revises antes de enviarlo. Se transcribe en tu equipo, sin cuentas ni pagos: en un Mac con el reconocimiento de voz de macOS y en Linux y Windows con Whisper.':
+      'Click the microphone next to the message box and dictate in Spanish or English: the text appears in the box so you can review it before sending. It is transcribed on your computer, with no accounts or payments: on a Mac with macOS speech recognition and on Linux and Windows with Whisper.',
+    'Ajustes del dictado…': 'Dictation settings…',
+    'Con CodeGraph activado, la wiki del repo tiene un mapa del código: las piezas más usadas y qué zona depende de cuál. Se actualiza solo después de cada tarea, y «Conocer este repo» y la wiki parten de él en vez de leer el repo a ciegas.':
+      "With CodeGraph on, the repo's wiki has a code map: the most used pieces and which area depends on which. It updates itself after every task, and “Learn this repo” and the wiki start from it instead of reading the repo blind.",
     'A partir de ahora: npm i -g faradia, y arráncalo con faradia. El paquete optimia seguirá actualizándose unos meses más y abre Faradia, pero dejará de hacerlo.':
       'From now on: npm i -g faradia, and start it with faradia. The optimia package will keep updating for a few more months and opens Faradia, but it will stop.',
     'Mostrar menos': 'Show less',
@@ -792,6 +837,24 @@ window.FARADIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    [
+      '^Escuchando · (\\d+:\\d\\d) · pulsa el micrófono para terminar o Esc para cancelar$',
+      'Listening · $1 · click the microphone to finish or Esc to cancel'
+    ],
+    [
+      '^Descargando el modelo de voz \\((.+), solo la primera vez\\)… (\\d+) %$',
+      'Downloading the voice model ($1, only the first time)… $2%'
+    ],
+    ['^Preparando el modelo de voz… (\\d+) %$', 'Preparing the voice model… $1%'],
+    ['^Se usa Whisper: (.+)\\.$', 'Whisper is used: $1.'],
+    ['^Whisper está instalado \\((\\d+) hilos: modelo (.+)\\)\\.$', 'Whisper is installed ($1 threads: $2 model).'],
+    ['^No se pudo instalar Whisper: (.+)$', 'Whisper could not be installed: $1'],
+    [
+      '^No se pudo instalar el motor de voz de Faradia \\((.+)\\); se transcribe en el navegador$',
+      "Faradia's voice engine could not be installed ($1); the browser transcribes"
+    ],
+    ['^No se pudo transcribir: (.+)$', 'Could not transcribe: $1'],
+    ['^No se pudo abrir el micrófono: (.+)$', 'Could not open the microphone: $1'],
     ['^Mostrar (\\d+) más$', 'Show $1 more'],
     ['^Evidencia: (\\d+) comprobaci(?:ón|ones)$', 'Evidence: $1 check(s)'],
     ['^Evidencia: (\\d+) comprobaci(?:ón|ones) \\((\\d+) con fallos\\)$', 'Evidence: $1 check(s) ($2 failing)'],

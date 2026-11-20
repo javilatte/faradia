@@ -21,7 +21,9 @@ const ICONS = {
   check: 'M4 4h16v16H4zM8 12l3 3 5-6',
   lock: 'M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
-  scissors: 'M6 6a2 2 0 1 0 0 .01M6 18a2 2 0 1 0 0 .01M8 7l12 10M8 17L20 7'
+  scissors: 'M6 6a2 2 0 1 0 0 .01M6 18a2 2 0 1 0 0 .01M8 7l12 10M8 17L20 7',
+  mic: 'M9 3h6v11H9zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7',
+  map: 'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14'
 };
 
 function icon(name) {
@@ -126,6 +128,17 @@ const NEWS = [
         icon: 'plug',
         title: 'Instala el paquete faradia',
         text: 'A partir de ahora: npm i -g faradia, y arráncalo con faradia. El paquete optimia seguirá actualizándose unos meses más y abre Faradia, pero dejará de hacerlo.'
+      },
+      {
+        icon: 'mic',
+        title: 'Habla en vez de escribir',
+        text: 'Pulsa el micrófono junto al cuadro de mensaje y dicta en español o en inglés: el texto aparece en el cuadro para que lo revises antes de enviarlo. Se transcribe en tu equipo, sin cuentas ni pagos: en un Mac con el reconocimiento de voz de macOS y en Linux y Windows con Whisper.',
+        action: { label: 'Ajustes del dictado…', run: () => openPane('voice') }
+      },
+      {
+        icon: 'map',
+        title: 'Mapa del código',
+        text: 'Con CodeGraph activado, la wiki del repo tiene un mapa del código: las piezas más usadas y qué zona depende de cuál. Se actualiza solo después de cada tarea, y «Conocer este repo» y la wiki parten de él en vez de leer el repo a ciegas.'
       }
     ]
   },

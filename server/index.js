@@ -19,6 +19,7 @@ const { handleWorkbenchRoutes, workbenchesView } = require('./http/workbenchRout
 const { handleMonitorRoutes } = require('./http/monitorRoutes');
 const { handleFsRoutes } = require('./http/fsRoutes');
 const { handleConfigRoutes } = require('./http/configRoutes');
+const { handleVoiceRoutes } = require('./http/voiceRoutes');
 const { handleSyncRoutes, isConfigWrite } = require('./http/syncRoutes');
 const { createSync } = require('./sync/engine');
 const { MonitorService } = require('./monitor/monitorService');
@@ -207,6 +208,11 @@ function start({ projectRoot = process.cwd(), port = 0, open = true, token } = {
 
     if (url.pathname === '/api/sync' || url.pathname.startsWith('/api/sync/')) {
       const handled = await handleSyncRoutes(req, res, url, { sync });
+      if (handled !== null) return handled;
+    }
+
+    if (url.pathname.startsWith('/api/voice/')) {
+      const handled = await handleVoiceRoutes(req, res, url);
       if (handled !== null) return handled;
     }
 

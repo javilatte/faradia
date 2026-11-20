@@ -140,6 +140,7 @@ function createApp(
           wiki: body.wiki,
           suggestions: body.suggestions,
           principles: body.principles,
+          voice: body.voice,
           chat: body.chat,
           tasks: body.tasks
         });

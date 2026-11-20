@@ -124,3 +124,22 @@ test('invalid values are dropped', (t) => {
   assert.equal(s.ai.mode, 'claude');
   assert.deepEqual(s.preferences.noGo, []);
 });
+
+test('dictation defaults to the automatic model choosing between Spanish and English, and keeps only known values', (t) => {
+  const repo = isolated(t);
+  assert.deepEqual(store.loadSettings(repo).voice, { enabled: true, engine: 'auto', model: 'auto', language: 'es-en' });
+  store.saveGlobalSettings({ voice: { model: 'small', language: 'detect', serverUrl: 'http://x' } });
+  assert.deepEqual(store.loadSettings(repo).voice, {
+    enabled: true,
+    engine: 'auto',
+    model: 'small',
+    language: 'detect'
+  });
+  store.saveGlobalSettings({ voice: { model: 'huge', language: 'klingon', enabled: false } });
+  assert.deepEqual(store.loadSettings(repo).voice, {
+    enabled: false,
+    engine: 'auto',
+    model: 'auto',
+    language: 'es-en'
+  });
+});
