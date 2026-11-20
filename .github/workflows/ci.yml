@@ -64,6 +64,12 @@ jobs:
           out="$("$bin" || true)"
           echo "$out"
           echo "$out" | grep -q '"ok":false'
+      - name: Keep the helper (for a publish made by hand)
+        uses: actions/upload-artifact@v4
+        with:
+          name: faradia-transcribe
+          path: ${{ runner.temp }}/faradia-transcribe
+          retention-days: 14
 
   secrets:
     runs-on: ubuntu-latest
