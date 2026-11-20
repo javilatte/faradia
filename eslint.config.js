@@ -5,7 +5,15 @@ const globals = require('globals');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'vendor/**', 'web/vendor/**', 'test-results/**', 'playwright-report/**', '.faradia/**', '.codegraph/**']
+    ignores: [
+      'node_modules/**',
+      'vendor/**',
+      'web/vendor/**',
+      'test-results/**',
+      'playwright-report/**',
+      '.faradia/**',
+      '.codegraph/**'
+    ]
   },
   js.configs.recommended,
   {
