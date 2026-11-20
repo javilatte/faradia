@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a PR cancels its older runs: a hung run would otherwise hold a runner until the job
+# times out, and the next runs wait in the queue behind it.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     # faradia runs on Linux and macOS: every suite runs on both.
@@ -16,6 +22,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # The suites take about 3 minutes; a hung test fails here instead of after 6 hours.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,6 +55,7 @@ jobs:
   # here so a change that breaks it fails the PR; publish.yml builds the one that goes to npm.
   apple-voice:
     runs-on: macos-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Build the speech recognition helper
@@ -83,6 +92,7 @@ jobs:
 
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
