@@ -109,6 +109,11 @@ function applyUi(ui) {
   else delete document.documentElement.dataset.theme;
   clockFormat = ui.clock === 'time' ? 'time' : 'datetime';
   tickClock();
+  const facesOn = ui.faces !== false;
+  if (window.faces && window.faces.facesEnabled() !== facesOn) {
+    window.faces.setFacesEnabled(facesOn);
+    renderTasks();
+  }
 }
 tickClock();
 setInterval(tickClock, 1000 * 30);

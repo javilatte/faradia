@@ -42,8 +42,10 @@ const claudeModelSelect = document.getElementById('setting-claude-model');
 const claudeEffortSelect = document.getElementById('setting-claude-effort');
 const uiThemeSelect = document.getElementById('setting-ui-theme');
 const uiClockSelect = document.getElementById('setting-ui-clock');
-const currentUiDraft = () => ({ theme: uiThemeSelect.value, clock: uiClockSelect.value });
-for (const el of [uiThemeSelect, uiClockSelect]) el.addEventListener('change', () => applyUi(currentUiDraft()));
+const uiFacesCheck = document.getElementById('setting-ui-faces');
+const currentUiDraft = () => ({ theme: uiThemeSelect.value, clock: uiClockSelect.value, faces: uiFacesCheck.checked });
+for (const el of [uiThemeSelect, uiClockSelect, uiFacesCheck])
+  el.addEventListener('change', () => applyUi(currentUiDraft()));
 const localUrlInput = document.getElementById('setting-local-url');
 const localModelInput = document.getElementById('setting-local-model');
 const localAuthInput = document.getElementById('setting-local-auth');
@@ -297,6 +299,7 @@ function populateSettingsForm() {
   const { layers } = currentSettings;
   uiThemeSelect.value = layers.global.ui?.theme || 'system';
   uiClockSelect.value = layers.global.ui?.clock || 'datetime';
+  uiFacesCheck.checked = layers.global.ui?.faces !== false;
   // In "Todos los repos" the global layer is shown and edited; in "Solo este repo", the effective
   // value (inherited or own).
   const source = settingsScope === 'global' ? layers.global.ai : currentSettings.ai;
@@ -603,7 +606,7 @@ function flushSettingsSave() {
 }
 
 for (const el of [claudeModelSelect, claudeEffortSelect]) el.addEventListener('change', () => saveField(el));
-for (const el of [uiThemeSelect, uiClockSelect]) {
+for (const el of [uiThemeSelect, uiClockSelect, uiFacesCheck]) {
   el.addEventListener('change', () => patchSettings({ scope: 'global', ui: currentUiDraft() }));
 }
 for (const el of [localUrlInput, localModelInput, localAuthInput, instructionsTextarea, memoryTextarea]) {

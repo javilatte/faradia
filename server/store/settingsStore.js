@@ -33,7 +33,7 @@ const AI_FIELDS = ['mode', 'claude.model', 'claude.effort', 'localAi.url', 'loca
 
 function defaultSettings() {
   return {
-    ui: { theme: 'system', clock: 'datetime' },
+    ui: { theme: 'system', clock: 'datetime', faces: true },
     ai: {
       mode: 'claude', // 'claude' | 'local'
       claude: { model: 'default', effort: 'high' },
@@ -147,7 +147,8 @@ function sanitizeGlobal(raw) {
   return {
     ui: {
       theme: THEMES.includes(g.ui?.theme) ? g.ui.theme : d.ui.theme,
-      clock: CLOCKS.includes(g.ui?.clock) ? g.ui.clock : d.ui.clock
+      clock: CLOCKS.includes(g.ui?.clock) ? g.ui.clock : d.ui.clock,
+      faces: g.ui?.faces !== false
     },
     ai,
     suggestions: { mode: ['auto', 'off'].includes(g.suggestions?.mode) ? g.suggestions.mode : d.suggestions.mode },

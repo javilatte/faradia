@@ -456,6 +456,16 @@
                   <option value="time">Solo hora</option>
                 </select>
               </div>
+              <div class="settings-field">
+                <label class="check-row">
+                  <input type="checkbox" id="setting-ui-faces" checked />
+                  <span>Caras de los agentes</span>
+                </label>
+                <p class="muted settings-help">
+                  Cada agente tiene su cara en las tarjetas: espera mientras trabaja, te mira cuando pregunta y sonríe
+                  cuando termina.
+                </p>
+              </div>
             </section>
 
             <section class="settings-pane" data-pane="voice" hidden>
@@ -672,6 +682,7 @@
     <script type="module" src="orb.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/lib/addon-fit.js"></script>
+    <script src="js/faces.js"></script>
     <script src="js/project/core.js"></script>
     <script src="js/project/activity.js"></script>
     <script src="js/project/tasks.js"></script>

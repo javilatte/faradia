@@ -6,6 +6,7 @@ const { STAGES, TASK_TYPES } = require('../bridge/taskStages');
 const { sendJson, readJsonBody } = require('./util');
 const { pstackPrinciples, frontmatterDescription } = require('../skills/library');
 const { loadSettings } = require('../store/settingsStore');
+const { FACE_POOL } = require('../agents/faces');
 const path = require('path');
 
 // pstack's principles, for the agent editor: id, a readable name and when it applies.
@@ -46,13 +47,14 @@ function catalogView(projectRoot) {
       ])
     ),
     claudeModels: catalog.CLAUDE_MODELS,
+    facePool: FACE_POOL,
     efforts: catalog.EFFORTS,
     principles: principleCatalog(),
     principlesEnabled: loadSettings(projectRoot).principles?.enabled !== false
   };
 }
 
-const PICK = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled', 'prompt', 'principles'];
+const PICK = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled', 'prompt', 'principles', 'face'];
 const pick = (body) => Object.fromEntries(PICK.filter((k) => body[k] !== undefined).map((k) => [k, body[k]]));
 
 async function handleAgentRoutes(req, res, url, projectRoot) {

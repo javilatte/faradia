@@ -2,6 +2,15 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **Agents' faces**: each agent has a face on its task cards, made with BoopFace (MIT, bundled):
+  it waits while the agent works, scans while it verifies or reviews, looks wary when it asks,
+  smiles when the work is ready and droops when it fails. Built-in agents have their own; others
+  get one from a set, always the same. Settings › Agentes changes an agent's face (`face:` in its
+  file); Settings › Apariencia turns them off.
+
 ## [3.0.1] - 2026-11-20
 
 ### Fixed

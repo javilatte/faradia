@@ -185,6 +185,13 @@ is ready. The verifier runs
 the project's tests, lint and build and gives a verdict; disable it to skip that
 stage. Each task card shows which agent and model ran every stage.
 
+**Faces.** Each agent has a face on its task cards, made with
+[BoopFace](https://github.com/CX-ArtLab/BoopFace) (MIT, bundled in `web/vendor/boopface`):
+it waits while the agent works, scans while it verifies or reviews, looks wary when it
+asks you something, smiles when the work is ready and droops when it fails. Choose
+another face in Settings → Agentes (click the face); turn them all off in Settings →
+Apariencia.
+
 ### Checks and evidence (pstack)
 
 Inspired by Lauren Tan's talk *Turn slop into gold* and her plugin

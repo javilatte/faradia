@@ -67,6 +67,52 @@ function plannedAgent(task, stage) {
   return agentCatalog.agents.find((a) => a.id === id) || null;
 }
 
+// Agents the chat starts (Claude's Task tool) have no catalog entry: they share one face.
+const CHAT_AGENT_FACE = '102';
+
+// The face of the agent at work on a task (web/js/faces.js), doing what the task is doing.
+const REVIEW_STAGES = ['verify', 'review', 'audit', 'tidy'];
+
+function taskFaceState(task, lastStep) {
+  if (task.status === 'awaiting_input' || task.pendingPermission) return 'asking';
+  if (task.error) return 'failed';
+  if (task.status === 'ready_to_test') return task.verification && !task.verification.ok ? 'failed' : 'done';
+  if (task.status === 'in_progress') {
+    if (REVIEW_STAGES.includes(task.stage)) return 'reviewing';
+    return lastStep ? 'working' : 'thinking';
+  }
+  if ((task.blockedCommands || []).some((b) => !b.allowed)) return 'blocked';
+  return 'idle';
+}
+
+function taskAgent(task) {
+  const runs = task.stageRuns || [];
+  const stage = task.stage || runs[runs.length - 1]?.stage;
+  if (!stage) return null;
+  const run = [...runs].reverse().find((r) => r.stage === stage);
+  return agentCatalog?.agents.find((a) => a.id === run?.agentId) || plannedAgent(task, stage);
+}
+
+// Title row: the agent's face (when faces are on) and the task's title.
+function renderTaskHead(taskId, task, lastStep) {
+  const head = document.createElement('div');
+  head.className = 'task-head';
+  const agent = taskAgent(task);
+  const face = agent
+    ? window.faces?.agentFace(`task:${taskId}`, {
+        skin: agent.face,
+        state: taskFaceState(task, lastStep),
+        label: agent.name
+      })
+    : null;
+  if (face) head.appendChild(face);
+  const title = document.createElement('div');
+  title.className = 'task-title marquee-text';
+  title.textContent = task.title;
+  head.appendChild(title);
+  return head;
+}
+
 // One row with the task's pipeline: each stage with its state and the agent and model that ran it
 // (or will run it). Replaces the self-reported phases and the agent trail, which told the same
 // thing separately.
@@ -1323,11 +1369,7 @@ function buildTaskCard(taskId, task, lastStep) {
   card.className = 'task-card' + (ready ? ' ready' : '') + (task.status === 'awaiting_input' ? ' awaiting' : '');
   // Also while running: deleting the task kills its Claude session (see DELETE in server/index.js).
   card.appendChild(renderDeleteButton(() => deleteRealTask(taskId)));
-
-  const title = document.createElement('div');
-  title.className = 'task-title marquee-text';
-  title.textContent = task.title;
-  card.appendChild(title);
+  card.appendChild(renderTaskHead(taskId, task, lastStep));
   if (task.type && TASK_TYPE_LABEL[task.type]) {
     const badge = document.createElement('span');
     badge.className = `task-type-badge type-${task.type}`;
@@ -1560,10 +1602,24 @@ function renderTasks() {
     card.className =
       'task-card chat-agent-card' + (agent.interrupted ? ' interrupted' : '') + (agent.finished ? ' ready' : '');
     if (agent.finished) card.appendChild(renderDeleteButton(() => dismissChatAgent(taskId)));
+    const head = document.createElement('div');
+    head.className = 'task-head';
+    const chatState = agent.finished
+      ? agent.status === 'failed'
+        ? 'failed'
+        : 'done'
+      : agent.interrupted
+        ? 'asking'
+        : agent.lastStep
+          ? 'working'
+          : 'thinking';
+    const face = window.faces?.agentFace(`chat:${taskId}`, { skin: CHAT_AGENT_FACE, state: chatState });
+    if (face) head.appendChild(face);
     const title = document.createElement('div');
     title.className = 'task-title marquee-text';
     title.textContent = agent.description;
-    card.appendChild(title);
+    head.appendChild(title);
+    card.appendChild(head);
     const step = document.createElement('div');
     step.className = 'task-step marquee-text';
     step.textContent = agent.finished
@@ -1586,6 +1642,10 @@ function renderTasks() {
   }
   const hasChatAgents = [...chatAgents.values()].some((a) => a.chatId === currentChatId);
   if (!tasks.size && !hasChatAgents) colInProgress.appendChild(renderEmptyBoard());
+  window.faces?.keepFaces([
+    ...[...tasks.keys()].map((id) => `task:${id}`),
+    ...[...chatAgents.keys()].map((id) => `chat:${id}`)
+  ]);
 }
 
 async function loadInitialTasks() {

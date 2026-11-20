@@ -5,7 +5,7 @@ const globals = require('globals');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'vendor/**', 'test-results/**', 'playwright-report/**', '.faradia/**', '.codegraph/**']
+    ignores: ['node_modules/**', 'vendor/**', 'web/vendor/**', 'test-results/**', 'playwright-report/**', '.faradia/**', '.codegraph/**']
   },
   js.configs.recommended,
   {
@@ -31,7 +31,7 @@ module.exports = [
     // Project view: classic browser scripts loaded in order that share one
     // global scope on purpose (see web/index.html), so cross-file references
     // are not undefined and functions used from another file are not unused.
-    files: ['web/js/project/**/*.js', 'web/terminal.js'],
+    files: ['web/js/project/**/*.js', 'web/js/faces.js', 'web/terminal.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'script',

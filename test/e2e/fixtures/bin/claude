@@ -183,18 +183,23 @@ rl.on('line', (line) => {
             : editing
               ? 'He hecho el cambio pedido.'
               : `Respuesta simulada a: ${text.split('\n')[0].slice(0, 80)}`;
-  emit({
-    type: 'assistant',
-    session_id: sessionId,
-    message: { role: 'assistant', content: [{ type: 'text', text: reply }] }
-  });
-  emit({
-    type: 'result',
-    subtype: 'success',
-    session_id: sessionId,
-    is_error: false,
-    result: reply,
-    total_cost_usd: 0
-  });
+  const finish = () => {
+    emit({
+      type: 'assistant',
+      session_id: sessionId,
+      message: { role: 'assistant', content: [{ type: 'text', text: reply }] }
+    });
+    emit({
+      type: 'result',
+      subtype: 'success',
+      session_id: sessionId,
+      is_error: false,
+      result: reply,
+      total_cost_usd: 0
+    });
+  };
+  // "[e2e:lento]": each stage takes a while, so a test can see the task at work.
+  if (/\[e2e:lento\]/.test(text)) setTimeout(finish, 2500);
+  else finish();
 });
 rl.on('close', () => process.exit(0));

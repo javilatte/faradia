@@ -16,6 +16,7 @@ window.addEventListener('faradia:settings-scope', (e) => {
 });
 const openPrompts = new Set();
 const openPrinciples = new Set();
+const openFacePickers = new Set();
 
 const url = (rest = '') => projectApi(currentProjectId(), `/agents${rest}`);
 const ENGINE_LABEL = { claude: 'Claude', local: 'IA local' };
@@ -223,6 +224,53 @@ function modelControl(agent, draft) {
   );
 }
 
+// The agent's face (web/js/faces.js): a button that opens the skins to choose another one.
+function faceButton(agent, card) {
+  const face = window.faces?.staticFace(agent.face, { size: 32 });
+  if (!face) return null;
+  return h(
+    'button',
+    {
+      type: 'button',
+      class: 'agent-face-btn',
+      title: 'Cambiar la cara',
+      'aria-label': `Cambiar la cara de ${agent.name}`,
+      'aria-expanded': openFacePickers.has(agent.id) ? 'true' : 'false',
+      onclick: () => {
+        if (openFacePickers.has(agent.id)) openFacePickers.delete(agent.id);
+        else openFacePickers.add(agent.id);
+        card.replaceWith(renderAgent(agent));
+      }
+    },
+    face
+  );
+}
+
+function facePicker(agent, draft) {
+  const choices = [...new Set([agent.face, ...(data.facePool || []), 'plain'])];
+  return h(
+    'div',
+    { class: 'face-picker', role: 'group', 'aria-label': `Caras para ${agent.name}` },
+    choices.map((skin) =>
+      h(
+        'button',
+        {
+          type: 'button',
+          class: `face-choice${skin === agent.face ? ' selected' : ''}`,
+          'aria-pressed': skin === agent.face ? 'true' : 'false',
+          title: skin === 'plain' ? 'Sin piel' : `Piel ${skin}`,
+          onclick: () => {
+            openFacePickers.delete(agent.id);
+            if (skin !== agent.face) draft.save({ face: skin });
+            else render();
+          }
+        },
+        window.faces.staticFace(skin, { size: 32 })
+      )
+    )
+  );
+}
+
 function renderAgent(agent) {
   const draft = {
     engine: agent.engine,
@@ -250,6 +298,7 @@ function renderAgent(agent) {
           onchange: (e) => mutate(() => api.patch(url(`/${agent.id}`), { scope, enabled: e.target.checked }))
         })
       ),
+      faceButton(agent, card),
       h('strong', {}, agent.name),
       h('span', { class: 'wb-badge' }, agent.source === 'ecc' ? 'ECC' : agent.builtin ? 'por defecto' : 'propio'),
       agent.overriddenIn.length
@@ -262,6 +311,7 @@ function renderAgent(agent) {
     ),
     h('p', { class: 'muted agent-desc' }, agent.description)
   );
+  if (openFacePickers.has(agent.id)) card.append(facePicker(agent, draft));
 
   const engineSelect = h(
     'select',

@@ -1,6 +1,7 @@
 'use strict';
 
 const { eccAgents } = require('../ecc/library');
+const { faceFor, isFace } = require('./faces');
 const { pstackAgent, pstackPrinciples } = require('../skills/library');
 
 const fs = require('fs');
@@ -25,7 +26,7 @@ const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
 // Model aliases the claude CLI understands; 'default' = the account's default model.
 const CLAUDE_MODELS = ['default', 'opus', 'sonnet', 'haiku', 'fable'];
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
-const FIELDS = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled', 'principles'];
+const FIELDS = ['name', 'description', 'engine', 'model', 'effort', 'access', 'enabled', 'principles', 'face'];
 
 const BUILTIN_AGENTS = [
   {
@@ -347,6 +348,7 @@ function normalize(agent) {
   a.description = typeof a.description === 'string' ? a.description : '';
   a.prompt = typeof a.prompt === 'string' ? a.prompt : '';
   a.principles = parsePrinciples(a.principles);
+  a.face = faceFor(a.id, a.face);
   return a;
 }
 
@@ -395,6 +397,7 @@ function validateAgentInput(input, { isNew }) {
   if (isNew && (typeof input.name !== 'string' || !input.name.trim())) return 'el agente necesita un nombre';
   if (input.name !== undefined && String(input.name).length > 60) return 'nombre demasiado largo';
   if (input.prompt !== undefined && String(input.prompt).length > 20000) return 'prompt demasiado largo';
+  if (input.face !== undefined && !isFace(input.face)) return 'cara no válida: un número de piel o plain';
   if (input.principles !== undefined) {
     const list = Array.isArray(input.principles) ? input.principles : String(input.principles).split(',');
     const known = new Set(pstackPrinciples());

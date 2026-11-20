@@ -1404,3 +1404,56 @@
     max-height: 35vh;
   }
 }
+
+/* Agents' faces in Settings › Agentes (web/js/faces.js) */
+.agent-face-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+.agent-face-btn:hover,
+.agent-face-btn[aria-expanded='true'] {
+  border-color: var(--separator);
+  background: var(--hover-bg);
+}
+.agent-face-btn:focus-visible,
+.face-choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.agent-face-btn faradia-face {
+  width: 34px;
+  height: 34px;
+}
+.face-choice faradia-face {
+  width: 36px;
+  height: 36px;
+}
+.face-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 4px;
+}
+.face-choice {
+  display: grid;
+  place-items: center;
+  height: 46px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+.face-choice:hover {
+  border-color: var(--separator);
+}
+.face-choice.selected {
+  border-color: var(--accent);
+}
