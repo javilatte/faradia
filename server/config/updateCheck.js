@@ -12,7 +12,7 @@ const pkg = require('../../package.json');
 // Disabled from Settings (updates.check) or with FARADIA_NO_UPDATE_CHECK=1.
 
 const REGISTRY_URL = `https://registry.npmjs.org/${pkg.name.replace('/', '%2f')}/latest`;
-const RELEASES_URL = 'https://github.com/javilatte/optimia/releases';
+const RELEASES_URL = 'https://github.com/javilatte/faradia/releases';
 const DAY = 24 * 60 * 60 * 1000;
 
 function cacheFile() {

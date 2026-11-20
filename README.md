@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/faradia"><img src="https://img.shields.io/npm/v/faradia?color=0A84FF&label=npm" alt="npm version"></a>
-  <a href="https://github.com/javilatte/optimia/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/javilatte/optimia/ci.yml?label=CI" alt="CI status"></a>
+  <a href="https://github.com/javilatte/faradia/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/javilatte/faradia/ci.yml?label=CI" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0A84FF" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/node-%E2%89%A5%2022-0A84FF" alt="Node 22 or later">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-0A84FF" alt="Platforms: macOS and Linux">
