@@ -142,7 +142,10 @@ func run() -> Never {
     let first = results.first!
     fail(first.code, first.error ?? "no se pudo reconocer la grabación")
   }
-  emit(["ok": true, "text": best.text, "locale": best.locale, "confidence": best.confidence])
+  // The locales that could not take part, and why (a language whose on-device model is not
+  // downloaded, for instance): Faradia shows it in Settings › Dictado.
+  let skipped = results.filter { $0.error != nil }.map { ["locale": $0.locale, "message": $0.error!] }
+  emit(["ok": true, "text": best.text, "locale": best.locale, "confidence": best.confidence, "skipped": skipped])
 }
 
 DispatchQueue.global(qos: .userInitiated).async { run() }

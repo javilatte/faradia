@@ -135,14 +135,22 @@ function appleWith(t, reply, { platform = 'darwin', missing = false } = {}) {
   const { createAppleEngine } = require('../../server/voice/appleEngine');
   const dir = mkTmpDir('apple-helper');
   t.after(() => rmTmpDir(dir));
-  const helper = path.join(dir, 'faradia-transcribe');
-  if (!missing) fs.writeFileSync(helper, '');
+  const helper = path.join(dir, 'Faradia.app');
+  if (!missing) {
+    fs.mkdirSync(path.join(helper, 'Contents', 'MacOS'), { recursive: true });
+    fs.writeFileSync(path.join(helper, 'Contents', 'MacOS', 'faradia-transcribe'), '');
+  }
   const calls = [];
+  // Plays `open`: the app's output goes to the files after --stdout and --stderr.
   const exec = (command, args, _opts, cb) => {
-    const wav = fs.readFileSync(args[0]);
-    calls.push({ command, args, header: wav.subarray(0, 4).toString(), dataBytes: wav.readUInt32LE(40) });
-    const r = typeof reply === 'function' ? reply(args) : reply;
-    setImmediate(() => cb(r.err || null, r.stdout || '', r.stderr || ''));
+    const after = (flag) => args[args.indexOf(flag) + 1];
+    const appArgs = args.slice(args.indexOf('--args') + 1);
+    const wav = fs.readFileSync(appArgs[0]);
+    calls.push({ command, args, appArgs, header: wav.subarray(0, 4).toString(), dataBytes: wav.readUInt32LE(40) });
+    const r = typeof reply === 'function' ? reply(appArgs) : reply;
+    if (r.stdout !== undefined) fs.writeFileSync(after('--stdout'), r.stdout);
+    if (r.stderr !== undefined) fs.writeFileSync(after('--stderr'), r.stderr);
+    setImmediate(() => cb(r.err || null, '', r.openStderr || ''));
   };
   return { apple: createAppleEngine({ platform, exec, helper }), calls, helper };
 }
@@ -155,11 +163,13 @@ test("Apple's recognizer gets the recording as WAV with the candidate locales an
   assert.equal(apple.usable(['es', 'en']), true);
   const out = await apple.transcribe(new Float32Array(16000).fill(0.2), ['es', 'en']);
   assert.deepEqual(out, { text: 'Añade un test para el login', language: 'es', model: 'apple' });
-  assert.equal(calls[0].command, helper);
-  assert.equal(calls[0].args[1], 'es-ES,en-US');
+  assert.equal(calls[0].command, '/usr/bin/open', 'opened as an app, so macOS asks permission for Faradia');
+  assert.equal(calls[0].args[calls[0].args.indexOf('--args') - 1], helper);
+  assert.ok(calls[0].args.includes('-W'), 'waits for it to finish');
+  assert.equal(calls[0].appArgs[1], 'es-ES,en-US');
   assert.equal(calls[0].header, 'RIFF');
   assert.equal(calls[0].dataBytes, 32000, '16-bit samples');
-  assert.equal(fs.existsSync(calls[0].args[0]), false, 'the recording is deleted afterwards');
+  assert.equal(fs.existsSync(calls[0].appArgs[0]), false, 'the recording is deleted afterwards');
   assert.equal(apple.status().state, 'ready');
 });
 
@@ -183,10 +193,10 @@ test('without permission it says where to give it and stops trying', async (t) =
   assert.equal(apple.usable(['es']), false);
 });
 
-test('a helper that macOS kills is not tried again', async (t) => {
-  const killed = Object.assign(new Error('Command failed'), { signal: 'SIGABRT', code: null });
-  const { apple, calls } = appleWith(t, { err: killed });
-  await assert.rejects(apple.transcribe(new Float32Array(8000), ['es']), /falló/);
+test('an app that macOS cannot open or kills is not tried again', async (t) => {
+  const failed = Object.assign(new Error('Command failed'), { code: 1 });
+  const { apple, calls } = appleWith(t, { err: failed, openStderr: 'The application cannot be opened' });
+  await assert.rejects(apple.transcribe(new Float32Array(8000), ['es']), /cannot be opened/);
   assert.equal(apple.status().state, 'unavailable');
   assert.equal(apple.usable(['es']), false);
   assert.equal(calls.length, 1);
