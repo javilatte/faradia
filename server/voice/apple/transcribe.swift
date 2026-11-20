@@ -14,6 +14,17 @@
 import Foundation
 import Speech
 
+func emit(_ object: [String: Any]) -> Never {
+  let data = (try? JSONSerialization.data(withJSONObject: object)) ?? Data("{\"ok\":false,\"code\":\"failed\"}".utf8)
+  FileHandle.standardOutput.write(data)
+  FileHandle.standardOutput.write(Data("\n".utf8))
+  exit(object["ok"] as? Bool == true ? 0 : 1)
+}
+
+func fail(_ code: String, _ message: String) -> Never {
+  emit(["ok": false, "code": code, "message": message])
+}
+
 // Asks once: macOS shows its permission dialog the first time and remembers the answer.
 func authorize() -> SFSpeechRecognizerAuthorizationStatus {
   let current = SFSpeechRecognizer.authorizationStatus()

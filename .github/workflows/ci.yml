@@ -50,40 +50,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build the speech recognition helper
-        run: scripts/build-apple-voice.sh "$RUNNER_TEMP/faradia-transcribe"
-      - name: Check the binary
+        run: scripts/build-apple-voice.sh "$RUNNER_TEMP/Faradia.app"
+      - name: Check the app
         run: |
-          bin="$RUNNER_TEMP/faradia-transcribe"
+          app="$RUNNER_TEMP/Faradia.app"
+          bin="$app/Contents/MacOS/faradia-transcribe"
           archs="$(lipo -archs "$bin")"
           [[ "$archs" == *arm64* && "$archs" == *x86_64* ]] || { echo "::error::not universal: $archs"; exit 1; }
-          codesign --verify "$bin"
-          # macOS kills a program that asks for speech recognition without saying why: the reason must be inside.
-          otool -P "$bin" | grep -q NSSpeechRecognitionUsageDescription \
-            || { echo "::error::Info.plist missing from the binary"; exit 1; }
-          # It runs and answers in JSON (no recording, so no permission dialog on the runner).
+          codesign --verify --deep --strict "$app"
+          # macOS kills a program that asks for speech recognition without saying why.
+          plutil -extract NSSpeechRecognitionUsageDescription raw "$app/Contents/Info.plist"
+          # It runs and answers in JSON (no recording, so no permission dialog).
           out="$("$bin" || true)"
           echo "$out"
           echo "$out" | grep -q '"ok":false'
-      - name: Recognize a recording without macOS killing it
+      - name: Open the app the way Faradia does and get an answer
         run: |
-          bin="$RUNNER_TEMP/faradia-transcribe"
           say -o "$RUNNER_TEMP/test.wav" --data-format=LEI16@16000 "This is a dictation test"
-          set +e
-          # At most 3 minutes: the helper itself gives up on an unanswered permission after 2.
-          out="$(perl -e 'alarm 180; exec @ARGV' "$bin" "$RUNNER_TEMP/test.wav" en-US,es-ES)"
-          code=$?
-          set -e
-          echo "exit $code: $out"
-          # The runner has no one to grant permission, so "denied" is fine; a crash (128 + signal),
-          # what macOS does when the permission check fails, is not.
-          log show --last 2m --style compact --predicate 'process == "tccd" AND eventMessage CONTAINS "Speech"' | tail -20 || true
-          [ "$code" -lt 128 ] || { echo "::error::macOS killed the helper (exit $code)"; exit 1; }
-          echo "$out" | grep -q '^{"' || { echo "::error::no JSON answer"; exit 1; }
+          # At most 3 minutes: the helper gives up on an unanswered permission dialog after 2.
+          perl -e 'alarm 180; exec @ARGV' open -W -n -g --stdout "$RUNNER_TEMP/out.json" --stderr "$RUNNER_TEMP/err.txt" \
+            "$RUNNER_TEMP/Faradia.app" --args "$RUNNER_TEMP/test.wav" en-US,es-ES
+          echo "out: $(cat "$RUNNER_TEMP/out.json")"
+          echo "err: $(cat "$RUNNER_TEMP/err.txt")"
+          # The runner has no one to grant permission: "denied" is the expected answer, but there must be one.
+          grep -q '^{"' "$RUNNER_TEMP/out.json" || { echo "::error::no JSON answer"; exit 1; }
       - name: Keep the helper (for a publish made by hand)
         uses: actions/upload-artifact@v4
         with:
-          name: faradia-transcribe
-          path: ${{ runner.temp }}/faradia-transcribe
+          name: faradia-app
+          path: ${{ runner.temp }}/Faradia.app
           retention-days: 14
 
   secrets:
