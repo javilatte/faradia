@@ -68,19 +68,29 @@ function plannedAgent(task, stage) {
 }
 
 // Agents the chat starts (Claude's Task tool) have no catalog entry: they share one face.
-const CHAT_AGENT_FACE = '102';
+const CHAT_AGENT_FACE = 'circle/ocean';
 
-// The face of the agent at work on a task (web/js/faces.js), doing what the task is doing.
-const REVIEW_STAGES = ['verify', 'review', 'audit', 'tidy'];
+// The face of the agent at work on a task (web/js/faces.js), doing what its stage does.
+const STAGE_FACE = {
+  plan: 'thinking',
+  diagnose: 'thinking',
+  research: 'searching',
+  onboard: 'searching',
+  write: 'writing',
+  describe: 'writing',
+  commit: 'writing',
+  verify: 'reviewing',
+  'verification-kit': 'reviewing',
+  review: 'reviewing',
+  audit: 'reviewing',
+  tidy: 'reviewing'
+};
 
 function taskFaceState(task, lastStep) {
   if (task.status === 'awaiting_input' || task.pendingPermission) return 'asking';
   if (task.error) return 'failed';
   if (task.status === 'ready_to_test') return task.verification && !task.verification.ok ? 'failed' : 'done';
-  if (task.status === 'in_progress') {
-    if (REVIEW_STAGES.includes(task.stage)) return 'reviewing';
-    return lastStep ? 'working' : 'thinking';
-  }
+  if (task.status === 'in_progress') return lastStep ? STAGE_FACE[task.stage] || 'working' : 'thinking';
   if ((task.blockedCommands || []).some((b) => !b.allowed)) return 'blocked';
   return 'idle';
 }
@@ -100,7 +110,9 @@ function renderTaskHead(taskId, task, lastStep) {
   const agent = taskAgent(task);
   const face = agent
     ? window.faces?.agentFace(`task:${taskId}`, {
-        skin: agent.face,
+        face: agent.face,
+        seed: agent.id,
+        size: 40,
         state: taskFaceState(task, lastStep),
         label: agent.name
       })
@@ -1613,7 +1625,7 @@ function renderTasks() {
         : agent.lastStep
           ? 'working'
           : 'thinking';
-    const face = window.faces?.agentFace(`chat:${taskId}`, { skin: CHAT_AGENT_FACE, state: chatState });
+    const face = window.faces?.agentFace(`chat:${taskId}`, { face: CHAT_AGENT_FACE, state: chatState });
     if (face) head.appendChild(face);
     const title = document.createElement('div');
     title.className = 'task-title marquee-text';

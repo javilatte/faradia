@@ -125,20 +125,20 @@ test('stageMap: a custom task uses its own agent', (t) => {
   assert.equal(stageMap.resolveStageAgent(project, { type: 'custom', agentId: 'nope' }, 'custom'), null);
 });
 
-test('faces: every agent has one, built-in agents their own, and a repo can choose another', (t) => {
+test('faces: built-in agents have their own, others are picked in the browser, and a repo can choose', (t) => {
   const { project, catalog } = setup(t);
-  const { BUILTIN_FACES, FACE_POOL, faceFor } = require('../../server/agents/faces');
+  const { BUILTIN_FACES, isFace } = require('../../server/agents/faces');
   const byId = () => Object.fromEntries(catalog.loadAgents(project).map((a) => [a.id, a]));
   const agents = byId();
   assert.equal(agents.planner.face, BUILTIN_FACES.planner);
-  for (const a of Object.values(agents)) assert.match(a.face, /^(plain|\d{3,4})$/, a.id);
-  // Any other agent: one from the pool, always the same for the same id.
-  assert.ok(FACE_POOL.includes(faceFor('my-agent')));
-  assert.equal(faceFor('my-agent'), faceFor('my-agent'));
+  for (const id of Object.keys(BUILTIN_FACES)) assert.ok(isFace(agents[id].face), id);
+  // Any other agent: null, so the browser picks a look from its id.
+  const ecc = Object.values(agents).find((a) => a.source === 'ecc');
+  assert.equal(ecc.face, null);
 
-  catalog.saveAgent(project, 'project', 'planner', { face: '1503' });
-  assert.equal(byId().planner.face, '1503');
-  catalog.saveAgent(project, 'project', 'planner', { face: 'plain' });
-  assert.equal(byId().planner.face, 'plain');
-  assert.throws(() => catalog.saveAgent(project, 'project', 'planner', { face: '<svg>' }), /cara no válida/);
+  catalog.saveAgent(project, 'project', 'planner', { face: 'drop/#c2410c' });
+  assert.equal(byId().planner.face, 'drop/#c2410c');
+  for (const bad of ['blob/ocean/round/white', 'star/ocean', 'blob/red', '<svg>']) {
+    assert.throws(() => catalog.saveAgent(project, 'project', 'planner', { face: bad }), /cara no válida/, bad);
+  }
 });

@@ -1428,23 +1428,32 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-.agent-face-btn faradia-face {
-  width: 34px;
-  height: 34px;
-}
-.face-choice faradia-face {
-  width: 36px;
-  height: 36px;
-}
 .face-picker {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.face-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.face-picker-label {
+  width: 120px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.face-picker-choices {
+  display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 .face-choice {
   display: grid;
   place-items: center;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -1456,4 +1465,5 @@
 }
 .face-choice.selected {
   border-color: var(--accent);
+  background: var(--hover-bg);
 }

@@ -224,9 +224,31 @@ function modelControl(agent, draft) {
   );
 }
 
-// The agent's face (web/js/faces.js): a button that opens the skins to choose another one.
+// The agent's face (web/js/faces.js): a button that opens the picker (shape and color; the eyes
+// follow what the agent is doing).
+const FACE_PARTS = [
+  [
+    'shapes',
+    'Forma',
+    { circle: 'Círculo', squircle: 'Redondeada', pill: 'Píldora', blob: 'Mancha', drop: 'Gota', hexagon: 'Hexágono' }
+  ],
+  [
+    'colors',
+    'Color',
+    {
+      slate: 'Pizarra',
+      teal: 'Verde azulado',
+      ocean: 'Océano',
+      plum: 'Ciruela',
+      clay: 'Arcilla',
+      moss: 'Musgo',
+      black: 'Negro'
+    }
+  ]
+];
+
 function faceButton(agent, card) {
-  const face = window.faces?.staticFace(agent.face, { size: 32 });
+  const face = window.faces?.staticFace(agent.face, { seed: agent.id, size: 32 });
   if (!face) return null;
   return h(
     'button',
@@ -246,29 +268,53 @@ function faceButton(agent, card) {
   );
 }
 
+// The agent's shape and color: its own, or the ones picked from its id.
+function faceParts(agent) {
+  const parts = String(agent.face || '').split('/');
+  if (parts.length === 2) return parts;
+  const seeded = window.AgentAvatars?.avatarFromSeed(agent.id);
+  return seeded ? [seeded.shape, seeded.color] : ['squircle', 'slate'];
+}
+
 function facePicker(agent, draft) {
-  const choices = [...new Set([agent.face, ...(data.facePool || []), 'plain'])];
-  return h(
-    'div',
-    { class: 'face-picker', role: 'group', 'aria-label': `Caras para ${agent.name}` },
-    choices.map((skin) =>
-      h(
-        'button',
-        {
-          type: 'button',
-          class: `face-choice${skin === agent.face ? ' selected' : ''}`,
-          'aria-pressed': skin === agent.face ? 'true' : 'false',
-          title: skin === 'plain' ? 'Sin piel' : `Piel ${skin}`,
-          onclick: () => {
-            openFacePickers.delete(agent.id);
-            if (skin !== agent.face) draft.save({ face: skin });
-            else render();
-          }
-        },
-        window.faces.staticFace(skin, { size: 32 })
+  const box = h('div', { class: 'face-picker', role: 'group', 'aria-label': `Cara de ${agent.name}` });
+  window.faces.load().then(() => {
+    const current = faceParts(agent);
+    box.append(
+      ...FACE_PARTS.map(([, title, names], i) =>
+        h(
+          'div',
+          { class: 'face-picker-row' },
+          h('span', { class: 'face-picker-label' }, title),
+          h(
+            'div',
+            { class: 'face-picker-choices' },
+            Object.entries(names).map(([value, name]) => {
+              const parts = [...current];
+              parts[i] = value;
+              const face = parts.join('/');
+              const selected = current[i] === value;
+              return h(
+                'button',
+                {
+                  type: 'button',
+                  class: `face-choice${selected ? ' selected' : ''}`,
+                  'aria-pressed': selected ? 'true' : 'false',
+                  title: name,
+                  'aria-label': `${title}: ${name}`,
+                  onclick: () => {
+                    if (!selected) draft.save({ face });
+                  }
+                },
+                window.faces.staticFace(face, { size: 30 })
+              );
+            })
+          )
+        )
       )
-    )
-  );
+    );
+  });
+  return box;
 }
 
 function renderAgent(agent) {

@@ -397,7 +397,7 @@ function validateAgentInput(input, { isNew }) {
   if (isNew && (typeof input.name !== 'string' || !input.name.trim())) return 'el agente necesita un nombre';
   if (input.name !== undefined && String(input.name).length > 60) return 'nombre demasiado largo';
   if (input.prompt !== undefined && String(input.prompt).length > 20000) return 'prompt demasiado largo';
-  if (input.face !== undefined && !isFace(input.face)) return 'cara no válida: un número de piel o plain';
+  if (input.face !== undefined && !isFace(input.face)) return 'cara no válida: forma/color';
   if (input.principles !== undefined) {
     const list = Array.isArray(input.principles) ? input.principles : String(input.principles).split(',');
     const known = new Set(pstackPrinciples());

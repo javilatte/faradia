@@ -2502,8 +2502,17 @@ select,
 }
 .task-card .task-head .agent-face {
   flex: none;
-  width: 36px;
-  height: 36px;
+}
+/* The avatar is an inline box: without this its line of text makes it taller than the face, which
+   then sits off center. */
+.agent-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.agent-face > span {
+  display: block !important;
 }
 html:not(.no-faces) .task-card:has(.agent-face) .agent-orb .orb {
   display: none;

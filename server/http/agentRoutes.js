@@ -6,7 +6,7 @@ const { STAGES, TASK_TYPES } = require('../bridge/taskStages');
 const { sendJson, readJsonBody } = require('./util');
 const { pstackPrinciples, frontmatterDescription } = require('../skills/library');
 const { loadSettings } = require('../store/settingsStore');
-const { FACE_POOL } = require('../agents/faces');
+
 const path = require('path');
 
 // pstack's principles, for the agent editor: id, a readable name and when it applies.
@@ -47,7 +47,6 @@ function catalogView(projectRoot) {
       ])
     ),
     claudeModels: catalog.CLAUDE_MODELS,
-    facePool: FACE_POOL,
     efforts: catalog.EFFORTS,
     principles: principleCatalog(),
     principlesEnabled: loadSettings(projectRoot).principles?.enabled !== false

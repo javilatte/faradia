@@ -1,66 +1,43 @@
 'use strict';
 
-// Each agent's face: a BoopFace skin number (web/vendor/boopface), shown on its task cards and in
-// Settings › Agentes. Built-in agents have their own; any other agent gets one from the pool, always
-// the same for the same id. An agent file can choose another with `face: 1503`, or `face: plain`
-// for the flat color.
+// Each agent's face (web/js/faces.js, made with agent-avatars): a shape and a color, written
+// "shape/color", e.g. "blob/ocean"; the color is a preset name or a hex color. The eyes are always
+// white and change with what the agent is doing. Built-in agents have their own; any other agent
+// without one gets a shape and color picked from its id in the browser (avatarFromSeed).
+
+const SHAPES = ['circle', 'squircle', 'pill', 'blob', 'drop', 'hexagon'];
+const COLORS = ['slate', 'teal', 'ocean', 'plum', 'clay', 'moss', 'black'];
 
 const BUILTIN_FACES = {
-  planner: '1002',
-  implementer: '906',
-  verifier: '1007',
-  reviewer: '1102',
-  committer: '926',
-  'pr-writer': '1401',
-  'wiki-keeper': '1103',
-  researcher: '1609',
-  'doc-writer': '1402',
-  debugger: '1005',
-  'test-writer': '701',
-  auditor: '1001',
-  corrector: '1004',
-  'comment-sicko': '1503'
+  planner: 'blob/ocean',
+  implementer: 'squircle/slate',
+  verifier: 'pill/moss',
+  reviewer: 'hexagon/plum',
+  committer: 'circle/black',
+  'pr-writer': 'squircle/clay',
+  'wiki-keeper': 'squircle/moss',
+  researcher: 'drop/teal',
+  'doc-writer': 'drop/ocean',
+  debugger: 'hexagon/clay',
+  'test-writer': 'circle/teal',
+  auditor: 'pill/black',
+  corrector: 'blob/plum',
+  'comment-sicko': 'blob/clay'
 };
 
-// The skins offered in the face picker, and the pool for agents without one.
-const FACE_POOL = [
-  ...new Set([
-    ...Object.values(BUILTIN_FACES),
-    '102',
-    '103',
-    '105',
-    '106',
-    '201',
-    '404',
-    '509',
-    '603',
-    '912',
-    '916',
-    '1006',
-    '1301',
-    '1606',
-    '1612',
-    '1701',
-    '1702'
-  ])
-];
-
-const FACE_RE = /^(plain|\d{3,4})$/;
+const HEX = /^#[0-9a-f]{6}$/i;
 
 function isFace(value) {
-  return FACE_RE.test(String(value ?? ''));
+  const parts = String(value ?? '').split('/');
+  if (parts.length !== 2) return false;
+  const [shape, color] = parts;
+  return SHAPES.includes(shape) && (COLORS.includes(color) || HEX.test(color));
 }
 
-function hash(text) {
-  let h = 0;
-  for (const ch of String(text)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  return h;
-}
-
-/** The face an agent shows: its own choice, its built-in one, or one from the pool by its id. */
+/** The face an agent shows: its own choice or its built-in one; null lets the browser pick by id. */
 function faceFor(id, chosen) {
   if (isFace(chosen)) return String(chosen);
-  return BUILTIN_FACES[id] || FACE_POOL[hash(id) % FACE_POOL.length];
+  return BUILTIN_FACES[id] || null;
 }
 
-module.exports = { BUILTIN_FACES, FACE_POOL, faceFor, isFace };
+module.exports = { BUILTIN_FACES, SHAPES, COLORS, faceFor, isFace };

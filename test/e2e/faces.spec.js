@@ -5,7 +5,7 @@ const { trackErrors, openProject } = require('./helpers');
 
 const SHOTS = process.env.FARADIA_FACE_SHOTS;
 
-test('each agent shows its face on the task card, doing what the task does', async ({ page }) => {
+test('each agent shows its face on the task card, doing what its stage does', async ({ page }) => {
   const errors = trackErrors(page);
   await openProject(page);
   await page.locator('#chat-kind-select').selectOption('coding');
@@ -13,24 +13,23 @@ test('each agent shows its face on the task card, doing what the task does', asy
   await page.locator('#chat-input').press('Enter');
 
   const card = page.locator('.task-card', { hasText: 'Exportar el informe a CSV' });
-  const face = card.locator('.task-head faradia-face');
-  // The Planner plans: its own skin, waiting while it works.
-  await expect(face).toHaveAttribute('skin', '1002');
-  await expect(face).toHaveAttribute('data-state', /thinking|working/);
+  const face = card.locator('.task-head .agent-face');
+  // The Planner plans: it thinks.
+  await expect(face).toHaveAttribute('title', 'Planificador');
+  await expect(face.locator('.aa-avatar')).toHaveClass(/aa-thinking/);
+  if (SHOTS) await card.screenshot({ path: `${SHOTS}/face-thinking.png` });
+  // The Implementer works.
+  await expect(face).toHaveAttribute('title', 'Implementador', { timeout: 30_000 });
+  await expect(face.locator('.aa-avatar')).toHaveClass(/aa-working/);
   if (SHOTS) await card.screenshot({ path: `${SHOTS}/face-working.png` });
-  // The Verifier checks the work.
-  await expect(face).toHaveAttribute('skin', '1007', { timeout: 30_000 });
-  await expect(face).toHaveAttribute('data-state', 'reviewing');
+  // The Verifier reads the work.
+  await expect(face).toHaveAttribute('title', 'Verificador', { timeout: 30_000 });
+  await expect(face.locator('.aa-avatar')).toHaveClass(/aa-reading/);
   if (SHOTS) await card.screenshot({ path: `${SHOTS}/face-reviewing.png` });
   // Ready: it smiles.
   await expect(card).toHaveClass(/ready/, { timeout: 30_000 });
-  await expect(face).toHaveAttribute('data-state', 'done');
-  await page.waitForTimeout(600);
-  if (SHOTS)
-    await page
-      .locator('#col-ready-to-test, .task-card.ready')
-      .first()
-      .screenshot({ path: `${SHOTS}/face-done.png` });
+  await expect(face.locator('.aa-avatar')).toHaveClass(/aa-happy/);
+  if (SHOTS) await card.screenshot({ path: `${SHOTS}/face-done.png` });
   expect(errors).toEqual([]);
 });
 
@@ -39,18 +38,21 @@ test('an agent can change its face, and Settings › Apariencia turns the faces 
   await openProject(page);
   await page.locator('#settings-button').click();
   await page.locator('.settings-nav-item[data-pane="agents"]').click();
-  const planner = page.locator('.agent-card[data-agent="planner"]');
-  await expect(planner.locator('.agent-face-btn faradia-face')).toHaveAttribute('skin', '1002');
-  await planner.getByLabel('Cambiar la cara de Planificador').click();
+  const planner = () => page.locator('.agent-card[data-agent="planner"]');
+  await expect(planner().locator('.agent-face-btn .aa-avatar')).toBeVisible();
+  await planner().getByLabel('Cambiar la cara de Planificador').click();
+  await planner().getByLabel('Forma: Hexágono').click();
+  await expect(planner().getByLabel('Forma: Hexágono')).toHaveAttribute('aria-pressed', 'true');
+  await planner().getByLabel('Color: Arcilla').click();
+  await expect(planner().getByLabel('Color: Arcilla')).toHaveAttribute('aria-pressed', 'true');
   if (SHOTS) {
-    await page.waitForTimeout(800);
-    await planner.screenshot({ path: `${SHOTS}/face-picker.png` });
+    await page.waitForTimeout(600);
+    await planner().screenshot({ path: `${SHOTS}/face-picker.png` });
   }
-  await planner.locator('.face-choice[title="Piel 1503"]').click();
-  await expect(page.locator('.agent-card[data-agent="planner"] .agent-face-btn faradia-face')).toHaveAttribute(
-    'skin',
-    '1503'
-  );
+
+  // Its face is back to the built-in one with the rest of its settings.
+  await planner().getByRole('button', { name: 'Restablecer' }).click();
+  await expect(planner().locator('.wb-badge', { hasText: 'todos los repos' })).toHaveCount(0);
 
   await page.locator('.settings-nav-item[data-pane="appearance"]').click();
   await page.getByLabel('Caras de los agentes').uncheck();
@@ -60,7 +62,7 @@ test('an agent can change its face, and Settings › Apariencia turns the faces 
   await page.locator('#chat-input').press('Enter');
   const card = page.locator('.task-card', { hasText: 'Tarea sin caras' });
   await expect(card).toHaveClass(/ready/, { timeout: 30_000 });
-  await expect(card.locator('faradia-face')).toHaveCount(0);
+  await expect(card.locator('.agent-face')).toHaveCount(0);
 
   // Back on, for the other tests (settings are shared by the run).
   await page.locator('#settings-button').click();

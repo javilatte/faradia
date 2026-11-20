@@ -1,44 +1,25 @@
-// The agents' faces: BoopFace (web/vendor/boopface, MIT), one skin per agent (server/agents/faces.js).
-// A face says what its agent is doing: it waits while the agent works, looks wary when the agent asks
-// something, smiles when the work is ready and droops when it fails. Settings › Apariencia turns them
-// off. Faces load the first time one is shown; the skins, the first time a skin is.
+// The agents' faces: agent-avatars (web/vendor/agent-avatars, MIT), a shape with two eyes per agent
+// (server/agents/faces.js). A face says what its agent is doing: it thinks while it plans, works while
+// it changes code, reads while it verifies or reviews, listens when it asks you something, smiles when
+// the work is ready and says sorry when it fails. Settings › Apariencia turns them off. The library
+// loads the first time a face is shown.
 
 // A classic script (the task cards are classic scripts too): it exposes window.faces.
 (() => {
   'use strict';
 
-  const TAG = 'faradia-face';
   let enabled = true;
   let loading = null;
 
-  // The task lists are rebuilt on every change, which takes each face out of the page and puts it back
-  // at once. BoopFace starts over (idle) when it leaves the page; this subclass only lets it go when it
-  // is still out after the rebuild, so a face keeps doing what it was doing.
-  function define(BoopFace) {
-    if (customElements.get(TAG)) return;
-    customElements.define(
-      TAG,
-      class extends BoopFace {
-        connectedCallback() {
-          if (this._faradiaLive) return;
-          this._faradiaLive = true;
-          super.connectedCallback();
-        }
-        disconnectedCallback() {
-          queueMicrotask(() => {
-            if (this.isConnected || !this._faradiaLive) return;
-            this._faradiaLive = false;
-            super.disconnectedCallback();
-          });
-        }
-      }
-    );
-  }
-
   function load() {
-    loading ??= import(new URL('vendor/boopface/boopface.js', document.baseURI).href)
-      .then((m) => define(m.BoopFace))
-      .catch(() => null);
+    loading ??= new Promise((resolve) => {
+      if (window.AgentAvatars) return resolve(window.AgentAvatars);
+      const script = document.createElement('script');
+      script.src = new URL('vendor/agent-avatars/agent-avatars.js', document.baseURI).href;
+      script.onload = () => resolve(window.AgentAvatars || null);
+      script.onerror = () => resolve(null);
+      document.head.appendChild(script);
+    });
     return loading;
   }
 
@@ -51,79 +32,98 @@
     return enabled;
   }
 
-  // One face per key (a task, a chat agent…), kept between rebuilds.
+  /**
+   * "shape/color" (or nothing: picked from the agent's id) as avatar props. The eyes are always the
+   * same white ones: what changes them is the agent's mood.
+   */
+  function looks(face, seed, lib) {
+    const parts = String(face || '').split('/');
+    const [shape, color] =
+      parts.length === 2
+        ? parts
+        : [lib.avatarFromSeed(seed || 'agent').shape, lib.avatarFromSeed(seed || 'agent').color];
+    return { shape, color, eyes: 'round', eyeColor: 'white', fill: 'gradient' };
+  }
+
+  // A state of the task, as the avatar's mood.
+  const MOODS = {
+    idle: 'idle',
+    thinking: 'thinking',
+    searching: 'searching',
+    working: 'working',
+    writing: 'writing',
+    reviewing: 'reading',
+    asking: 'listening',
+    done: 'happy',
+    failed: 'sorry',
+    blocked: 'confused'
+  };
+
+  // One face per key (a task, a chat agent…). Its element is kept between rebuilds of the lists, so
+  // the avatar keeps its state and only changes what changed.
   const faces = new Map();
 
-  const LOOPS = { working: 'spin', thinking: 'wave', reviewing: 'wrap' };
-  const ONCE = { asking: 'wary', done: 'success', failed: 'failure', blocked: 'refuse' };
-
-  function apply(el, state) {
-    customElements.whenDefined(TAG).then(() => {
-      if (el.dataset.state !== state) return; // it changed again meanwhile
-      if (LOOPS[state]) return el.startWaiting({ variant: LOOPS[state] });
-      el.stopWaiting?.();
-      if (ONCE[state]) el.play(ONCE[state]);
-      else el.reset?.();
+  function render(entry) {
+    load().then((lib) => {
+      if (!lib) return;
+      const props = {
+        ...looks(entry.face, entry.seed, lib),
+        mood: MOODS[entry.state] || 'idle',
+        size: entry.size,
+        outline: true,
+        followPointer: entry.state === 'idle',
+        label: entry.label || undefined
+      };
+      if (entry.handle) entry.handle.update(props);
+      else entry.handle = lib.mount(entry.el, props);
     });
   }
 
-  // A skin, or the flat color in a grey that shows on light and dark backgrounds alike.
-  function paint(el, skin) {
-    if (skin && skin !== 'plain') {
-      if (el.getAttribute('skin') !== skin) el.setAttribute('skin', skin);
-      el.removeAttribute('color');
-    } else {
-      el.removeAttribute('skin');
-      el.setAttribute('color', '#8e8e93');
-    }
-  }
-
   /**
-   * The face for `key`: `skin` is a BoopFace skin number or 'plain'; `state` one of idle, thinking,
-   * working, reviewing, asking, done, failed, blocked. Null when faces are off.
+   * The face for `key`: `face` is "shape/color" or null (picked from `seed`), `state`
+   * one of idle, thinking, searching, working, writing, reviewing, asking, done, failed, blocked.
+   * Null when faces are off.
    */
-  function agentFace(key, { skin, size = 36, state = 'idle', label = '' } = {}) {
+  function agentFace(key, { face = null, seed = '', size = 36, state = 'idle', label = '' } = {}) {
     if (!enabled) return null;
-    load();
-    let el = faces.get(key);
-    if (!el) {
-      el = document.createElement(TAG);
+    let entry = faces.get(key);
+    if (!entry) {
+      const el = document.createElement('span');
       el.className = 'agent-face';
-      el.setAttribute('size', String(size));
-      el.setAttribute('auto-sleep', '0');
-      el.setAttribute('press-squeeze', 'false');
-      el.setAttribute('aria-hidden', 'true');
-      faces.set(key, el);
+      entry = { el, handle: null };
+      faces.set(key, entry);
     }
-    paint(el, skin);
-    el.title = label;
-    if (el.dataset.state !== state) {
-      el.dataset.state = state;
-      apply(el, state);
-    }
-    return el;
+    const changed =
+      entry.face !== face ||
+      entry.seed !== seed ||
+      entry.state !== state ||
+      entry.size !== size ||
+      entry.label !== label;
+    Object.assign(entry, { face, seed, size, state, label });
+    entry.el.title = label;
+    entry.el.dataset.state = state;
+    if (changed) render(entry);
+    return entry.el;
   }
 
-  /** A face that does not change state: Settings › Agentes, the face picker. Not kept. */
-  function staticFace(skin, { size = 40, label = '' } = {}) {
+  /** A face that does not follow a task: Settings › Agentes and its picker. */
+  function staticFace(face, { seed = '', size = 32, mood = 'idle' } = {}) {
     if (!enabled) return null;
-    load();
-    const el = document.createElement(TAG);
+    const el = document.createElement('span');
     el.className = 'agent-face';
-    el.setAttribute('size', String(size));
-    el.setAttribute('auto-sleep', '0');
-    el.setAttribute('press-squeeze', 'false');
-    paint(el, skin);
-    if (label) el.title = label;
-    el.setAttribute('aria-hidden', 'true');
+    load().then((lib) => lib && lib.mount(el, { ...looks(face, seed, lib), mood, size, outline: true }));
     return el;
   }
 
   /** Forgets the faces whose key is not in `keys` (tasks deleted or archived). */
   function keepFaces(keys) {
     const keep = new Set(keys);
-    for (const key of faces.keys()) if (!keep.has(key)) faces.delete(key);
+    for (const [key, entry] of faces) {
+      if (keep.has(key)) continue;
+      entry.handle?.unmount();
+      faces.delete(key);
+    }
   }
 
-  window.faces = { agentFace, staticFace, keepFaces, setFacesEnabled, facesEnabled };
+  window.faces = { agentFace, staticFace, keepFaces, setFacesEnabled, facesEnabled, load };
 })();
