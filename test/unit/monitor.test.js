@@ -284,3 +284,25 @@ test('MonitorService: a change whose event was lost is reported after the watche
   const caught = activity.find((e) => e.catchUp);
   assert.deepEqual(caught?.paths, ['config.js']);
 });
+
+test('TreeWatcher (per-folder): a watchlist folder created without an event is watched by ensureWatched', async (t) => {
+  const { dir } = makeRepo(t);
+  const w = await new TreeWatcher(dir, { debounceMs: 80, recursive: false, extraDirs: ['build'] }).start();
+  t.after(() => w.close());
+  const seen = new Set();
+  w.on('change', ({ paths }) => paths.forEach((p) => seen.add(p)));
+  // As when the folder appears while the watcher restarts: the root watch misses it.
+  w.watchers.get('').close();
+  w.watchers.delete('');
+  fs.mkdirSync(path.join(dir, 'build'));
+  fs.writeFileSync(path.join(dir, 'build', 'antes.js'), 'x');
+  await w.ensureWatched('build');
+  const until = async (rel) => {
+    const deadline = Date.now() + 3000;
+    while (!seen.has(rel) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+    return seen.has(rel);
+  };
+  assert.ok(await until('build/antes.js'), 'what was already inside is reported');
+  fs.writeFileSync(path.join(dir, 'build', 'despues.js'), 'y');
+  assert.ok(await until('build/despues.js'), 'and the folder is watched from then on');
+});

@@ -23,7 +23,8 @@ const RECENT_WATCH_EVENTS = 200;
 // On macOS every recursive fs.watch shares one FSEvents stream that libuv restarts whenever a
 // watcher is added or closed: changes made in that moment produce no event. A while after any
 // watcher change, each repo's git status is read again and the files that changed without an
-// event are reported as activity, so secrets and other signals are not missed.
+// event are reported as activity, so secrets and other signals are not missed. On Linux, a
+// watchlist folder created while a watcher restarts is not watched: it is checked then too.
 const CATCH_UP_MS = 1000;
 const MAX_CATCH_UP_FILES = 2000;
 
@@ -41,7 +42,11 @@ class MonitorService extends EventEmitter {
   watchersChanged() {
     clearTimeout(this.catchUpTimer);
     this.catchUpTimer = setTimeout(() => {
-      for (const entry of this.repos.values()) if (entry.git) this.scheduleRefresh(entry);
+      for (const entry of this.repos.values()) {
+        if (entry.git) this.scheduleRefresh(entry);
+        // A watchlist folder created while the watcher restarted is not watched: it is now.
+        for (const dir of entry.extraDirs || []) entry.watcher?.ensureWatched(dir).catch(() => {});
+      }
     }, CATCH_UP_MS);
     this.catchUpTimer.unref?.();
   }
@@ -125,6 +130,7 @@ class MonitorService extends EventEmitter {
     const patterns = getWatchlist(entry.path);
     entry.matches = compileGlobs(patterns);
     const extraDirs = patterns.map(staticPrefix).filter(Boolean);
+    entry.extraDirs = extraDirs;
     entry.watcher = new TreeWatcher(entry.path, { extraDirs, debounceMs: this.debounceMs, watchGitMeta: entry.git });
     entry.watcher.on('change', (batch) => this.onChange(entry, batch));
     await entry.watcher.start();
