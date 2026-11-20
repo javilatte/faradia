@@ -20,7 +20,20 @@ reins of your work.
   formatters, test runners and watchers do not see them; the JSON state in `.faradia` is written
   the way Prettier formats it.
 
+### Added
+- **Dictation in the chat**: a microphone next to the message box. The text lands in the box, never
+  sent on its own; Esc cancels. It is transcribed on the computer, with no accounts or payments, by
+  Faradia's own engine, outside the browser: macOS's speech recognition on a Mac (a small Swift
+  helper that CI builds and ships in the package) and Whisper elsewhere, native on every core (it
+  installs itself the first time, about 110 MB, while the browser transcribes). Whisper chooses
+  between Spanish and English in the same pass that transcribes, and uses large-v3-turbo when it
+  runs fast enough on the computer and small when not. Settings › Dictado.
+- **Code map**: with CodeGraph on, the repo's wiki gets a *Mapa del código* page taken from its
+  index without a model (the pieces used from most other files and which area depends on which),
+  refreshed after every task. *Conocer este repo* and the wiki agent start from it.
+
 ### Fixed
+- Two Faradia instances starting at once no longer clash saving `workbenches.json`.
 - Findings of a test run on real repos (koa, click, zustand): a clear message and an automatic
   resume when Claude runs out of usage without a local model; retries keep the conversation and the
   user's answers, which every later stage and the Verifier take into account; the verification kit

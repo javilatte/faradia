@@ -357,6 +357,11 @@ edit them. After each committed task (and each report), the *Librarian* agent up
 the project wiki, and your personal wiki when it learns something general. It uses your
 local model when one is configured and answering; otherwise, or if it fails, Claude Haiku.
 
+With [CodeGraph](https://github.com/colbymchenry/codegraph) on, the project wiki also has a
+**code map** (*Mapa del código*) that Faradia takes from CodeGraph's index without any model:
+the pieces used from the most other files and which area depends on which. It is refreshed
+after every task, and *Conocer este repo* and the wiki agent start from it.
+
 Wikis live outside the repos (`~/.local/share/faradia/knowledge`), keyed by the project's
 git remote, so a project has the same wiki on every machine. **Settings → General →
 Export knowledge** writes one file with your configuration, every wiki and each repo's
@@ -379,6 +384,22 @@ memory; importing it merges by date (the newer side wins, replaced items are bac
 Drop, paste or attach any file in the chat. Images go as images; PDFs are referenced by
 path and page count so Claude reads only the pages it needs; Word, Excel, PowerPoint and
 ODT text is extracted to markdown; small text files go inline; anything else by path.
+
+## Dictation
+
+Click the microphone next to the message box and speak: the text appears in the box, where
+you review it before sending (Esc cancels). It is transcribed on your computer, outside the
+browser, with no accounts, APIs or payments:
+
+- **macOS**: the system's own speech recognition, offline. A small Swift helper
+  (`server/voice/apple/`) comes built in the npm package; macOS asks for permission once.
+- **Linux and Windows**, or when macOS cannot: Whisper, run natively on every core by
+  Faradia. It installs itself the first time (about 110 MB, in `~/.local/share/faradia/voice`)
+  while the browser transcribes that dictation. It uses large-v3-turbo with 8 threads or more
+  and small with fewer, and chooses between Spanish and English by itself.
+
+Settings → Dictado changes the engine (Faradia, Whisper or the browser), the model and the
+language.
 
 ## Supervision
 
@@ -462,6 +483,7 @@ with a sandbox CSP.
 
 ~/.local/share/faradia/
 ├── worktrees/<repo>/<task>/     one git worktree per agent task, outside the repo
+├── voice/                       dictation engine (Whisper) and its models, installed on first use
 ├── timeline/events.jsonl        the timeline
 ├── issues.jsonl                 problem report
 └── trash/                       files deleted from the explorer
