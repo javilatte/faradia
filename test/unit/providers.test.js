@@ -110,6 +110,7 @@ test('the local model answers suggestions only while it is fast; after a failure
     proc.stdout = new EventEmitter();
     proc.kill = () => {};
     proc.stdin = {
+      on: () => {},
       end: () => {
         claude.push(1);
         setImmediate(() => {
@@ -167,7 +168,7 @@ test('at most two Haiku suggestions run per repo: a third stops the oldest', asy
   const spawnFn = () => {
     const proc = new EventEmitter();
     proc.stdout = new EventEmitter();
-    proc.stdin = { end: () => {} };
+    proc.stdin = { on: () => {}, end: () => {} };
     proc.killed = false;
     proc.kill = () => {
       proc.killed = true;

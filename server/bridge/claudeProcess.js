@@ -112,6 +112,8 @@ class ClaudeSession extends EventEmitter {
       this.emit('exit', { code, signal });
     });
     this.proc.on('error', (err) => this.emit('error', err));
+    // Writing after claude has gone: its exit event reports it, the write must not crash Faradia.
+    this.proc.stdin.on('error', () => {});
   }
 
   _onStdout(chunk) {

@@ -400,8 +400,10 @@ Click the microphone next to the message box and speak: the text appears in the 
 you review it before sending (Esc cancels). It is transcribed on your computer, outside the
 browser, with no accounts, APIs or payments:
 
-- **macOS**: the system's own speech recognition, offline. A small Swift helper
-  (`server/voice/apple/`) comes built in the npm package; macOS asks for permission once.
+- **macOS**: the system's own speech recognition, offline. A small helper app, Faradia.app
+  (`server/voice/apple/`), comes built in the npm package; macOS asks for permission for
+  Faradia once. A language needs its dictation model downloaded (System Settings › Keyboard ›
+  Dictation); Settings → Dictado says when one is missing.
 - **Linux and Windows**, or when macOS cannot: Whisper, run natively on every core by
   Faradia. It installs itself the first time (about 110 MB, in `~/.local/share/faradia/voice`)
   while the browser transcribes that dictation. It uses large-v3-turbo with 8 threads or more

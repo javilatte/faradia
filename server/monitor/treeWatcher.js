@@ -33,6 +33,8 @@ function checkIgnored(root, dirs) {
     let out = '';
     child.stdout.on('data', (c) => (out += c));
     child.on('error', () => resolve(new Set()));
+    // Outside a git repo git exits before reading: the unread input must not crash Faradia.
+    child.stdin.on('error', () => {});
     // exit 0 = some ignored, 1 = none ignored, 128 = not a git repo
     child.on('close', () => resolve(new Set(out.split('\n').filter(Boolean))));
     child.stdin.end(dirs.join('\n') + '\n');
@@ -343,6 +345,7 @@ class TreeWatcher extends EventEmitter {
 }
 
 module.exports = {
+  checkIgnored,
   isTransient,
   TreeWatcher,
   dirsOf,

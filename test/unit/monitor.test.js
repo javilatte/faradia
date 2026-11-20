@@ -306,3 +306,14 @@ test('TreeWatcher (per-folder): a watchlist folder created without an event is w
   fs.writeFileSync(path.join(dir, 'build', 'despues.js'), 'y');
   assert.ok(await until('build/despues.js'), 'and the folder is watched from then on');
 });
+
+test('checkIgnored outside a git repo: answers "none ignored" instead of crashing on the unread input', async () => {
+  const { checkIgnored } = require('../../server/monitor/treeWatcher');
+  const dir = mkTmpDir('nogit');
+  try {
+    const dirs = Array.from({ length: 20000 }, (_, i) => `folder-${i}`);
+    assert.deepEqual(await checkIgnored(dir, dirs), new Set());
+  } finally {
+    rmTmpDir(dir);
+  }
+});

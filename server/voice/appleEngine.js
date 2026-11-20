@@ -1,25 +1,27 @@
 'use strict';
 
-const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 
 // macOS's own speech recognition for dictation (the Speech framework, on the device): no download
-// and no model, and it runs on Apple's chips. The helper (apple/transcribe.swift) comes already built
-// in Faradia's npm package: CI compiles it on macOS when publishing (scripts/build-apple-voice.sh), so
-// nobody compiles anything. macOS asks for permission once. Without the helper (a git checkout that
-// did not build it) or without permission, dictation uses Faradia's Whisper (localEngine.js).
+// and no model, and it runs on Apple's chips. The helper (apple/transcribe.swift) is a small app,
+// Faradia.app, that comes already built in Faradia's npm package: CI compiles it on macOS when
+// publishing (scripts/build-apple-voice.sh), so nobody compiles anything. Faradia opens it with `open`
+// so that macOS treats it as an app of its own: it asks permission for Faradia once (it would not ask a
+// program Faradia started, and would kill it instead). Without the helper (a git checkout that did not
+// build it) or without permission, dictation uses Faradia's Whisper (localEngine.js).
 
-const HELPER = path.join(__dirname, 'apple', 'bin', 'faradia-transcribe');
+const HELPER = path.join(__dirname, 'apple', 'bin', 'Faradia.app');
+const OPEN = '/usr/bin/open';
 
 // Whisper's language codes to the locales Apple recognizes on the device.
 const LOCALES = { es: 'es-ES', en: 'en-US', ca: 'ca-ES', pt: 'pt-BR', fr: 'fr-FR', it: 'it-IT', de: 'de-DE' };
 
 const MESSAGES = {
   denied:
-    'macOS no da permiso de reconocimiento de voz: actívalo para la app desde la que arrancas Faradia (Terminal, por ejemplo) en Ajustes del Sistema › Privacidad y seguridad › Reconocimiento de voz',
+    'macOS no da permiso de reconocimiento de voz: actívalo para Faradia en Ajustes del Sistema › Privacidad y seguridad › Reconocimiento de voz',
   restricted: 'el reconocimiento de voz está restringido en este Mac',
   missing:
     'esta instalación de Faradia no trae el reconocimiento de voz de macOS (npm run build:apple-voice lo compila)'
@@ -62,7 +64,8 @@ function run(exec, command, args, opts) {
 function createAppleEngine({ platform = process.platform, exec = execFile, helper = HELPER } = {}) {
   const supported = platform === 'darwin';
   const state = { state: 'unknown', message: null };
-  if (supported && !fs.existsSync(helper)) Object.assign(state, { state: 'unavailable', message: MESSAGES.missing });
+  if (supported && !fs.existsSync(path.join(helper, 'Contents', 'MacOS', 'faradia-transcribe')))
+    Object.assign(state, { state: 'unavailable', message: MESSAGES.missing });
 
   /** Whether it is worth trying for these languages (Apple does not detect "any" language). */
   function usable(languages) {
@@ -71,13 +74,22 @@ function createAppleEngine({ platform = process.platform, exec = execFile, helpe
   }
 
   async function transcribe(audio, languages) {
-    const wav = path.join(os.tmpdir(), `faradia-dictado-${process.pid}-${crypto.randomBytes(4).toString('hex')}.wav`);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `faradia-dictado-${process.pid}-`));
+    const wav = path.join(dir, 'recording.wav');
+    const outFile = path.join(dir, 'out.json');
+    const errFile = path.join(dir, 'err.txt');
     fs.writeFileSync(wav, encodeWav(audio));
     let out;
     try {
-      out = await run(exec, helper, [wav, languages.map((l) => LOCALES[l]).join(',')], { timeout: 240_000 });
+      // -W waits for it to finish, -n opens a new instance each time, -g leaves it in the background.
+      const args = ['-W', '-n', '-g', '--stdout', outFile, '--stderr', errFile, helper, '--args', wav];
+      const result = await run(exec, OPEN, [...args, languages.map((l) => LOCALES[l]).join(',')], {
+        timeout: 240_000
+      });
+      const read = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '');
+      out = { ...result, stdout: read(outFile), stderr: read(errFile) || result.stderr };
     } finally {
-      fs.rmSync(wav, { force: true });
+      fs.rmSync(dir, { recursive: true, force: true });
     }
     let answer = null;
     try {
@@ -86,7 +98,9 @@ function createAppleEngine({ platform = process.platform, exec = execFile, helpe
       /* it did not answer: below */
     }
     if (answer?.ok) {
-      Object.assign(state, { state: 'ready', message: null });
+      // A language Apple could not use (its on-device model is not downloaded, say) is said in Settings.
+      const skipped = (answer.skipped || []).map((x) => `${x.locale}: ${x.message}`).join('; ');
+      Object.assign(state, { state: 'ready', message: skipped || null });
       const language = Object.keys(LOCALES).find((k) => LOCALES[k] === answer.locale) || languages[0];
       return { text: String(answer.text || '').trim(), language, model: 'apple' };
     }
@@ -97,8 +111,9 @@ function createAppleEngine({ platform = process.platform, exec = execFile, helpe
       `el reconocimiento de voz de macOS falló: ${(out.stderr || out.err?.message || '').trim() || 'sin respuesta'}`;
     // Without permission it would fail every time; other errors (a busy recognizer) may pass.
     if (code === 'denied' || code === 'restricted') state.state = 'denied';
-    // It could not start at all (a broken or foreign binary): Whisper from now on.
-    else if (!answer && out.err?.code === 'ENOENT') state.state = 'unavailable';
+    // No answer at all: macOS could not open it or killed it, and that would happen on every
+    // dictation, so Whisper from now on.
+    else if (!answer) state.state = 'unavailable';
     state.message = message;
     throw Object.assign(new Error(message), { code });
   }
