@@ -117,6 +117,23 @@ const INTRO = [
 // What changed in each version (newest last). Only versions newer than the one seen are shown.
 const NEWS = [
   {
+    version: '3.1.0',
+    cards: [
+      {
+        icon: 'agents',
+        title: 'Los agentes tienen cara',
+        text: 'Cada agente tiene su cara en las tarjetas, y sus ojos dicen qué está haciendo: piensa mientras planifica, trabaja mientras implementa, lee mientras verifica, te escucha cuando pregunta y sonríe cuando termina. Cambia su forma y su color en Ajustes › Agentes, o apágalas en Apariencia.',
+        action: { label: 'Ver los agentes…', run: () => openPane('agents') }
+      },
+      {
+        icon: 'mic',
+        title: 'Dictado en el Mac',
+        text: 'El dictado con el reconocimiento de voz de macOS ya funciona: la primera vez macOS te pide permiso para Faradia. Distingue bien español e inglés.',
+        action: { label: 'Ajustes del dictado…', run: () => openPane('voice') }
+      }
+    ]
+  },
+  {
     version: '3.0.0',
     cards: [
       {

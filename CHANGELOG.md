@@ -2,7 +2,7 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [3.1.0] - 2026-11-21
 
 ### Added
 - **Agents' faces**: each agent has a face on its task cards, made with agent-avatars (MIT, bundled
