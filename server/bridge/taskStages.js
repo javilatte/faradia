@@ -388,7 +388,7 @@ function requestWithDecisions(task, stage) {
     .join('\n')}`;
 }
 
-function buildStageBody(task, stage, { docOptions, agent, describeOptions, evidenceDir, skillsDir } = {}) {
+function buildStageBody(task, stage, { docOptions, agent, describeOptions, evidenceDir, skillsDir, codeMap } = {}) {
   const goal = requestWithDecisions(task, stage);
   const out = (s) => (task.stageOutputs && task.stageOutputs[s]) || '';
   switch (stage) {
@@ -510,6 +510,9 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         'Vas a escribir la memoria de este repositorio: el conocimiento que el chat y todos los agentes reciben en cada sesión para trabajar aquí sin redescubrirlo. Si ya hay una memoria (la tienes en el system prompt), mejórala: conserva lo que siga siendo cierto y útil.',
         `Indicaciones del usuario:\n${goal}`,
         'Investiga leyendo los ficheros (manifiestos, README, configuración de CI, scripts, estructura de carpetas) y el historial (git log --oneline -30). Puedes ejecutar comandos de solo lectura y, si son rápidos, comprobar que el comando de tests funciona.',
+        codeMap
+          ? `Punto de partida para «## Estructura»: el mapa del código que Faradia sacó del índice de CodeGraph (las piezas más usadas y qué zona depende de cuál). Compruébalo leyendo el código; no lo copies entero:\n\n${codeMap}`
+          : null,
         [
           'Responde SOLO con el markdown completo de la memoria, sin preámbulo, con estos apartados (omite los que no apliquen):',
           '## Qué es — una o dos frases.',
@@ -520,7 +523,9 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
           'Sé concreto y breve (unas 60 líneas como mucho): es contexto que se paga en cada sesión.',
           'Escribe solo conocimiento estable del repo. No incluyas nada de esta sesión: estás en un worktree temporal de Faradia en una rama de tarea (faradia/task-…), y esa ruta y esa rama no son del repo. La rama principal sí. Tampoco repitas las instrucciones que ya recibes en el system prompt.'
         ].join('\n')
-      ].join('\n\n');
+      ]
+        .filter(Boolean)
+        .join('\n\n');
     case 'audit':
       return [
         'Etapa de AUDITORIA. No modifiques ficheros.',

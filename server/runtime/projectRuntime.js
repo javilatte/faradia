@@ -38,6 +38,17 @@ const { adoptPendingMemory } = require('../knowledge/bundle');
 const { loadAttachments, attachmentsPrompt } = require('../bridge/attachments');
 const { listFilesModifiedSince } = require('../bridge/taskFiles');
 const evidence = require('../bridge/evidence');
+const { buildRepoMap, renderRepoMap } = require('../knowledge/repoMap');
+
+// "Conocer este repo" starts from the code map when the repo has a CodeGraph index (repoMap.js).
+function codeMapFor(projectRoot) {
+  try {
+    const map = buildRepoMap(projectRoot);
+    return map ? renderRepoMap(map) : null;
+  } catch {
+    return null;
+  }
+}
 const { migrateRepo } = require('../migrate/rename');
 const { transcriptExists } = require('../bridge/claudeTranscripts');
 const { KIT_STAGING } = require('../bridge/taskStages');
@@ -321,7 +332,8 @@ function createProjectRuntime({ projectId, projectRoot, port, token, sendToClien
       agent,
       describeOptions,
       evidenceDir,
-      skillsDir: opts.skillsDir
+      skillsDir: opts.skillsDir,
+      codeMap: stage === 'onboard' ? codeMapFor(projectRoot) : null
     });
     if (afterSwitch && resuming)
       prompt =
