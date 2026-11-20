@@ -64,6 +64,20 @@ jobs:
           out="$("$bin" || true)"
           echo "$out"
           echo "$out" | grep -q '"ok":false'
+      - name: Recognize a recording without macOS killing it
+        run: |
+          bin="$RUNNER_TEMP/faradia-transcribe"
+          say -o "$RUNNER_TEMP/test.wav" --data-format=LEI16@16000 "This is a dictation test"
+          set +e
+          out="$("$bin" "$RUNNER_TEMP/test.wav" en-US,es-ES)"
+          code=$?
+          set -e
+          echo "exit $code: $out"
+          # The runner has no one to grant permission, so "denied" is fine; a crash (128 + signal),
+          # what macOS does when the permission check fails, is not.
+          log show --last 2m --style compact --predicate 'process == "tccd" AND eventMessage CONTAINS "Speech"' | tail -20 || true
+          [ "$code" -lt 128 ] || { echo "::error::macOS killed the helper (exit $code)"; exit 1; }
+          echo "$out" | grep -q '^{"' || { echo "::error::no JSON answer"; exit 1; }
       - name: Keep the helper (for a publish made by hand)
         uses: actions/upload-artifact@v4
         with:
