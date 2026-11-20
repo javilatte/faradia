@@ -101,7 +101,7 @@ test('a newer version shows a notice in the toolbar with how to update', async (
         latest: '2.1.0',
         updateAvailable: true,
         installCommand: 'npm install -g faradia@latest',
-        releaseUrl: 'https://github.com/javilatte/optimia/releases/tag/v2.1.0'
+        releaseUrl: 'https://github.com/javilatte/faradia/releases/tag/v2.1.0'
       }
     })
   );
