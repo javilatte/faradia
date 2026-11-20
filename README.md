@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><img src="docs/assets/demo-agents.gif" alt="Agents at work in faradia: their reasoning, a risky command blocked for safety, and three agents running at once in two repos" width="100%"></a>
+  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><img src="docs/assets/demo-agents.gif" alt="Agents at work in Faradia: their reasoning, a risky command blocked for safety, and three agents running at once in two repos" width="100%"></a>
 </p>
 
 <p align="center">
@@ -32,11 +32,12 @@
 </p>
 
 <p align="center">
-  <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4"><img src="docs/assets/whats-new-2.3.gif" alt="What's new in Faradia 2.3: a 40-second video" width="60%"></a><br>
-  <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4"><b>▶ What's new in 2.3</b></a>
+  <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4"><img src="docs/assets/whats-new-3.0.gif" alt="optimia is now Faradia: what's new in 3.0, a 45-second video" width="60%"></a><br>
+  <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4"><b>▶ optimia is now Faradia: what's new in 3.0</b></a>
+  · <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4">2.3</a>
 </p>
 
-![faradia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
+![Faradia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
 
 ## Why Faradia
 
