@@ -32,8 +32,9 @@
 </p>
 
 <p align="center">
-  <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4"><img src="docs/assets/whats-new-3.0.gif" alt="optimia is now Faradia: what's new in 3.0, a 45-second video" width="60%"></a><br>
-  <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4"><b>▶ optimia is now Faradia: what's new in 3.0</b></a>
+  <a href="https://optimia.jagoan.es/media/faradia-3.1.0-4k.mp4"><img src="docs/assets/whats-new-3.1.gif" alt="Faradia 3.1: your agents have faces, a 35-second video" width="60%"></a><br>
+  <a href="https://optimia.jagoan.es/media/faradia-3.1.0-4k.mp4"><b>▶ Your agents have faces: what's new in 3.1</b></a>
+  · <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4">3.0</a>
   · <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4">2.3</a>
 </p>
 
