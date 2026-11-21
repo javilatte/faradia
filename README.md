@@ -24,27 +24,25 @@
 </p>
 
 <p align="center">
-  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><img src="docs/assets/demo-agents.gif" alt="Agents at work in Faradia: their reasoning, a risky command blocked for safety, and three agents running at once in two repos" width="100%"></a>
+  <a href="https://optimia.jagoan.es/media/faradia-3.1.0-4k.mp4"><img src="docs/assets/demo-agents.gif" alt="Agents at work in Faradia: three tasks at once, each with the face of the agent at work, thinking, working and reviewing as the stages go by" width="100%"></a>
 </p>
 
 <p align="center">
-  <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2"><b>▶ Watch Faradia in one minute</b></a>
-</p>
-
-<p align="center">
-  <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4"><img src="docs/assets/whats-new-3.0.gif" alt="optimia is now Faradia: what's new in 3.0, a 45-second video" width="60%"></a><br>
-  <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4"><b>▶ optimia is now Faradia: what's new in 3.0</b></a>
+  <a href="https://optimia.jagoan.es/media/faradia-3.1.0-4k.mp4"><img src="docs/assets/whats-new-3.1.gif" alt="Faradia 3.1: your agents have faces, a 35-second video" width="60%"></a><br>
+  <a href="https://optimia.jagoan.es/media/faradia-3.1.0-4k.mp4"><b>▶ Your agents have faces: what's new in 3.1</b></a>
+  · <a href="https://optimia.jagoan.es/media/faradia-3.0.0-4k.mp4">3.0</a>
   · <a href="https://optimia.jagoan.es/media/optimia-2.3.0-4k.mp4">2.3</a>
+  · <a href="https://optimia.jagoan.es/media/optimia-2.2.0-4k.mp4?v=2">2.2 in one minute</a>
 </p>
 
-![Faradia: the chat on the left, the agents' task board on the right with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
+![Faradia: the chat on the left, the agents' task board on the right, where the Researcher waits for an answer and the Verifier is happy with a task ready to deliver as a pull request](docs/assets/screenshot-tasks.png)
 
 ## Why Faradia
 
 - **Agents that finish the job.** Every task runs a pipeline of agents (plan → implement →
   verify) in its own git worktree, with a model per agent. Agents only stop to ask when
   they lack context; anything blocked for safety can be allowed from the card.
-- **Trust from checks, not prose.** When an agent gets something wrong, a *Corrección*
+- **Trust from checks, not prose.** When an agent gets something wrong, a *Correction*
   task turns the mistake into a check that fails (architecture, types, lint, a test) and
   proves it on the real mistake. The verification is reviewed as evidence: every command
   the Verifier ran, with its result and its screenshots, and an "OK" the tests contradict
@@ -55,6 +53,12 @@
 - **Watch them think.** Each card streams what its agent is doing: what it says, the files
   it reads, its edits (+/−), the commands it runs and their results, the tests, how much it
   is thinking. Agents write in the language you wrote the task in.
+- **Faces that tell you.** Every agent has its own face on its cards, and its eyes show
+  what it is doing: thinking, searching, working, writing, reviewing, waiting for your
+  answer, happy when the work is ready, sorry when it fails.
+- **Talk instead of typing.** Dictate in the chat in Spanish or English, transcribed on
+  your computer: macOS's own speech recognition on a Mac, Whisper on Linux. No accounts,
+  no API, nothing leaves the machine.
 - **Delivered the way your team works.** Commit, then open the pull request with a
   description drafted from the task, or write the comment for the Jira ticket, which
   may tell more (or less) than the PR. Or keep several tasks on one branch.
@@ -65,7 +69,7 @@
 - **Every repo, one window.** Workbenches group your repos; switching is instant, and
   the chat, agents and settings follow. Global settings with per-repo overrides.
 - **Batteries included.** The agents, skills and commands of
-  [ECC (Everything Claude Code)](https://github.com/affaan-m/ECC) are bundled: faradia's
+  [ECC (Everything Claude Code)](https://github.com/affaan-m/ECC) are bundled: Faradia's
   own agents follow their best ECC counterpart, and any ECC agent is one `@` away.
 - **Local or Claude.** Claude Code, or LM Studio / Ollama models for the chat or for
   any agent; your Claude account never reaches the local server. When Claude runs out
@@ -86,7 +90,7 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshot-pr.png" alt="A task card with the pipeline, the verification and the drafted pull request"><br><sub><b>Delivery</b> — the PR title and description, drafted from the task</sub></td>
+    <td width="50%"><img src="docs/assets/screenshot-pr.png" alt="The pull request title and description drafted for a finished task"><br><sub><b>Delivery</b> — the PR title and description, drafted from the task</sub></td>
     <td width="50%"><img src="docs/assets/screenshot-wiki.png" alt="A wiki page with its backlinks"><br><sub><b>Wiki</b> — pages written by the agents, with backlinks</sub></td>
   </tr>
   <tr>
@@ -178,7 +182,7 @@ own git worktree:
 | Verification kit (`verification-kit`) | the repo's verify skill and feature map |
 | Documentation (`documentation`) | research → (choose format and target) → write |
 | Audit (`audit`) | audit → report (no changes) |
-| Agente propio (`custom`) | one stage with one of your agents |
+| Custom agent (`custom`) | one stage with one of your agents |
 
 Review, commit preparation and the PR / Jira description run on demand once a task
 is ready. The verifier runs
@@ -191,8 +195,8 @@ stage. Each task card shows which agent and model ran every stage.
 agent is doing: thinking while it plans, searching while it researches, working while it
 changes code, writing, reading while it verifies or reviews, listening when it asks you
 something, happy when the work is ready and sorry when it fails. Each agent has its own shape
-and color; change them in Settings → Agentes (click the face), or turn faces off in Settings →
-Apariencia.
+and color; change them in Settings → Agents (click the face), or turn faces off in Settings →
+Appearance.
 
 ### Checks and evidence (pstack)
 
@@ -201,12 +205,12 @@ Inspired by Lauren Tan's talk *Turn slop into gold* and her plugin
 because the repo stops them and their work comes with evidence, not because the
 instructions grow.
 
-- **Corrections.** A *Corrección* task follows pstack's `correct` skill for one mistake:
+- **Corrections.** A *Correction* task follows pstack's `correct` skill for one mistake:
   it picks the highest level that works (architecture, types, a lint rule whose message
   names the fix, a test; docs only for judgment calls), runs the check against the real
   past mistake to show it fails, and adds the rule to a rule ↔ enforcer table in the
   repo's `CLAUDE.md` or `AGENTS.md`. Start one from the mode selector, from a suggestion
-  ("no vuelvas a…"), with *Evitar que se repita…* on a finished task, or from a proposal
+  ("don't do that again"), with *Stop it happening again…* on a finished task, or from a proposal
   of the comments pass. The card shows the level of the check it added.
 - **Evidence.** Faradia records every command the Verifier runs and its result, from the
   session's stream, plus the screenshots or videos it saves in
@@ -253,27 +257,15 @@ details, and a failed stage is retried once by itself. They can never commit, pu
 merge or rebase, and destructive commands are blocked by a policy hook (see
 [Security](#security)): the agent is told why and carries on; the card lists what was
 blocked and lets you allow it. Read-only stages cannot edit files. Task
-agents only see faradia's MCP server and your repo's `.mcp.json`, not the
+agents only see Faradia's MCP server and your repo's `.mcp.json`, not the
 connectors of your claude.ai account.
 
 Commit and delivery are always your action, from the task card. "Suggest commit
 message" fills in a Conventional Commits message in the repo's language; the commit
 respects `.gitignore` (ignored files only go in if you tick them).
 
-After the commit, a repo with a remote delivers the task as a **pull request**:
-
-- **Pull request** tab: "Draft with AI" drafts the title and description from the
-  request, the plan, the verification and the branch diff. It follows the repo's PR
-  template and leaves the internal process of the task out. Optional notes steer it
-  ("don't mention the migration"). "Create PR" pushes the branch and opens the PR with
-  `gh` (draft if you want); later commits update it. Without `gh`, or on GitLab and
-  Bitbucket, the branch is pushed and the page to create the PR opens.
-- **Jira** tab: a separate comment for the ticket (what was done, how to test it,
-  what is pending), which can say more or less than the PR. "Copiar" puts it on the
-  clipboard.
-
-A repo without a remote merges the task locally instead (fast-forward when it can),
-then removes the task's worktree and branch.
+After the commit, a repo with a remote delivers the task as a pull request, and one
+without a remote merges it locally: see [Delivering tasks](#delivering-tasks).
 
 ---
 
@@ -348,7 +340,7 @@ After the agents finish, you review and commit from the card. In a repo with a r
   branch and opens the PR with `gh` (draft if you want); later commits update it. Without
   `gh`, or on GitLab and Bitbucket, the branch is pushed and the page to open it shows up.
 - **Jira**: a separate comment for the ticket (what was done, how to test it, what is
-  pending), copied to the clipboard.
+  pending), which can say more or less than the PR, copied to the clipboard.
 - **Merge**: the commit is merged into the base branch locally, also in a repo with a remote.
 - **Leave it on its branch**: the task ends with its commit. Type an existing branch in
   the task's "Branch" field and the next task continues it: several tasks, one branch.
@@ -367,9 +359,9 @@ the project wiki, and your personal wiki when it learns something general. It us
 local model when one is configured and answering; otherwise, or if it fails, Claude Haiku.
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) on, the project wiki also has a
-**code map** (*Mapa del código*) that Faradia takes from CodeGraph's index without any model:
+**code map** that Faradia takes from CodeGraph's index without any model:
 the pieces used from the most other files and which area depends on which. It is refreshed
-after every task, and *Conocer este repo* and the wiki agent start from it.
+after every task, and *Learn this repo* and the wiki agent start from it.
 
 Wikis live outside the repos (`~/.local/share/faradia/knowledge`), keyed by the project's
 git remote, so a project has the same wiki on every machine. **Settings → General →
@@ -381,7 +373,7 @@ memory; importing it merges by date (the newer side wins, replaced items are bac
 [ECC (Everything Claude Code)](https://github.com/affaan-m/ECC), MIT, is bundled in
 `vendor/ecc` (not installed as a Claude Code plugin):
 
-- faradia's agents follow the method of their ECC counterpart (Reviewer ← code-reviewer,
+- Faradia's agents follow the method of their ECC counterpart (Reviewer ← code-reviewer,
   Planner ← planner + architect, Verifier ← build-error-resolver, Test writer ←
   tdd-guide, Auditor ← security-reviewer + performance-optimizer…);
 - its 72 agents are in Settings → Agents; type `@` in the chat to call any of them;
@@ -403,13 +395,13 @@ browser, with no accounts, APIs or payments:
 - **macOS**: the system's own speech recognition, offline. A small helper app, Faradia.app
   (`server/voice/apple/`), comes built in the npm package; macOS asks for permission for
   Faradia once. A language needs its dictation model downloaded (System Settings › Keyboard ›
-  Dictation); Settings → Dictado says when one is missing.
-- **Linux and Windows**, or when macOS cannot: Whisper, run natively on every core by
+  Dictation); Settings → Dictation says when one is missing.
+- **Linux**, or when macOS cannot: Whisper, run natively on every core by
   Faradia. It installs itself the first time (about 110 MB, in `~/.local/share/faradia/voice`)
   while the browser transcribes that dictation. It uses large-v3-turbo with 8 threads or more
   and small with fewer, and chooses between Spanish and English by itself.
 
-Settings → Dictado changes the engine (Faradia, Whisper or the browser), the model and the
+Settings → Dictation changes the engine (Faradia, Whisper or the browser), the model and the
 language.
 
 ## Supervision
@@ -475,7 +467,7 @@ with a sandbox CSP.
 ```
 <project>/.faradia/              per project (excluded from git automatically)
 ├── settings.json                only what this repo changes, its own instructions and no-go list
-├── claude-settings*.json        permissions for faradia's own claude sessions (--settings)
+├── claude-settings*.json        permissions for Faradia's own claude sessions (--settings)
 ├── memory.md                    the repo's knowledge, included in every session's system prompt
 ├── tasks.json, chats.json       kanban and chat state
 ├── tasks-archive.json           finished tasks (Archive)
@@ -543,8 +535,7 @@ The design is described in [docs/design.md](docs/design.md) and what comes next 
 ### Releasing
 
 1. Bump `version` in `package.json`, add the entry to `CHANGELOG.md` and merge to `main`.
-2. Tag it and create the GitHub release: `git tag -a vX.Y.Z -m "faradia X.Y.Z" && git push origin vX.Y.Z`,
-   then `gh release create vX.Y.Z --title "faradia X.Y.Z" --notes-file <notes>`.
+2. Create the GitHub release on `main`: `gh release create vX.Y.Z --target main --notes-file <notes>`.
 3. Publishing the release runs `.github/workflows/publish.yml`, which checks that the tag
    matches `package.json`, runs lint and tests and publishes to npm with Trusted Publishing
    (no npm token; the package gets a provenance attestation). To publish an existing tag by

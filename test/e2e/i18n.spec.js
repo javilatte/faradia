@@ -26,6 +26,11 @@ test.describe('in an English browser', () => {
     await page.locator('#settings-button').click();
     await page.locator('.settings-nav-item[data-pane="appearance"]').click();
     await expect(page.locator('label[for="setting-ui-language"]')).toHaveText('Language');
+    // A help text that wraps over several lines in the HTML is translated too.
+    await expect(page.locator('.settings-pane[data-pane="appearance"]')).toContainText(
+      'Each agent has its face on the cards'
+    );
+    await expect(page.locator('.settings-pane[data-pane="appearance"]')).toContainText('Agent faces');
     await page.locator('#setting-ui-language').selectOption('es');
     await page.waitForLoadState('load');
     await waitForChatReady(page);

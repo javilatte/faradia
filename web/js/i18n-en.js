@@ -57,6 +57,31 @@ window.FARADIA_I18N_EN = {
     'A partir de ahora: npm i -g faradia, y arráncalo con faradia. El paquete optimia seguirá actualizándose unos meses más y abre Faradia, pero dejará de hacerlo.':
       'From now on: npm i -g faradia, and start it with faradia. The optimia package will keep updating for a few more months and opens Faradia, but it will stop.',
     'Mostrar menos': 'Show less',
+    'Caras de los agentes': 'Agent faces',
+    'Cada agente tiene su cara en las tarjetas: piensa, trabaja o revisa según la etapa, te escucha cuando pregunta y sonríe cuando termina.':
+      'Each agent has its face on the cards: it thinks, works or reviews depending on the stage, listens when it asks and smiles when it is done.',
+    'Cambiar la cara': 'Change the face',
+    Forma: 'Shape',
+    Círculo: 'Circle',
+    Redondeada: 'Rounded',
+    Píldora: 'Pill',
+    Mancha: 'Blob',
+    Gota: 'Drop',
+    Hexágono: 'Hexagon',
+    Pizarra: 'Slate',
+    'Verde azulado': 'Teal',
+    Océano: 'Ocean',
+    Ciruela: 'Plum',
+    Arcilla: 'Clay',
+    Musgo: 'Moss',
+    Negro: 'Black',
+    'Ver los agentes…': 'See the agents…',
+    'Los agentes tienen cara': 'Your agents have faces',
+    'Cada agente tiene su cara en las tarjetas, y sus ojos dicen qué está haciendo: piensa mientras planifica, trabaja mientras implementa, lee mientras verifica, te escucha cuando pregunta y sonríe cuando termina. Cambia su forma y su color en Ajustes › Agentes, o apágalas en Apariencia.':
+      'Each agent has its face on the cards, and its eyes tell what it is doing: it thinks while it plans, works while it implements, reads while it verifies, listens when it asks and smiles when it is done. Change its shape and color in Settings › Agents, or turn faces off in Appearance.',
+    'Dictado en el Mac': 'Dictation on the Mac',
+    'El dictado con el reconocimiento de voz de macOS ya funciona: la primera vez macOS te pide permiso para Faradia. Distingue bien español e inglés.':
+      'Dictation with macOS speech recognition works now: the first time, macOS asks permission for Faradia. It tells Spanish and English apart.',
     '! Sin verificar: lo que se ejecutó no respalda el «OK» del agente':
       "! Not verified: what ran does not back the agent's “OK”",
     'Debía fallar y terminó bien': 'It should have failed and it finished fine',
@@ -837,6 +862,10 @@ window.FARADIA_I18N_EN = {
   // Text built with values: [Spanish regex, English with $1, $2…]. Captured Spanish words are
   // translated too when they are in `exact`.
   patterns: [
+    ['^Cambiar la cara de (.+)$', 'Change the face of $1'],
+    ['^Caras para (.+)$', 'Faces for $1'],
+    ['^Cara de (.+)$', 'Face of $1'],
+    ['^(Forma|Color): (.+)$', '$1: $2'],
     [
       '^Escuchando · (\\d+:\\d\\d) · pulsa el micrófono para terminar o Esc para cancelar$',
       'Listening · $1 · click the microphone to finish or Esc to cancel'
