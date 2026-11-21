@@ -60,7 +60,8 @@ try {
 
   function translate(text) {
     if (!text) return text;
-    const trimmed = text.trim();
+    // A text that wraps over several lines in the HTML is looked up as one line.
+    const trimmed = text.trim().replace(/\s+/g, ' ');
     if (!trimmed || !/[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(trimmed)) return text;
     let out = exact.get(trimmed);
     if (out === undefined) {
@@ -75,7 +76,7 @@ try {
       }
     }
     if (out === undefined) return text;
-    return text.replace(trimmed, out);
+    return text.match(/^\s*/)[0] + out + text.match(/\s*$/)[0];
   }
   window.t = translate;
 
