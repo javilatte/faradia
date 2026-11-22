@@ -9,6 +9,8 @@ const path = require('path');
 //     security-audit, plan-optimizer, ponytail with its review and audit, which scripts/vendor-ponytail.sh
 //     changes so it leaves no marks in the code). Each folder carries its LICENSE and a SOURCE.md
 //     with the attribution, and both travel with the copy sessions read.
+//   - humanizer (Siqi Chen, MIT), bundled by scripts/vendor-humanizer.sh: the writing stages follow it
+//     (server/bridge/taskStages.js HUMAN_TEXT).
 //   - part of pstack (Lauren Tan, MIT), bundled by scripts/vendor-pstack.sh: its skills in
 //     vendor/skills, and in vendor/pstack its principles (which go into the agents' prompts, not the
 //     / menu), the Comment Sicko agent and the Claude Code adapter its skills link to.
@@ -41,6 +43,7 @@ const CREDITS = {
   ponytail: 'Dietrich Gebert · MIT',
   'ponytail-review': 'Dietrich Gebert · MIT',
   'ponytail-audit': 'Dietrich Gebert · MIT',
+  humanizer: 'Siqi Chen (blader) · MIT',
   ...Object.fromEntries(PSTACK_SKILLS.map((n) => [n, PSTACK_CREDIT]))
 };
 

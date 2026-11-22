@@ -219,7 +219,7 @@ function canRun(task, stage, { answer, docOptions } = {}) {
   return `etapa desconocida: ${stage}`;
 }
 
-function buildWritePrompt(task, { mode, format, targetPath, template }, research) {
+function buildWritePrompt(task, { mode, format, targetPath, template }, research, skillsDir) {
   const goal = requestWithDecisions(task, 'write');
   const tpl = template ? ` Usa la plantilla ${template} como base de estructura y estilo.` : '';
   const fmtNote =
@@ -233,7 +233,8 @@ function buildWritePrompt(task, { mode, format, targetPath, template }, research
       'Etapa de REDACCION: editar un documento existente.',
       `Edita ${targetPath} manteniendo su estructura, tono y estilo. ${fmtNote}${tpl}`,
       `Encargo:\n${goal}`,
-      notes
+      notes,
+      HUMAN_TEXT(skillsDir, 'el texto que añadas o cambies')
     ].join('\n\n');
   }
   if (mode === 'fragments') {
@@ -241,7 +242,8 @@ function buildWritePrompt(task, { mode, format, targetPath, template }, research
       'Etapa de REDACCION: trozos para añadir a un documento existente.',
       `NO modifiques ${targetPath}. Devuelve en tu respuesta los trozos de texto que habria que añadir, indicando en cada uno donde insertarlo (seccion o ancla). ${fmtNote}${tpl}`,
       `Encargo:\n${goal}`,
-      notes
+      notes,
+      HUMAN_TEXT(skillsDir, 'los trozos')
     ].join('\n\n');
   }
   const dest = targetPath || `docs/<nombre-kebab>.${format}`;
@@ -249,7 +251,8 @@ function buildWritePrompt(task, { mode, format, targetPath, template }, research
     'Etapa de REDACCION: documento nuevo.',
     `Crea el documento en ${dest}. ${fmtNote}${tpl}`,
     `Encargo:\n${goal}`,
-    notes
+    notes,
+    HUMAN_TEXT(skillsDir, 'el documento')
   ].join('\n\n');
 }
 
@@ -266,7 +269,7 @@ function taskContext(task) {
   return parts.join('\n\n');
 }
 
-function buildDescribePrompt(task, { target, notes }) {
+function buildDescribePrompt(task, { target, notes }, skillsDir) {
   const base = task.baseBranch || 'la rama base';
   const range = task.baseBranch ? `${task.baseBranch}...HEAD` : 'HEAD~1...HEAD';
   const common = [
@@ -274,7 +277,8 @@ function buildDescribePrompt(task, { target, notes }) {
     `Lee los cambios de esta rama respecto a ${base}: git log --oneline ${range} y git diff ${range}.`,
     taskContext(task),
     notes ? `Indicaciones del usuario (mandan sobre todo lo demás):\n${notes}` : null,
-    'Escribe en el idioma de los commits del repo. Sin firmas de agente, sin "Generated with" ni menciones a la IA.'
+    'Escribe en el idioma de los commits del repo. Sin firmas de agente, sin "Generated with" ni menciones a la IA.',
+    HUMAN_TEXT(skillsDir, target === 'jira' ? 'el comentario' : 'la descripción')
   ];
   if (target === 'jira') {
     return [
@@ -377,6 +381,11 @@ function skillFile(skillsDir, name) {
   return skillsDir ? path.join(skillsDir, name, 'SKILL.md') : `la skill ${name} (/${name})`;
 }
 
+// Text written for people (documents, README, pull request and Jira descriptions, commit messages)
+// goes through humanizer before the stage ends, so it does not read as machine-written.
+const HUMAN_TEXT = (skillsDir, what) =>
+  `Antes de terminar, repasa ${what} con ${skillFile(skillsDir, 'humanizer')} en modo embebido: quita los patrones de texto de IA sin cambiar ningún dato, nombre, cifra, comando, ruta ni enlace, y entrega solo la versión final. Si el repo tiene su propia guía de estilo, manda la del repo.`;
+
 // The request plus what the user decided when an agent asked: every later stage works (and the
 // Verifier judges) against both, the decisions winning.
 function requestWithDecisions(task, stage) {
@@ -419,6 +428,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
           ? `${task.type === 'bugfix' ? 'Diagnóstico' : 'Plan'}:\n${previousOutput(task, 'implement')}`
           : null,
         'Reporta el progreso con update_task_progress (fase "implement").',
+        `Si escribes o cambias texto para personas (README, documentación, CHANGELOG, textos de ayuda): ${HUMAN_TEXT(skillsDir, 'ese texto').replace(/^Antes de terminar, r/, 'r')}`,
         'Si te falta un dato para continuar, llama a update_task_progress con fase "implement" y estado "blocked", y termina tu respuesta con las preguntas concretas que necesitas que responda el usuario.',
         'No hagas git commit ni git push.'
       ]
@@ -491,10 +501,11 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         'Etapa de PREPARAR COMMIT. No ejecutes git add, git commit ni git push.',
         'Revisa los cambios staged (git diff --cached --stat y git diff --cached) y el estilo de los ultimos commits (git log --oneline -10).',
         'Propon un mensaje en formato Conventional Commits: tipo(ambito): resumen en minusculas, imperativo, sin punto final y de 72 caracteres como mucho; si hace falta, un cuerpo breve tras una línea en blanco. Sigue el idioma de los commits anteriores del repo. No anadas líneas Co-Authored-By ni firmas de agente.',
+        HUMAN_TEXT(skillsDir, 'el mensaje'),
         'Termina SIEMPRE con una línea exacta "MENSAJE: <primera línea del commit>", que Faradia usa para rellenar el campo de commit.'
       ].join('\n\n');
     case 'describe':
-      return buildDescribePrompt(task, describeOptions || {});
+      return buildDescribePrompt(task, describeOptions || {}, skillsDir);
     case 'research':
       return [
         'Etapa de INVESTIGACION. No escribas ni modifiques documentos.',
@@ -503,7 +514,7 @@ function buildStageBody(task, stage, { docOptions, agent, describeOptions, evide
         'Si investigas, lee el repositorio y las fuentes necesarias. Devuelve notas estructuradas: hechos verificados (con fuente), huecos de información y ficheros existentes relacionados.'
       ].join('\n\n');
     case 'write':
-      return buildWritePrompt(task, docOptions || task.docOptions || {}, out('research'));
+      return buildWritePrompt(task, docOptions || task.docOptions || {}, out('research'), skillsDir);
     case 'onboard':
       return [
         'Etapa de ESTUDIO DEL REPO. No modifiques ficheros.',

@@ -20,6 +20,7 @@ const BUILTIN_NAMES = [
   'correct',
   'create-verification-skill',
   'how',
+  'humanizer',
   'in-your-own-words',
   'interrogate',
   'maintain-verification-skill',
