@@ -75,10 +75,12 @@
   any agent; your Claude account never reaches the local server. When Claude runs out
   of usage, the chat and running tasks go on with the local model in the same session
   and come back to Claude when the limit resets.
-- **Good habits built in.** Skills for interface work (frontend-craft), plain writing
-  (unslop), security reviews (security-audit), plans (plan-optimizer), the simplest
-  change that works (ponytail) and pstack's engineering skills (correct, tdd,
-  blast-radius, interrogate…) are on for the chat and every agent.
+- **Good habits built in.** Skills for interface work (frontend-craft, unslop), security
+  reviews (security-audit), plans (plan-optimizer), the simplest change that works
+  (ponytail) and pstack's engineering skills (correct, tdd, blast-radius, interrogate…)
+  are on for the chat and every agent. Documents, READMEs, pull request descriptions and
+  commit messages go through [humanizer](https://github.com/blader/humanizer) before
+  they are done, so they read like a person wrote them.
 - **Your setup on every computer.** Settings, agents and keys sync through a folder you
   already sync, encrypted with a passphrase only you know.
 - **Safe by default.** Agents run in Claude Code's OS sandbox, can never commit, push

@@ -2,6 +2,15 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **humanizer** (Siqi Chen, MIT) is bundled unmodified, for the chat as /humanizer and for the
+  agents. The stages that write for people follow it before they finish: documents (new, edited or
+  fragments), pull request and Jira descriptions, commit messages, and README or docs changed while
+  implementing. It removes AI writing patterns without touching facts, names, numbers, commands or
+  links, and a repo's own style guide comes first.
+
 ## [3.1.0] - 2026-11-21
 
 ### Added
